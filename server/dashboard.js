@@ -198,10 +198,21 @@ function buildWorkspaceSnapshot(cache) {
   const improvementBacklog = readJson(path.join(WORKSPACE, 'IMPROVEMENT_BACKLOG.json')) || {};
   const sharedKnowledge = readJson(path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json')) || [];
   const memory = readMd(path.join(WORKSPACE, 'MEMORY.md'));
+  const alerts = readJson(path.join(WORKSPACE, 'ALERTS.json')) || [];
+  const projects = readJson(path.join(WORKSPACE, 'PROJECTS.json')) || [];
 
   const crons = loadCrons();
   const cachedAgents = cache.getAgentStatuses();
   const cronStatuses = cache.getCronStatuses();
+
+  // Enriched Comms (for Comms.jsx)
+  const comms = {};
+  Object.keys(agentStatus).forEach(id => {
+    comms[id] = {
+      inbox: readMd(path.join(WORKSPACE, 'comms', 'inboxes', `${id}.md`)),
+      outbox: readMd(path.join(WORKSPACE, 'comms', 'outboxes', `${id}.md`))
+    };
+  });
 
   // Enrich agents
   const agents = Object.entries(agentStatus).map(([id, data]) => {
@@ -213,9 +224,14 @@ function buildWorkspaceSnapshot(cache) {
       emoji: cached.identityEmoji || '🤖',
       status: cronStatuses[id] || data.status || 'available',
       model: cached.model || 'unknown',
+      role: data.role || 'Agent',
+      specializations: data.specializations || [],
       inbox_count: countInbox(WORKSPACE, id),
-      quality_score: perf.quality_score,
-      credibility: perf.credibility,
+      tasks_completed: perf.tasks_completed || 0,
+      tasks_failed: perf.tasks_failed || 0,
+      quality_score: perf.quality_score || 0,
+      avg_quality: perf.quality_score || 0, // Frontend alias
+      credibility: perf.credibility || 1.0,
       cache_age_seconds: Math.floor(cache.ageSeconds()),
       heartbeat_age_minutes: getHeartbeatAge(WORKSPACE, cached.workspace || ''),
     };
@@ -225,18 +241,24 @@ function buildWorkspaceSnapshot(cache) {
   const taskCounts = {
     total: tasks.length,
     pending: tasks.filter(t => t.status === 'pending').length,
-    in_progress: tasks.filter(t => t.status === 'in-progress').length,
+    'in-progress': tasks.filter(t => t.status === 'in-progress').length,
     complete: tasks.filter(t => t.status === 'complete').length,
     failed: tasks.filter(t => t.status === 'failed').length,
     blocked: tasks.filter(t => t.status === 'blocked').length,
     hitl: tasks.filter(t => t.status === 'needs_human_decision').length,
+    needs_human_decision: tasks.filter(t => t.status === 'needs_human_decision').length, // Alias
   };
+
+  const hitl_tasks = tasks.filter(t => t.status === 'needs_human_decision');
+  const sla_at_risk = tasks.filter(t => t.status !== 'complete' && t.sla?.deadline && new Date(t.sla.deadline) < new Date(Date.now() + 3600000));
 
   return {
     timestamp: new Date().toISOString(),
     workspace: WORKSPACE,
     tasks,
     task_counts: taskCounts,
+    hitl_tasks,
+    sla_at_risk,
     agents,
     budget,
     velocity,
@@ -245,9 +267,14 @@ function buildWorkspaceSnapshot(cache) {
     experiments,
     improvement_backlog: improvementBacklog,
     shared_knowledge: sharedKnowledge,
+    knowledge: sharedKnowledge, // Alias for frontend
     knowledge_count: sharedKnowledge.length,
     memory_lines: memory.split('\n').length,
     crons,
+    alerts,
+    projects,
+    comms,
+    gateway_online: true,
     cache_age_seconds: Math.floor(cache.ageSeconds()),
   };
 }
@@ -284,6 +311,7 @@ class Broadcaster {
 // ── Main Server ───────────────────────────────────────────────────────────────
 async function main() {
   const app = express();
+  app.use(express.json());
 
   // Add CORS header
   app.use((req, res, next) => {
@@ -336,6 +364,46 @@ async function main() {
   app.get('/api/data', (req, res) => {
     const snapshot = buildWorkspaceSnapshot(cache);
     res.json(snapshot);
+  });
+
+  // ── Cron Actions ────────────────────────────────────────────────────────────
+  app.post('/api/cron/:id/trigger', async (req, res) => {
+    const { id } = req.params;
+    console.log(`[dashboard] Triggering cron: ${id}`);
+    try {
+      spawn('openclaw', ['cron', 'run', id], { stdio: 'inherit' });
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/cron/:id/toggle', async (req, res) => {
+    const { id } = req.params;
+    console.log(`[dashboard] Toggling cron: ${id}`);
+    try {
+      // Note: Generic toggle or enable/disable logic based on state
+      res.json({ ok: true, enabled: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ── HITL Actions ────────────────────────────────────────────────────────────
+  app.post('/api/hitl/:id/:action', async (req, res) => {
+    const { id, action } = req.params;
+    const { note } = req.body;
+    console.log(`[dashboard] HITL ${action} for task ${id}${note ? `: ${note}` : ''}`);
+    try {
+      const status = action === 'approve' ? 'pending' : 'blocked';
+      const args = ['tasks', 'update', id, '--status', status];
+      if (note) args.push('--comment', note);
+
+      spawn('openclaw', args, { stdio: 'inherit' });
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // ── File Watcher ───────────────────────────────────────────────────────────

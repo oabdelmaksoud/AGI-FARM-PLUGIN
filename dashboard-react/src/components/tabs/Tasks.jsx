@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import LastUpdated from '../LastUpdated';
 
-const FILTERS = ['all','pending','in-progress','complete','failed','blocked','🚨 hitl'];
+const FILTERS = ['all', 'pending', 'in-progress', 'complete', 'failed', 'blocked', '🚨 hitl'];
 const PAGE_SIZE = 25;
 
 function useTick(intervalMs = 10000) {
@@ -17,15 +17,15 @@ function DeadlineBadge({ deadline }) {
   useTick(10000); // recalculate every 10s
   if (!deadline) return <span style={{ color: 'var(--muted)' }}>—</span>;
   try {
-    const d    = new Date(deadline);
+    const d = new Date(deadline);
     const diff = Math.round((d - Date.now()) / 60000); // minutes
-    const abs  = Math.abs(diff);
+    const abs = Math.abs(diff);
     const over = diff < 0;
     const color = over ? 'var(--red)' : diff < 60 ? 'var(--amber)' : 'var(--muted)';
     const label = abs < 60
       ? `${over ? '-' : ''}${abs}m`
       : abs < 1440
-        ? `${over ? '-' : ''}${Math.round(abs/60)}h`
+        ? `${over ? '-' : ''}${Math.round(abs / 60)}h`
         : d.toLocaleDateString();
     return (
       <span title={d.toLocaleString()} style={{ color, fontSize: 11, fontWeight: over ? 700 : 400 }}>
@@ -38,9 +38,9 @@ function DeadlineBadge({ deadline }) {
 }
 
 function TaskRow({ task: t, expanded, onToggle }) {
-  const pri   = (t.sla?.priority || t.priority || '').toUpperCase();
-  const s     = (t.status || '').toLowerCase().replace(/ /g, '-');
-  const cls   = {
+  const pri = (t.sla?.priority || t.priority || '').toUpperCase();
+  const s = (t.status || '').toLowerCase().replace(/ /g, '-');
+  const cls = {
     'complete': 'badge-complete', 'pending': 'badge-pending',
     'in-progress': 'badge-in-progress', 'failed': 'badge-failed',
     'needs_human_decision': 'badge-hitl', 'blocked': 'badge-blocked',
@@ -106,9 +106,9 @@ function TaskRow({ task: t, expanded, onToggle }) {
 
               {/* Meta row */}
               <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 10, color: 'var(--muted)', borderTop: '1px solid rgba(255,255,255,.04)', paddingTop: 8 }}>
-                {t.type        && <span>Type: <span style={{ color: 'var(--cyan)' }}>{t.type}</span></span>}
-                {t.proc_id     && <span>Proc: <span style={{ color: 'var(--cyan)' }}>{t.proc_id}</span></span>}
-                {t.created_at  && <span>Created: {new Date(t.created_at).toLocaleString()}</span>}
+                {t.type && <span>Type: <span style={{ color: 'var(--cyan)' }}>{t.type}</span></span>}
+                {t.proc_id && <span>Proc: <span style={{ color: 'var(--cyan)' }}>{t.proc_id}</span></span>}
+                {t.created_at && <span>Created: {new Date(t.created_at).toLocaleString()}</span>}
                 {t.completed_at && <span style={{ color: 'var(--green)' }}>Completed: {new Date(t.completed_at).toLocaleString()}</span>}
                 {t.depends_on?.length > 0 && <span>Depends on: {t.depends_on.join(', ')}</span>}
               </div>
@@ -122,8 +122,8 @@ function TaskRow({ task: t, expanded, onToggle }) {
 
 export default function Tasks({ data, lastUpdated }) {
   const { tasks = [] } = data;
-  const [filter, setFilter]   = useState('all');
-  const [page, setPage]       = useState(0);
+  const [filter, setFilter] = useState('all');
+  const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState(null);
 
   const filtered = tasks.filter(t => {
@@ -133,7 +133,7 @@ export default function Tasks({ data, lastUpdated }) {
   });
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged      = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const toggle = (id) => setExpanded(prev => prev === id ? null : id);
 
@@ -170,14 +170,24 @@ export default function Tasks({ data, lastUpdated }) {
           <thead>
             <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
               {['ID', 'Title', 'Assigned To', 'Priority', 'Status', 'Deadline', ''].map(h => (
-                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10,
-                  color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</th>
+                <th key={h} style={{
+                  padding: '8px 12px', textAlign: 'left', fontSize: 10,
+                  color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em'
+                }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {paged.length === 0 && (
-              <tr><td colSpan={7} style={{ padding: '20px 12px', color: 'var(--muted)', textAlign: 'center' }}>No tasks</td></tr>
+              <tr>
+                <td colSpan={7} style={{ padding: '40px 12px', color: 'var(--muted)', textAlign: 'center' }}>
+                  <div style={{ fontSize: 24, marginBottom: 12 }}>📋</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>No tasks found</div>
+                  <div style={{ fontSize: 11, marginTop: 4 }}>
+                    {filter === 'all' ? 'Your farm hasn\'t generated any tasks yet.' : `No tasks matching the "${filter.replace('🚨 ', '')}" status.`}
+                  </div>
+                </td>
+              </tr>
             )}
             {paged.map(t => (
               <TaskRow key={t.id} task={t} expanded={expanded === t.id} onToggle={() => toggle(t.id)} />
@@ -190,16 +200,20 @@ export default function Tasks({ data, lastUpdated }) {
       {totalPages > 1 && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center', justifyContent: 'center' }}>
           <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: page === 0 ? 'var(--muted)' : 'var(--cyan)',
-              padding: '4px 12px', borderRadius: 4, cursor: page === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 11 }}>
+            style={{
+              background: 'var(--surface)', border: '1px solid var(--border)', color: page === 0 ? 'var(--muted)' : 'var(--cyan)',
+              padding: '4px 12px', borderRadius: 4, cursor: page === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 11
+            }}>
             ← Prev
           </button>
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>
             Page {page + 1} / {totalPages} ({filtered.length} total)
           </span>
           <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1}
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: page === totalPages - 1 ? 'var(--muted)' : 'var(--cyan)',
-              padding: '4px 12px', borderRadius: 4, cursor: page === totalPages - 1 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 11 }}>
+            style={{
+              background: 'var(--surface)', border: '1px solid var(--border)', color: page === totalPages - 1 ? 'var(--muted)' : 'var(--cyan)',
+              padding: '4px 12px', borderRadius: 4, cursor: page === totalPages - 1 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 11
+            }}>
             Next →
           </button>
         </div>

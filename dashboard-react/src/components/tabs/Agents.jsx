@@ -25,8 +25,8 @@ export default function Agents({ data, lastUpdated }) {
 }
 
 function AgentCard({ agent: a }) {
-  const dotCls = { active:'dot-active', available:'dot-available', busy:'dot-busy', error:'dot-error' }[a.status] || 'dot-offline';
-  const badgeCls = { active:'badge-active', available:'badge-available', busy:'badge-busy', error:'badge-error' }[a.status] || 'badge-offline';
+  const dotCls = { active: 'dot-active', available: 'dot-available', busy: 'dot-busy', error: 'dot-error' }[a.status] || 'dot-offline';
+  const badgeCls = { active: 'badge-active', available: 'badge-available', busy: 'badge-busy', error: 'badge-error' }[a.status] || 'badge-offline';
   const cred = a.credibility ?? 1.0;
   return (
     <div className="card">
@@ -57,7 +57,13 @@ function AgentCard({ agent: a }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
         <Stat label="Done" value={a.tasks_completed ?? 0} />
         <Stat label="Failed" value={a.tasks_failed ?? 0} color="var(--red)" />
-        <Stat label="Quality" value={`⭐${(a.avg_quality || 0).toFixed(1)}`} color="var(--amber)" />
+        <Stat label="Quality" value={`⭐${(a.quality_score || 0).toFixed(1)}`} color="var(--amber)" />
+      </div>
+
+      {/* Liveness */}
+      <div style={{ fontSize: 9, color: 'var(--muted)', marginBottom: 10, display: 'flex', justifyContent: 'space-between' }}>
+        <span>Heartbeat: {a.heartbeat_age_minutes != null ? `${a.heartbeat_age_minutes}m ago` : 'offline'}</span>
+        <span>ID: {a.id}</span>
       </div>
 
       {/* Credibility */}
@@ -77,8 +83,10 @@ function AgentCard({ agent: a }) {
       {a.specializations?.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           {a.specializations.map(s => (
-            <span key={s} style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(0,229,255,.07)',
-              color: 'var(--cyan)', border: '1px solid rgba(0,229,255,.2)', borderRadius: 3 }}>{s}</span>
+            <span key={s} style={{
+              fontSize: 9, padding: '2px 6px', background: 'rgba(0,229,255,.07)',
+              color: 'var(--cyan)', border: '1px solid rgba(0,229,255,.2)', borderRadius: 3
+            }}>{s}</span>
           ))}
         </div>
       )}

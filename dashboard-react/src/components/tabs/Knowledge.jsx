@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import LastUpdated from '../LastUpdated';
 
 export default function Knowledge({ data, lastUpdated }) {
-  const { knowledge = [], agents = [] } = data;
+  const { shared_knowledge: knowledge = [], agents = [] } = data;
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
 
@@ -28,9 +28,11 @@ export default function Knowledge({ data, lastUpdated }) {
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search knowledge base..."
-          style={{ flex: 1, minWidth: 200, background: 'var(--bg3)', border: '1px solid var(--border)',
+          style={{
+            flex: 1, minWidth: 200, background: 'var(--bg3)', border: '1px solid var(--border)',
             borderRadius: 5, padding: '7px 12px', fontSize: 12, color: 'var(--text)',
-            fontFamily: 'inherit', outline: 'none' }} />
+            fontFamily: 'inherit', outline: 'none'
+          }} />
         {categories.map(c => (
           <button key={c} onClick={() => setCategory(c)} style={{
             background: category === c ? 'rgba(0,229,255,.15)' : 'var(--surface)',
@@ -69,16 +71,20 @@ export default function Knowledge({ data, lastUpdated }) {
                     {entry.content || entry.summary || entry.insight || '—'}
                   </div>
                 </div>
-                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 3, flexShrink: 0,
+                <span style={{
+                  fontSize: 10, padding: '2px 7px', borderRadius: 3, flexShrink: 0,
                   background: 'rgba(0,229,255,.07)', color: 'var(--cyan)', border: '1px solid rgba(0,229,255,.2)',
-                  textTransform: 'capitalize' }}>{entry.category || 'general'}</span>
+                  textTransform: 'capitalize'
+                }}>{entry.category || 'general'}</span>
               </div>
 
               {entry.tags?.length > 0 && (
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
                   {entry.tags.map(t => (
-                    <span key={t} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3,
-                      background: 'rgba(255,214,0,.08)', color: 'var(--amber)', border: '1px solid rgba(255,214,0,.2)' }}>{t}</span>
+                    <span key={t} style={{
+                      fontSize: 9, padding: '1px 5px', borderRadius: 3,
+                      background: 'rgba(255,214,0,.08)', color: 'var(--amber)', border: '1px solid rgba(255,214,0,.2)'
+                    }}>{t}</span>
                   ))}
                 </div>
               )}

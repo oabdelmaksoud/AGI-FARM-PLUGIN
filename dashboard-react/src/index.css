@@ -78,3 +78,19 @@ body::after {
 ::-webkit-scrollbar { width:4px; height:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:rgba(0,229,255,.2); border-radius:2px; }
+
+/* Focus States & Accessibility */
+button:focus-visible, input:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.card:focus-within {
+  border-color: var(--border-h);
+  box-shadow: var(--shadow);
+}
+
+input::placeholder {
+  color: var(--muted);
+  opacity: 0.6;
+}
