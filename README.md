@@ -524,6 +524,16 @@ MIT License — built for [OpenClaw](https://docs.openclaw.ai)
 
 Copyright (c) 2025 oabdelmaksoud
 
+## 📈 Star History
+
+<a href="https://star-history.com/#oabdelmaksoud/AGI-FARM-PLUGIN&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=oabdelmaksoud/AGI-FARM-PLUGIN&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=oabdelmaksoud/AGI-FARM-PLUGIN&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=oabdelmaksoud/AGI-FARM-PLUGIN&type=Date" />
+ </picture>
+</a>
+
 ---
 
 ## 🔗 Links
