@@ -535,13 +535,7 @@ Copyright (c) 2025 oabdelmaksoud
 
 ## 📈 Star History
 
-<a href="https://star-history.com/#oabdelmaksoud/AGI-FARM-PLUGIN&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=oabdelmaksoud/AGI-FARM-PLUGIN&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=oabdelmaksoud/AGI-FARM-PLUGIN&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=oabdelmaksoud/AGI-FARM-PLUGIN&type=Date" />
- </picture>
-</a>
+[![Star History Chart](https://api.star-history.com/image?repos=oabdelmaksoud/AGI-FARM-PLUGIN&type=date&legend=top-left)](https://www.star-history.com/?repos=oabdelmaksoud%2FAGI-FARM-PLUGIN&type=date&legend=top-left)
 
 ---
 
