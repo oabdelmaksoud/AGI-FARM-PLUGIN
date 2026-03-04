@@ -25,9 +25,10 @@
 |---------|-------------|
 | 🧙 **Interactive Wizard** | 6 questions → complete team setup in ~2 minutes |
 | 🤖 **Multi-Agent Teams** | Choose 3, 5, or 11 pre-wired specialist agents |
-| 📡 **Live Ops Dashboard** | React + SSE with ~350ms real-time updates |
+| 📡 **Live Ops Dashboard** | React + SSE with ~350ms real-time updates and hardened error handling |
 | 🔄 **Auto-Dispatcher** | Smart task delegation with HITL, backoff & dependencies |
 | 📦 **Portable Bundle** | Export your entire team to GitHub with one command |
+| 🏗️ **ESM Native** | Built for Node 20+ with full ES Module support |
 | 🧩 **Framework Support** | Works with autogen, crewai, and langgraph |
 
 ---
@@ -127,11 +128,12 @@ Answer 6 questions and your team will be live in ~2 minutes:
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| 🎯 `/agi-farm setup` | Full wizard — agents, workspace, crons, bundle, GitHub | Sets up complete team |
+| 🎯 `/agi-farm setup` | Full wizard — agents, workspace, crons | Sets up complete team |
+| 🗑️ `/agi-farm teardown` | Full uninstall — removes agents & workspace | Reverts system to clean state |
 | 📊 `/agi-farm status` | Team health: agents, tasks, cron status | Shows real-time metrics |
-| 🔧 `/agi-farm rebuild` | Regenerate workspace from bundle (preserves edits) | After git pull |
+| 🔧 `/agi-farm rebuild` | Regenerate workspace from bundle | After git pull |
 | 📤 `/agi-farm export` | Push bundle to GitHub | Creates new release |
-| 🖥️ `/agi-farm dashboard` | Launch live ops room (React + SSE, :8080) | Opens in browser |
+| 🖥️ `/agi-farm dashboard` | Launch live ops room (SSE, :8080) | Opens in browser |
 | ⚡ `/agi-farm dispatch` | Run auto-dispatcher manually | Test task routing |
 
 ---
@@ -142,14 +144,16 @@ Answer 6 questions and your team will be live in ~2 minutes:
 
 ```
 .openclaw/extensions/agi-farm/
-├── 📦 package.json              Plugin manifest
+├── 📦 package.json              Plugin manifest (ESM)
 ├── ⚙️ openclaw.plugin.json     Config schema & commands
 ├── 📂 src/
 │   └── 💻 index.ts             Main plugin entry (TypeScript)
 ├── 🌐 server/
-│   └── 🖥️ dashboard.js         SSE server (Node.js)
+│   ├── 🖥️ dashboard.js         SSE server (Node.js)
+│   └── 🛠️ utils.js             Core parsing & logic (Unit Tested)
 ├── 📜 scripts/
 │   ├── 🎯 setup.js             Setup wizard
+│   ├── 🗑️ teardown.js          Uninstall mechanism
 │   ├── 📊 status.js            Status checker
 │   ├── 🔧 rebuild.js           Rebuilder
 │   ├── 📤 export.js            GitHub exporter
@@ -434,7 +438,7 @@ npm run typecheck
 # Linting
 npm run lint
 
-# Run tests
+# Run unit tests (Jest + ESM)
 npm test
 
 # Start dashboard server manually
