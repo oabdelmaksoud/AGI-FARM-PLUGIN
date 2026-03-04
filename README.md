@@ -408,7 +408,7 @@ The auto-dispatcher intelligently routes tasks to agents:
 
 ```bash
 # Manual dry-run
-/agi-farm dispatch
+agi-farm dispatch
 
 # Check logs
 tail -f ~/.openclaw/workspace/logs/auto-dispatch.log
@@ -438,7 +438,10 @@ ln -s $(pwd) ~/.openclaw/extensions/agi-farm
 ## 💻 Development
 
 ```bash
-# Build TypeScript
+# Build everything (TS + Dashboard)
+npm run build:all
+
+# Build backend only
 npm run build
 
 # Watch mode for development
@@ -464,7 +467,7 @@ npm run start-dashboard
 | Symptom | Fix | Command |
 |---------|-----|---------|
 | ❌ Plugin fails to load | Check global install | `npm list -g agi-farm` |
-| 📊 Dashboard shows stale data | Restart dashboard | `/agi-farm dashboard` |
+| 📊 Dashboard shows stale data | Restart dashboard | `agi-farm dashboard` |
 | 🤖 Agent stuck >30 min | Check broadcast | `cat comms/broadcast.md` |
 | ⚠️ `openclaw` not found | Add to PATH | `export PATH=$PATH:/path/to/openclaw` |
 | 🔐 `gh repo create` fails | Login to GitHub | `gh auth login` |
