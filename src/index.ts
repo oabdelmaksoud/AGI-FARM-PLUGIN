@@ -7,6 +7,13 @@
  */
 
 import type { ChildProcess } from "child_process";
+import { fileURLToPath } from "url";
+import { createRequire } from "module";
+
+const __dirname = import.meta.dirname ?? fileURLToPath(new URL(".", import.meta.url));
+
+const require = createRequire(import.meta.url);
+const PKG_VERSION: string = (require("../package.json") as { version: string }).version;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -61,7 +68,7 @@ const DEFAULT_CONFIG: AGIFarmConfig = {
 class AGIFarmExtension implements OpenClawExtension {
   id = "agi-farm";
   name = "AGI Farm — Multi-Agent Team Builder";
-  version = "1.0.0";
+  version = PKG_VERSION;
 
   private config: AGIFarmConfig;
   private context: ExtensionContext | null = null;
@@ -103,9 +110,9 @@ class AGIFarmExtension implements OpenClawExtension {
    */
   private async startDashboard(): Promise<void> {
     const { spawn } = await import("child_process");
-    const path = await import("path");
+    const { join } = await import("path");
 
-    const dashboardScript = path.join(__dirname, "..", "server", "dashboard.js");
+    const dashboardScript = join(__dirname, "..", "server", "dashboard.js");
 
     this.context?.logger.info(`[agi-farm] Starting dashboard on ${this.config.dashboardHost}:${this.config.dashboardPort}`);
 

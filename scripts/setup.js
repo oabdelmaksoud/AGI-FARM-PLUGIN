@@ -13,6 +13,7 @@ import path from 'path';
 import os from 'os';
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { runCommand } from './lib/run-command.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,16 +66,6 @@ const MODEL_GUIDE = {
   'Researcher': 'anthropic/claude-opus-4-6',
   'Builder': 'claude-cli-proxy/claude-3-5-sonnet-20241022',
 };
-
-// ── Safe Command Runner ───────────────────────────────────────────────────────
-function runCommand(cmd, args, options = {}) {
-  const result = spawnSync(cmd, args, {
-    encoding: 'utf-8',
-    timeout: 30000,
-    ...options,
-  });
-  return result;
-}
 
 // ── Wizard Steps ───────────────────────────────────────────────────────────────
 async function runWizard() {

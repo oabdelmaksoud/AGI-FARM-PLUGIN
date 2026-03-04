@@ -198,11 +198,28 @@ function loadCrons() {
 function constantTimeEquals(a, b) {
   const aBuf = Buffer.from(a || '', 'utf8');
   const bBuf = Buffer.from(b || '', 'utf8');
-  if (aBuf.length !== bBuf.length) return false;
-  return crypto.timingSafeEqual(aBuf, bBuf);
+  const len = Math.max(aBuf.length, bBuf.length);
+  const aPad = Buffer.alloc(len);
+  const bPad = Buffer.alloc(len);
+  aBuf.copy(aPad);
+  bBuf.copy(bPad);
+  return aBuf.length === bBuf.length && crypto.timingSafeEqual(aPad, bPad);
 }
 
+const ALLOWED_ORIGINS = new Set([
+  `http://127.0.0.1:${PORT}`,
+  `http://localhost:${PORT}`,
+  `http://[::1]:${PORT}`,
+]);
+
 function requireCsrf(req, res, next) {
+  // Validate Origin header to prevent cross-origin attacks
+  const origin = req.header('origin');
+  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+    res.status(403).json({ error: 'forbidden_origin' });
+    return;
+  }
+
   const token = req.header('x-agi-farm-csrf');
   if (!token || !constantTimeEquals(token, CSRF_TOKEN)) {
     res.status(403).json({ error: 'forbidden' });

@@ -9,26 +9,17 @@
 import inquirer from 'inquirer';
 import ora from 'ora';
 import chalk from 'chalk';
-import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
+import { runCommand } from './lib/run-command.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const WORKSPACE = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
 const BUNDLE_DIR = path.join(WORKSPACE, 'agi-farm-bundle');
-
-// ── Safe Command Runner ───────────────────────────────────────────────────────
-function runCommand(cmd, args, options = {}) {
-    return spawnSync(cmd, args, {
-        encoding: 'utf-8',
-        timeout: 30000,
-        ...options,
-    });
-}
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 async function main() {
