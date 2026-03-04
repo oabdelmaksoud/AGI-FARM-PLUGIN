@@ -25,11 +25,12 @@
 |---------|-------------|
 | 🧙 **Interactive Wizard** | 6 questions → complete team setup in ~2 minutes |
 | 🤖 **Multi-Agent Teams** | Choose 3, 5, or 11 pre-wired specialist agents |
-| 📡 **Live Ops Dashboard** | React + SSE with ~350ms real-time updates and hardened error handling |
+| 📡 **Live Ops Dashboard** | React + SSE with real-time updates and interactive HITL/Cron controls |
 | 🔄 **Auto-Dispatcher** | Smart task delegation with HITL, backoff & dependencies |
 | 📦 **Portable Bundle** | Export your entire team to GitHub with one command |
 | 🏗️ **ESM Native** | Built for Node 20+ with full ES Module support |
-| 🧩 **Framework Support** | Works with autogen, crewai, and langgraph |
+| 🛡️ **Production Hardened** | Audited for security, memory leaks, and CLI timeouts |
+| 🧪 **Unit Tested** | Core parsing and logic verified with a Jest/ESM test suite |
 
 ---
 
@@ -339,7 +340,9 @@ All data updates in real-time from workspace files:
 |-------|--------|---------|---------|
 | 📋 Tasks | `TASKS.json` | Instant | ~50ms |
 | 🤖 Agents | `AGENT_STATUS.json` | Instant | ~50ms |
-| 📨 Inbox | `comms/inboxes/*.md` | Instant | ~50ms |
+| 📬 Comms | `comms/inboxes/*.md` | Instant | ~50ms |
+| 🚨 Alerts | `ALERTS.json` | Instant | ~50ms |
+| 📂 Projects | `PROJECTS.json` | Instant | ~50ms |
 | 💰 Budget | `BUDGET.json` | Instant | ~50ms |
 | 📈 Velocity | `VELOCITY.json` | Instant | ~50ms |
 | 🎯 OKRs | `OKRs.json` | Instant | ~50ms |
@@ -348,6 +351,15 @@ All data updates in real-time from workspace files:
 | 📚 Knowledge | `SHARED_KNOWLEDGE.json` | Instant | ~50ms |
 | 🧠 Memory | `MEMORY.md` | Instant | ~50ms |
 | 🔄 Agent Models | `openclaw agents list` | Cached | ~30s |
+
+### Interactive Actions (API)
+
+The dashboard enables direct control over team operations via the following REST endpoints:
+
+- `POST /api/hitl/:id/approve` — Continue task with optional notes
+- `POST /api/hitl/:id/reject` — Block task and notify agent
+- `POST /api/cron/:id/trigger` — Manually run a specific cron job
+- `POST /api/cron/:id/toggle` — Enable or disable a cron job
 
 **Total push latency:** ~350ms from file change to browser update
 
