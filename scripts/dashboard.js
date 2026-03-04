@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-/**
- * AGI Farm Dashboard - Launch live ops room
- */
+import { spawn } from 'child_process';
+import path from 'path';
+import os from 'os';
+import { fileURLToPath } from 'url';
 
-const { spawn } = require('child_process');
-const path = require('path');
-const os = require('os');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const DASHBOARD_JS = path.join(os.homedir(), '.openclaw', 'extensions', 'agi-farm', 'server', 'dashboard.js');
 

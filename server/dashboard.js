@@ -1,19 +1,16 @@
 #!/usr/bin/env node
-/**
- * AGI Farm Dashboard Server — File-Watcher Edition (Node.js)
- *
- * Live updates via chokidar: pushes SSE events immediately on any workspace file change.
- * Fallback: full refresh every 60s + keepalive ping every 25s (proxy-safe).
- *
- * Usage: node dashboard.js [--port 8080] [--workspace /path/to/workspace] [--no-browser]
- */
+import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { spawn } from 'child_process';
+import chokidar from 'chokidar';
+import os from 'os';
+import open from 'open';
+import { parseAgentsJson, parseCronList } from './utils.js';
 
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { spawn } = require('child_process');
-const chokidar = require('chokidar');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const WATCHED_EXTENSIONS = ['.json', '.md'];
@@ -37,8 +34,8 @@ const HOST = process.env.AGI_FARM_DASHBOARD_HOST || '127.0.0.1';
 
 const WORKSPACE = process.env.AGI_FARM_WORKSPACE ||
   (process.argv.includes('--workspace')
-  ? process.argv[process.argv.indexOf('--workspace') + 1]
-  : path.join(os.homedir(), '.openclaw', 'workspace'));
+    ? process.argv[process.argv.indexOf('--workspace') + 1]
+    : path.join(os.homedir(), '.openclaw', 'workspace'));
 
 const NO_BROWSER = process.argv.includes('--no-browser');
 
@@ -56,68 +53,56 @@ class SlowDataCache {
 
   async fetchAgents() {
     return new Promise((resolve) => {
-      const proc = spawn('openclaw', ['agents', 'list', '--json'], { timeout: 10000 });
-      let stdout = '';
-      proc.stdout.on('data', (data) => stdout += data);
-      proc.on('close', (code) => {
-        if (code === 0) {
-          try {
-            const agents = JSON.parse(stdout);
-            const map = {};
-            for (const a of agents) map[a.id] = a;
-            resolve(map);
-          } catch {
+      try {
+        const proc = spawn('openclaw', ['agents', 'list', '--json'], { timeout: 10000 });
+        let stdout = '';
+        proc.stdout.on('data', (data) => stdout += data);
+        proc.on('close', (code) => {
+          if (code === 0) {
+            resolve(parseAgentsJson(stdout));
+          } else {
             resolve({});
           }
-        } else {
-          resolve({});
-        }
-      });
-      proc.on('error', () => resolve({}));
+        });
+        proc.on('error', () => resolve({}));
+      } catch (err) {
+        resolve({});
+      }
     });
   }
 
   async fetchCrons() {
     return new Promise((resolve) => {
-      const proc = spawn('openclaw', ['cron', 'list'], { timeout: 10000 });
-      let stdout = '';
-      proc.stdout.on('data', (data) => stdout += data);
-      proc.on('close', (code) => {
-        const statuses = {};
-        if (code === 0) {
-          const lines = stdout.split('\n').slice(1);
-          for (const line of lines) {
-            const parts = line.split(/\s+/);
-            if (parts.length < 8) continue;
-            for (let i = 0; i < parts.length; i++) {
-              const part = parts[i].toLowerCase();
-              if (['running', 'ok', 'error', 'idle'].includes(part) && i + 2 < parts.length) {
-                const cs = part;
-                const agentId = parts[parts.length - 1].trim();
-                if (cs === 'running' && !(agentId in statuses)) {
-                  statuses[agentId] = 'busy';
-                } else if (cs === 'error' && statuses[agentId] !== 'busy') {
-                  statuses[agentId] = 'error';
-                }
-                break;
-              }
-            }
+      try {
+        const proc = spawn('openclaw', ['cron', 'list'], { timeout: 10000 });
+        let stdout = '';
+        proc.stdout.on('data', (data) => stdout += data);
+        proc.on('close', (code) => {
+          if (code === 0) {
+            resolve(parseCronList(stdout));
+          } else {
+            resolve({});
           }
-        }
-        resolve(statuses);
-      });
-      proc.on('error', () => resolve({}));
+        });
+        proc.on('error', () => resolve({}));
+      } catch (err) {
+        resolve({});
+      }
     });
   }
 
   async refresh() {
-    const [agents, crons] = await Promise.all([
-      this.fetchAgents(),
-      this.fetchCrons()
-    ]);
-    this.agentStatuses = agents;
-    this.cronStatuses = crons;
-    this.lastRefresh = Date.now();
+    try {
+      const [agents, crons] = await Promise.allSettled([
+        this.fetchAgents(),
+        this.fetchCrons()
+      ]);
+      if (agents.status === 'fulfilled') this.agentStatuses = agents.value;
+      if (crons.status === 'fulfilled') this.cronStatuses = crons.value;
+      this.lastRefresh = Date.now();
+    } catch (err) {
+      console.error('[dashboard] Refresh failed:', err);
+    }
   }
 
   getAgentStatuses() {
@@ -163,7 +148,7 @@ function getHeartbeatAge(workspace, wsDir = '') {
         const lastTs = new Date(matches[matches.length - 1]);
         return Math.floor((Date.now() - lastTs.getTime()) / 60000);
       }
-    } catch {}
+    } catch { }
   }
   return 999;
 }
@@ -390,8 +375,7 @@ async function main() {
     console.log(`[dashboard] SSE endpoint: http://${HOST}:${PORT}/api/stream`);
 
     if (!NO_BROWSER) {
-      const open = require('open');
-      open(`http://${HOST}:${PORT}`).catch(() => {});
+      open(`http://${HOST}:${PORT}`).catch(() => { });
     }
   });
 }

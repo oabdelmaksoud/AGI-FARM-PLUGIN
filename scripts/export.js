@@ -3,11 +3,15 @@
  * AGI Farm Export - Push bundle to GitHub
  */
 
-const { spawnSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const chalk = require('chalk');
+import { spawnSync } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
+import chalk from 'chalk';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const WORKSPACE = path.join(os.homedir(), '.openclaw', 'workspace');
 const BUNDLE_DIR = path.join(WORKSPACE, 'agi-farm-bundle');

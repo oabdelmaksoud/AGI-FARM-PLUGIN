@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Multi-agent AI team builder for OpenClaw — bootstrap complete teams with auto-dispatcher, dashboard, and infrastructure",
   "main": "dist/index.js",
+  "type": "module",
   "bin": {
     "agi-farm": "./scripts/setup.js",
     "agi-farm-teardown": "./scripts/teardown.js"
@@ -44,7 +45,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "start-dashboard": "node server/dashboard.js",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts .js"
   },
   "keywords": [
     "openclaw",

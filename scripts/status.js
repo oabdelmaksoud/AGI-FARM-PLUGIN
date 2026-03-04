@@ -1,23 +1,21 @@
 #!/usr/bin/env node
-/**
- * AGI Farm Status - Show team health
- */
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import chalk from 'chalk';
+import { spawnSync } from 'child_process';
+import { fileURLToPath } from 'url';
 
-const { spawnSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const WORKSPACE = path.join(os.homedir(), '.openclaw', 'workspace');
 
-// ANSI color codes
-const cyan = '\x1b[36m';
-const yellow = '\x1b[33m';
 const dim = '\x1b[2m';
 const bold = '\x1b[1m';
 const reset = '\x1b[0m';
 
-console.log(`\n${cyan}${bold}🚜 AGI Farm — Team Status${reset}\n`);
+console.log(`\n${chalk.cyan.bold('🚜 AGI Farm — Team Status')}\n`);
 
 // ── Agents ────────────────────────────────────────────────────────────────────
 console.log(`${bold}Agents:${reset}`);
@@ -37,10 +35,10 @@ try {
     }
     console.log();
   } else {
-    console.log(`${yellow}  Could not fetch agents${reset}\n`);
+    console.log(`${chalk.yellow('  Could not fetch agents')}\n`);
   }
 } catch (err) {
-  console.log(`${yellow}  Could not fetch agents${reset}\n`);
+  console.log(`${chalk.yellow('  Could not fetch agents')}\n`);
 }
 
 // ── Tasks ──────────────────────────────────────────────────────────────────────
@@ -52,12 +50,12 @@ try {
     const pending = tasks.filter(t => t.status === 'pending').length;
     const inProgress = tasks.filter(t => t.status === 'in-progress').length;
     const hitl = tasks.filter(t => t.status === 'needs_human_decision').length;
-    console.log(`  Total: ${tasks.length} · Pending: ${pending} · In Progress: ${inProgress} · HITL: ${yellow}${hitl}${reset}\n`);
+    console.log(`  Total: ${tasks.length} · Pending: ${pending} · In Progress: ${inProgress} · HITL: ${chalk.yellow(hitl)}${reset}\n`);
   } else {
-    console.log(`${yellow}  No TASKS.json found${reset}\n`);
+    console.log(`${chalk.yellow('  No TASKS.json found')}\n`);
   }
 } catch {
-  console.log(`${yellow}  Could not read tasks${reset}\n`);
+  console.log(`${chalk.yellow('  Could not read tasks')}\n`);
 }
 
 // ── Crons ──────────────────────────────────────────────────────────────────────
@@ -69,16 +67,16 @@ try {
   });
 
   if (result.status === 0) {
-    const lines = result.stdout.split('\n').slice(0, 10);
+    const lines = result.stdout.split('\n').filter(l => l.trim()).slice(0, 10);
     for (const line of lines) {
       console.log(`${dim}  ${line}${reset}`);
     }
     console.log();
   } else {
-    console.log(`${yellow}  Could not fetch crons${reset}\n`);
+    console.log(`${chalk.yellow('  Could not fetch crons')}\n`);
   }
 } catch {
-  console.log(`${yellow}  Could not fetch crons${reset}\n`);
+  console.log(`${chalk.yellow('  Could not fetch crons')}\n`);
 }
 
-console.log(`${dim}Run /agi-farm dashboard for live ops room${reset}\n`);
+console.log(`${chalk.dim('Run /agi-farm dashboard for live ops room')}\n`);

@@ -1,19 +1,13 @@
 #!/usr/bin/env node
-/**
- * AGI Farm Dispatch - Run auto-dispatcher
- */
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import chalk from 'chalk';
+import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
 
-const { spawn } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const chalk = {
-  cyan: { bold: (str) => `\x1b[36m\x1b[1m${str}\x1b[0m` },
-  yellow: (str) => `\x1b[33m${str}\x1b[0m`,
-  green: (str) => `\x1b[32m${str}\x1b[0m`,
-  red: (str) => `\x1b[31m${str}\x1b[0m`,
-  dim: (str) => `\x1b[2m${str}\x1b[0m`
-};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const DISPATCH_PY = path.join(os.homedir(), '.openclaw', 'skills', 'agi-farm', 'scripts', 'auto-dispatch.py');
 

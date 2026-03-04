@@ -6,21 +6,17 @@
  * and the bundle.
  */
 
-const inquirer = require('inquirer');
-const ora = require('ora');
-const { spawnSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+import inquirer from 'inquirer';
+import ora from 'ora';
+import chalk from 'chalk';
+import { spawnSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { fileURLToPath } from 'url';
 
-// Manually mock chalk to avoid ESM require issues
-const chalk = {
-    cyan: { bold: (str) => `\x1b[36m\x1b[1m${str}\x1b[0m` },
-    yellow: (str) => `\x1b[33m${str}\x1b[0m`,
-    green: (str) => `\x1b[32m${str}\x1b[0m`,
-    red: (str) => `\x1b[31m${str}\x1b[0m`,
-    dim: (str) => `\x1b[2m${str}\x1b[0m`
-};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const WORKSPACE = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
 const BUNDLE_DIR = path.join(WORKSPACE, 'agi-farm-bundle');

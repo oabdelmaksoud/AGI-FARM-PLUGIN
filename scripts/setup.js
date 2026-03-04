@@ -5,13 +5,17 @@
  * Interactive wizard that creates a fully working multi-agent AI team on OpenClaw.
  */
 
-const inquirer = require('inquirer');
-const chalk = require('chalk');
-const ora = require('ora');
-const { spawnSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+import inquirer from 'inquirer';
+import ora from 'ora';
+import chalk from 'chalk';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { spawnSync } from 'child_process';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const WORKSPACE = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
 const BUNDLE_DIR = path.join(WORKSPACE, 'agi-farm-bundle');

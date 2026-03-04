@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-/**
- * AGI Farm Rebuild - Regenerate workspace from existing bundle
- */
+import { spawnSync } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
+import chalk from 'chalk';
+import { fileURLToPath } from 'url';
 
-const { spawnSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const chalk = require('chalk');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const WORKSPACE = path.join(os.homedir(), '.openclaw', 'workspace');
+const WORKSPACE = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
 const BUNDLE_DIR = path.join(WORKSPACE, 'agi-farm-bundle');
 const GENERATE_PY = path.join(os.homedir(), '.openclaw', 'skills', 'agi-farm', 'generate.py');
 
