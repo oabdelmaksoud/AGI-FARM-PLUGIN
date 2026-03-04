@@ -6,10 +6,10 @@
 
 **Build production-ready AI teams with a single command**
 
+[![npm version](https://img.shields.io/npm/v/agi-farm.svg)](https://www.npmjs.com/package/agi-farm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-Plugin-blue.svg)](https://docs.openclaw.ai)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green.svg)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 
 [Quick Start](#-quick-start) • [Features](#-what-it-does) • [Documentation](#-commands) • [Architecture](#-architecture)
 
@@ -284,16 +284,16 @@ Complete team for complex systems - **RECOMMENDED**
 
 Choose the right model for each role to optimize cost and quality:
 
-| Role | Model Tier | Why | Cost/Quality |
+| Role | Recommended Model | Why | Cost/Quality |
 |------|-----------|-----|--------------|
-| 🦅 Orchestrator | **High** (`sonnet`, `opus`) | Delegation judgment, broad reasoning | 💰💰💰 / ⭐⭐⭐ |
-| 🔮 Architect | **High** | Deep analysis, design decisions | 💰💰💰 / ⭐⭐⭐ |
-| ⚒️ Engineer | **Mid** (`glm-5`, `sonnet`) | Fast code gen, cost-efficiency | 💰💰 / ⭐⭐ |
-| 🐛 Debugger | **High** (`opus`) | Root-cause analysis, precision | 💰💰💰 / ⭐⭐⭐ |
-| 🔭 Analyst | **Mid-High** (`gemini-2.0-pro-exp`) | Long-context research | 💰💰 / ⭐⭐⭐ |
-| 🛡️ QA | **Fast** (`glm-4.7-flash`) | High-volume pattern checks | 💰 / ⭐⭐ |
-| ⚓ Content | **Multimodal** (`gemini-2.0-pro-exp`) | Vision + rich generation | 💰💰 / ⭐⭐⭐ |
-| 🧪 R&D | **High** | Creative + structured experiments | 💰💰💰 / ⭐⭐⭐ |
+| 🦅 Orchestrator | `anthropic/claude-3-5-sonnet` | High-level planning & delegation | 💰💰💰 / ⭐⭐⭐ |
+| 🔮 Architect | `anthropic/claude-3-opus` | Deep reasoning & system design | 💰💰💰 / ⭐⭐⭐ |
+| ⚒️ Engineer | `google/gemini-1.5-pro` | Reliable code gen & large context | 💰💰 / ⭐⭐ |
+| 🐛 Debugger | `anthropic/claude-3-5-sonnet` | Precision logic & error analysis | 💰💰 / ⭐⭐⭐ |
+| 🔭 Analyst | `google/gemini-2.0-flash` | Ultra-fast data synthesis | 💰 / ⭐⭐ |
+| 🛡️ QA | `anthropic/claude-3-haiku` | Rapid pattern validation | 💰 / ⭐ |
+| ⚓ Content | `google/gemini-1.5-pro` | Rich multimodal generation | 💰💰 / ⭐⭐⭐ |
+| 🧪 R&D | `deepseek/deepseek-reasoner` | Structured creative experimentation | 💰 / ⭐⭐⭐ |
 
 ---
 
@@ -467,13 +467,12 @@ npm run start-dashboard
 | Symptom | Fix | Command |
 |---------|-----|---------|
 | ❌ Plugin fails to load | Check global install | `npm list -g agi-farm` |
-| 📊 Dashboard shows stale data | Restart dashboard | `agi-farm dashboard` |
-| 🤖 Agent stuck >30 min | Check broadcast | `cat comms/broadcast.md` |
-| ⚠️ `openclaw` not found | Add to PATH | `export PATH=$PATH:/path/to/openclaw` |
-| 🔐 `gh repo create` fails | Login to GitHub | `gh auth login` |
-| ⏰ Cron shows 0 crons | Check duplicates | `openclaw cron list` |
-| 📄 TASKS.json parse error | Validate JSON | `python3 -m json.tool TASKS.json` |
-| 🐌 Rate-limit too aggressive | Adjust backoff | Edit dispatch script |
+| 📊 Dashboard shows stale data | Sync with workspace | `agi-farm status` |
+| 🤖 Agent stuck >30 min | Verify heartbeats | `cat ~/.openclaw/workspace/HEARTBEAT.md` |
+| ⚠️ `openclaw` not found | Add to PATH | `export PATH=$PATH:$(npm bin -g)` |
+| 🔐 Access Denied | Check npm login | `npm whoami` |
+| ⏰ Cron registration error | Clean crontab | `openclaw cron list --fix` |
+| 📄 JSON Parse Error | Re-run setup | `agi-farm setup --force` |
 
 ---
 

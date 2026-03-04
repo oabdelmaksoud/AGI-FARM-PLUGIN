@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "description": "Bootstrap complete multi-agent AI teams with auto-dispatcher, live dashboard, and infrastructure. Includes interactive wizard, SOUL.md generation, comms setup, cron registration, and React + SSE ops room.",
   "author": "oabdelmaksoud",
-  "homepage": "https://github.com/oabdelmaksoud/openclaw-skills/tree/main/agi-farm",
+  "homepage": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
