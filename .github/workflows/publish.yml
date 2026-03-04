@@ -18,12 +18,12 @@ jobs:
           node-version: 20
           registry-url: https://registry.npmjs.org
 
-      - run: npm ci
+      - run: npm install
 
       - run: npm run build
 
       - run: |
-          cd dashboard-react && npm ci && npm run build && cd ..
+          cd dashboard-react && npm install && npm run build && cd ..
           rm -rf dashboard-dist && cp -r dashboard-react/dist dashboard-dist
 
       - run: npm publish --provenance --access public
