@@ -140,12 +140,12 @@ class AGIFarmExtension implements OpenClawExtension {
   }
 
   /**
-   * Register plugin commands
+   * Register plugin commands (stub)
    */
   private registerCommands(context: ExtensionContext): void {
-    // Commands are defined in openclaw.plugin.json
-    // This method can be used to register additional runtime commands
-    context.logger.debug("[agi-farm] Commands registered via openclaw.plugin.json");
+    // Commands in this plugin are statically defined in openclaw.plugin.json
+    // This method stub exists for future programmatic runtime command registration if needed
+    context.logger.debug("[agi-farm] Commands registered statically via openclaw.plugin.json");
   }
 
   /**

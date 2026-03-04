@@ -4,11 +4,24 @@
  */
 
 const { spawn } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const chalk = require('chalk');
+const chalk = {
+  cyan: { bold: (str) => `\x1b[36m\x1b[1m${str}\x1b[0m` },
+  yellow: (str) => `\x1b[33m${str}\x1b[0m`,
+  green: (str) => `\x1b[32m${str}\x1b[0m`,
+  red: (str) => `\x1b[31m${str}\x1b[0m`,
+  dim: (str) => `\x1b[2m${str}\x1b[0m`
+};
 
 const DISPATCH_PY = path.join(os.homedir(), '.openclaw', 'skills', 'agi-farm', 'scripts', 'auto-dispatch.py');
+
+if (!fs.existsSync(DISPATCH_PY)) {
+  console.error(chalk.red('Error: AGI Farm python skill not found at ' + DISPATCH_PY));
+  console.log(chalk.yellow('Please install the skill first from the openclaw-skills repository.'));
+  process.exit(1);
+}
 
 const args = process.argv.slice(2);
 const execute = args.includes('--execute');

@@ -60,7 +60,9 @@
       "description": "Path to AGI Farm team bundle directory"
     }
   },
-  "skills": ["skills/agi-farm"],
+  "skills": [
+    "skills/agi-farm"
+  ],
   "commands": [
     {
       "name": "agi-farm setup",
@@ -91,6 +93,11 @@
       "name": "agi-farm dispatch",
       "description": "Run auto-dispatcher — fires agent sessions for pending tasks",
       "handler": "./scripts/dispatch.js"
+    },
+    {
+      "name": "agi-farm teardown",
+      "description": "Completely uninstall and teardown the active AGI Farm team",
+      "handler": "./scripts/teardown.js"
     }
   ]
 }

@@ -13,6 +13,9 @@ const WORKSPACE = path.join(os.homedir(), '.openclaw', 'workspace');
 const BUNDLE_DIR = path.join(WORKSPACE, 'agi-farm-bundle');
 const GENERATE_PY = path.join(os.homedir(), '.openclaw', 'skills', 'agi-farm', 'generate.py');
 
+const args = process.argv.slice(2);
+const force = args.includes('--force');
+
 console.log(chalk.cyan.bold('\n🔄 AGI Farm — Rebuild Workspace\n'));
 
 // Check for team.json
@@ -33,14 +36,16 @@ if (!fs.existsSync(GENERATE_PY)) {
 console.log(chalk.dim('Regenerating workspace files...'));
 
 try {
-  const result = spawnSync('python3', [
+  const spawnArgs = [
     GENERATE_PY,
     '--team-json', teamJson,
     '--output', WORKSPACE,
     '--all-agents',
     '--shared',
-    '--no-overwrite',
-  ], {
+  ];
+  if (!force) spawnArgs.push('--no-overwrite');
+
+  const result = spawnSync('python3', spawnArgs, {
     encoding: 'utf-8',
     stdio: 'inherit',
     timeout: 60000,

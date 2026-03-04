@@ -30,11 +30,9 @@ if (!fs.existsSync(gitDir)) {
 }
 
 try {
-  process.chdir(BUNDLE_DIR);
-
   // Add all changes
   console.log(chalk.dim('Staging changes...'));
-  spawnSync('git', ['add', '-A'], { stdio: 'inherit' });
+  spawnSync('git', ['add', '-A'], { stdio: 'inherit', cwd: BUNDLE_DIR });
 
   // Commit
   const date = new Date().toISOString().split('T')[0];
@@ -42,6 +40,7 @@ try {
   const commitResult = spawnSync('git', ['commit', '-m', `export: ${date}`], {
     encoding: 'utf-8',
     stdio: 'inherit',
+    cwd: BUNDLE_DIR
   });
 
   if (commitResult.status !== 0) {
@@ -51,7 +50,7 @@ try {
 
   // Push
   console.log(chalk.dim('Pushing to remote...'));
-  const pushResult = spawnSync('git', ['push'], { stdio: 'inherit' });
+  const pushResult = spawnSync('git', ['push'], { stdio: 'inherit', cwd: BUNDLE_DIR });
 
   if (pushResult.status === 0) {
     console.log(chalk.green('\n✅ Bundle exported to GitHub'));
@@ -63,12 +62,13 @@ try {
   try {
     const urlResult = spawnSync('git', ['remote', 'get-url', 'origin'], {
       encoding: 'utf-8',
+      cwd: BUNDLE_DIR
     });
     if (urlResult.status === 0) {
       const url = urlResult.stdout.trim();
       console.log(chalk.dim(`\nRemote: ${url}\n`));
     }
-  } catch {}
+  } catch { }
 
 } catch (err) {
   console.error(chalk.red('Error exporting to GitHub'));

@@ -11,6 +11,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { spawn } = require('child_process');
 const chokidar = require('chokidar');
 
@@ -21,16 +22,23 @@ const KEEPALIVE_MS = 25000;
 const FALLBACK_MS = 60000;
 
 // ── Configuration ─────────────────────────────────────────────────────────────
-const PORT = parseInt(process.env.AGI_FARM_DASHBOARD_PORT || process.argv.includes('--port')
-  ? process.argv[process.argv.indexOf('--port') + 1]
-  : 8080);
+const PORT = parseInt(
+  process.env.AGI_FARM_DASHBOARD_PORT ||
+  (process.argv.includes('--port') ? process.argv[process.argv.indexOf('--port') + 1] : '8080'),
+  10
+);
+
+if (isNaN(PORT) || PORT < 1024 || PORT > 65535) {
+  console.error('[dashboard] Invalid port');
+  process.exit(1);
+}
 
 const HOST = process.env.AGI_FARM_DASHBOARD_HOST || '127.0.0.1';
 
 const WORKSPACE = process.env.AGI_FARM_WORKSPACE ||
-  process.argv.includes('--workspace')
+  (process.argv.includes('--workspace')
   ? process.argv[process.argv.indexOf('--workspace') + 1]
-  : path.join(process.env.HOME, '.openclaw', 'workspace');
+  : path.join(os.homedir(), '.openclaw', 'workspace'));
 
 const NO_BROWSER = process.argv.includes('--no-browser');
 
@@ -171,7 +179,7 @@ function countInbox(workspace, agentId) {
 
 function loadCrons() {
   try {
-    const cronFile = path.join(process.env.HOME, '.openclaw', 'cron', 'jobs.json');
+    const cronFile = path.join(os.homedir(), '.openclaw', 'cron', 'jobs.json');
     const raw = readJson(cronFile);
     const jobs = raw.jobs || [];
     const nowMs = Date.now();
@@ -291,6 +299,13 @@ class Broadcaster {
 // ── Main Server ───────────────────────────────────────────────────────────────
 async function main() {
   const app = express();
+
+  // Add CORS header
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    next();
+  });
+
   const cache = new SlowDataCache();
   const broadcaster = new Broadcaster();
 

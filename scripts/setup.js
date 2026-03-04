@@ -76,6 +76,45 @@ function runCommand(cmd, args, options = {}) {
 async function runWizard() {
   console.log(chalk.cyan.bold('\n🚜 AGI Farm — Multi-Agent Team Builder\n'));
 
+  // Pre-flight check: Does a team already exist?
+  const teamJsonPath = path.join(BUNDLE_DIR, 'team.json');
+  if (fs.existsSync(teamJsonPath)) {
+    let existingTeam;
+    try {
+      existingTeam = JSON.parse(fs.readFileSync(teamJsonPath, 'utf8'));
+    } catch (e) {
+      existingTeam = { team_name: 'Unknown' };
+    }
+
+    console.log(chalk.yellow(`⚠ An active AGI Farm team ("${existingTeam.team_name}") already exists.`));
+    console.log(chalk.dim('You must teardown the existing team before creating a new one.\n'));
+
+    const { teardown } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'teardown',
+        message: 'Would you like to completely uninstall the existing team now?',
+        default: false,
+      },
+    ]);
+
+    if (!teardown) {
+      console.log(chalk.dim('Setup cancelled. Existing team preserved.'));
+      process.exit(0);
+    }
+
+    // Run teardown script
+    console.log(chalk.dim('\nRunning teardown...'));
+    const teardownScript = path.join(__dirname, 'teardown.js');
+    const result = spawnSync(process.execPath, [teardownScript], { stdio: 'inherit' });
+
+    if (result.status !== 0) {
+      console.error(chalk.red('\nTeardown failed. Please fix the errors before continuing.'));
+      process.exit(1);
+    }
+    console.log(chalk.green('✅ Previous team cleared. Ready for new setup.\n'));
+  }
+
   // Step 1: Team name
   const { teamName } = await inquirer.prompt([
     {
@@ -150,17 +189,7 @@ async function runWizard() {
     },
   ]);
 
-  // Step 5: GitHub
-  const { createGithub } = await inquirer.prompt([
-    {
-      type: 'confirm',
-      name: 'createGithub',
-      message: 'Create a GitHub repo for the bundle?',
-      default: false,
-    },
-  ]);
-
-  // Step 6: Confirm
+  // Step 5: Confirm
   const finalDomain = domain === 'custom' ? customDomain : domain;
   console.log(chalk.dim('\n── Summary ──'));
   console.log(chalk.white(`Team:         ${teamName}`));
@@ -168,7 +197,6 @@ async function runWizard() {
   console.log(chalk.white(`Agents:       ${preset}`));
   console.log(chalk.white(`Domain:       ${finalDomain}`));
   console.log(chalk.white(`Frameworks:   ${frameworks.length > 0 ? frameworks.join(', ') : 'none'}`));
-  console.log(chalk.white(`GitHub:       ${createGithub ? 'yes' : 'no'}`));
 
   const { proceed } = await inquirer.prompt([
     {
@@ -190,7 +218,6 @@ async function runWizard() {
     preset,
     domain: finalDomain,
     frameworks,
-    createGithub,
   };
 }
 
