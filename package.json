@@ -5,14 +5,13 @@
   "main": "dist/index.js",
   "license": "MIT",
   "author": "oabdelmaksoud",
-  "homepage": "https://github.com/oabdelmaksoud/agi-farm",
+  "homepage": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN",
   "repository": {
     "type": "git",
-    "url": "https://github.com/oabdelmaksoud/openclaw-skills.git",
-    "directory": "agi-farm"
+    "url": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN.git"
   },
   "bugs": {
-    "url": "https://github.com/oabdelmaksoud/openclaw-skills/issues"
+    "url": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN/issues"
   },
   "files": [
     "dist/index.js",
