@@ -403,10 +403,51 @@ class Broadcaster {
   }
 }
 
+// ── Rate Limiter ──────────────────────────────────────────────────────────────
+function createRateLimiter(windowMs, maxRequests) {
+  const hits = new Map();
+  setInterval(() => hits.clear(), windowMs);
+  return (req, res, next) => {
+    const key = req.ip;
+    const count = (hits.get(key) || 0) + 1;
+    hits.set(key, count);
+    if (count > maxRequests) {
+      res.status(429).json({ error: 'too_many_requests' });
+      return;
+    }
+    next();
+  };
+}
+
+// ── Input Validation ──────────────────────────────────────────────────────────
+const ID_PATTERN = /^[a-zA-Z0-9_-]{1,128}$/;
+
+function validateId(req, res, next) {
+  const { id } = req.params;
+  if (id && !ID_PATTERN.test(id)) {
+    res.status(400).json({ error: 'invalid_id' });
+    return;
+  }
+  next();
+}
+
+function validateAction(req, res, next) {
+  const { action } = req.params;
+  if (action && !ID_PATTERN.test(action)) {
+    res.status(400).json({ error: 'invalid_action' });
+    return;
+  }
+  next();
+}
+
 // ── Main Server ───────────────────────────────────────────────────────────────
 async function main() {
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: '100kb' }));
+
+  const apiLimiter = createRateLimiter(60000, 120);   // 120 req/min
+  const actionLimiter = createRateLimiter(60000, 30);  // 30 req/min for mutations
+  app.use('/api', apiLimiter);
 
   app.get('/api/session', (req, res) => {
     res.json({ csrfToken: CSRF_TOKEN });
@@ -465,7 +506,7 @@ async function main() {
   });
 
   // ── Cron Actions ────────────────────────────────────────────────────────────
-  app.post('/api/cron/:id/trigger', requireCsrf, async (req, res) => {
+  app.post('/api/cron/:id/trigger', actionLimiter, validateId, requireCsrf, async (req, res) => {
     const { id } = req.params;
     console.log(`[dashboard] Triggering cron: ${id}`);
     try {
@@ -480,7 +521,7 @@ async function main() {
     }
   });
 
-  app.post('/api/cron/:id/toggle', requireCsrf, async (req, res) => {
+  app.post('/api/cron/:id/toggle', actionLimiter, validateId, requireCsrf, async (req, res) => {
     const { id } = req.params;
     console.log(`[dashboard] Toggling cron: ${id}`);
     try {
@@ -496,9 +537,9 @@ async function main() {
   });
 
   // ── HITL Actions ────────────────────────────────────────────────────────────
-  app.post('/api/hitl/:id/:action', requireCsrf, async (req, res) => {
+  app.post('/api/hitl/:id/:action', actionLimiter, validateId, validateAction, requireCsrf, async (req, res) => {
     const { id, action } = req.params;
-    const { note } = req.body;
+    const note = typeof req.body.note === 'string' ? req.body.note.slice(0, 1000) : '';
     if (!['approve', 'reject'].includes(action)) {
       res.status(400).json({ ok: false, error: 'invalid_action' });
       return;
