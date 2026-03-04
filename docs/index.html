@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGI Farm | Production-Ready Multi-Agent Teams</title>
+    <meta name="description" content="One wizard. Full multi-agent AI team. Live in minutes. Built for OpenClaw.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="mesh-background">
+        <div class="color-blob blob-1"></div>
+        <div class="color-blob blob-2"></div>
+        <div class="color-blob blob-3"></div>
+        <div class="noise-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">🦅</span>
+                <span class="logo-text">AGI Farm</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#dashboard" class="nav-link">Dashboard</a>
+                <a href="#architecture" class="nav-link">Architecture</a>
+                <a href="https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN" target="_blank" class="nav-link">GitHub</a>
+            </div>
+            <div class="nav-actions">
+                <a href="#quick-start" class="btn btn-primary btn-sm btn-magnetic">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-content">
+            <a href="https://npmjs.com/package/agi-farm" target="_blank" class="badge fade-up interactive-badge">
+                <span class="badge-dot"></span>
+                <span>OpenClaw Plugin v1.0 Live</span>
+                <span class="badge-arrow">→</span>
+            </a>
+
+            <h1 class="hero-title fade-up delay-1">
+                <span class="gradient-text-animated">Engineer</span> the future,<br>
+                not the boilerplate.
+            </h1>
+
+            <p class="hero-subtitle fade-up delay-2">
+                A single wizard to bootstrap a fully-wired, production-ready AI team. Equipped with a live HTTP
+                dashboard, crons, auto-dispatchers, and HITL built-in.
+            </p>
+
+            <div class="hero-cta fade-up delay-3">
+                <div class="code-terminal tilt-effect">
+                    <div class="window-controls">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
+                    </div>
+                    <div class="terminal-body">
+                        <div class="line"><span class="prompt">~</span> <span class="command">npm install -g
+                                agi-farm</span></div>
+                        <div class="line" id="typewriter-line"><span class="prompt">~</span> <span
+                                class="command type-text"></span><span class="cursor">_</span></div>
+                    </div>
+                    <!-- Using a pseudo-element for the active border glow -->
+                    <div class="active-border"></div>
+                </div>
+            </div>
+
+            <div class="hero-stats fade-up delay-4">
+                <div class="stat-item">
+                    <span class="stat-value">2m</span>
+                    <span class="stat-label">Deploy Time</span>
+                </div>
+                <div class="separator"></div>
+                <div class="stat-item">
+                    <span class="stat-value">11+</span>
+                    <span class="stat-label">Agent Roles</span>
+                </div>
+                <div class="separator"></div>
+                <div class="stat-item">
+                    <span class="stat-value">Zero</span>
+                    <span class="stat-label">Config Required</span>
+                </div>
+            </div>
+        </div>
+
+    </header>
+
+    <!-- Features Bento Grid Section -->
+    <section id="features" class="section features-section">
+        <div class="section-header reveal">
+            <h2 class="section-title">Everything you need to <span class="italic-highlight">scale</span></h2>
+            <p class="section-subtitle">No more tying disparate generic scripts together. AGI Farm brings
+                enterprise-grade AI operations directly to your OpenClaw workspace.</p>
+        </div>
+
+        <div class="bento-grid">
+
+            <!-- Large Feature 1 -->
+            <div class="bento-card large tilt-effect reveal glass">
+                <div class="card-glow primary"></div>
+                <div class="bento-content">
+                    <div class="feature-icon bg-blue">📡</div>
+                    <h3 class="feature-title">Live Ops React Dashboard</h3>
+                    <p class="feature-desc">Observe your AI team in real-time. A beautifully built React 18 dashboard
+                        served locally, powered by Server-Sent Events for zero-latency metrics.</p>
+                </div>
+                <div class="card-visual abstract-dash">
+                    <div class="mock-dash-line l1"></div>
+                    <div class="mock-dash-line l2"></div>
+                    <div class="mock-dash-line l3"></div>
+                    <div class="mock-chart">
+                        <div class="bar h-60"></div>
+                        <div class="bar h-80"></div>
+                        <div class="bar h-40"></div>
+                        <div class="bar h-90"></div>
+                        <div class="bar h-70"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medium Feature 1 -->
+            <div class="bento-card medium tilt-effect reveal delay-1 glass">
+                <div class="card-glow purple"></div>
+                <div class="bento-content">
+                    <div class="feature-icon bg-purple">🧙</div>
+                    <h3 class="feature-title">6-Question Wizard</h3>
+                    <p class="feature-desc">Go from an empty directory to an 11-agent team in two minutes. Hand-tuned
+                        prompts and connections.</p>
+                </div>
+            </div>
+
+            <!-- Tall Feature (Auto-Dispatch) -->
+            <div class="bento-card tall tilt-effect reveal delay-2 glass">
+                <div class="card-glow green"></div>
+                <div class="bento-content h-full">
+                    <div class="feature-icon bg-green">⚡</div>
+                    <h3 class="feature-title">Smart Auto-Dispatcher</h3>
+                    <p class="feature-desc">Intelligent task delegation that natively handles human-in-the-loop
+                        approvals, exponential API backoffs, and complex dependency DAGs.</p>
+
+                    <div class="visual-node-graph">
+                        <div class="v-node start">Task</div>
+                        <div class="v-edge"></div>
+                        <div class="v-node process">Validating</div>
+                        <div class="v-edge"></div>
+                        <div class="v-node success pulse-green">Dispatched</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medium Feature 2 -->
+            <div class="bento-card medium tilt-effect reveal delay-1 glass">
+                <div class="card-glow orange"></div>
+                <div class="bento-content">
+                    <div class="feature-icon bg-orange">📦</div>
+                    <h3 class="feature-title">Portable Git Bundles</h3>
+                    <p class="feature-desc">Achieved a great team state? Run one command to export your exact team setup
+                        to a GitHub repo.</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Architecture Section (Refined) -->
+    <section id="architecture" class="section alternate-section">
+        <div class="section-header reveal">
+            <h2 class="section-title">Pre-Wired Topologies</h2>
+            <p class="section-subtitle">Start small with a triage team or deploy a massive 11-agent software pipeline
+                immediately. Powered by OpenClaw.</p>
+        </div>
+
+        <div class="teams-container">
+
+            <div class="team-card glass reveal tilt-effect">
+                <div class="team-header">
+                    <h3>🏃 3-Agent</h3>
+                    <span class="badge sm">Minimal</span>
+                </div>
+                <p>Perfect for simple triage and research.</p>
+                <div class="code-tree">
+                    🦅 Orchestrator
+                    ├──▶ 🔮 Researcher
+                    └──▶ ⚒️ Builder
+                </div>
+                <div class="node-glow"></div>
+            </div>
+
+            <div class="team-card glass reveal delay-1 tilt-effect highlight-card">
+                <div class="active-border slow"></div>
+                <div class="team-header">
+                    <h3>🚀 11-Agent</h3>
+                    <span class="badge sm gradient-badge">Full Stack Recommended</span>
+                </div>
+                <p>Complete enterprise-grade team mapped to real corporate roles.</p>
+                <div class="code-tree highlight-tree">
+                    🦅 Cooper (Orchestrator)
+                    ┌─────────────┼─────────────┐
+                    🔮 Sage ⚒️ Forge 🐛 Pixel
+                    🔭 Vista 🔊 Ciph. 🛡️ Vigil
+                    ⚓ Anch. 📡 Lens � Evol.
+                    │
+                    🧪 Nova
+                </div>
+                <div class="node-glow heavy"></div>
+            </div>
+
+            <div class="team-card glass reveal delay-2 tilt-effect">
+                <div class="team-header">
+                    <h3>⚡ 5-Agent</h3>
+                    <span class="badge sm blue">Standard</span>
+                </div>
+                <p>Well-balanced executing production workloads.</p>
+                <div class="code-tree">
+                    🦅 Orchestrator
+                    ┌────────┼────────┐
+                    🔮 Res. �️ QA
+                    │ │
+                    ⚒️ Build. ⚓ Cont.
+                </div>
+                <div class="node-glow"></div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Dashboard Preview Section -->
+    <section id="dashboard" class="section showcase-section">
+        <div class="showcase-container reveal">
+            <div class="showcase-content">
+                <div class="label-heading">Real-Time</div>
+                <h2 class="section-title text-left">The Command Center</h2>
+                <p class="section-subtitle text-left">Stop guessing what your scripts are doing. AGI Farm provides an
+                    instant window into every agent's thought process and task status.</p>
+
+                <div class="feature-bars">
+                    <div class="feature-bar">
+                        <div class="fb-icon">⚡</div>
+                        <div class="fb-text">
+                            <strong>Zero-Latency Metrics</strong>
+                            <span>Powered by Chokidar and Local SSE.</span>
+                        </div>
+                    </div>
+                    <div class="feature-bar">
+                        <div class="fb-icon">✋</div>
+                        <div class="fb-text">
+                            <strong>Human-in-the-Loop</strong>
+                            <span>Approve or inject notes mid-execution.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="showcase-image-wrap tilt-effect glass">
+                <div class="image-glow"></div>
+                <img src="dashboard_mockup.png" alt="AGI Farm Dashboard Mockup" class="ui-mockup" />
+
+                <!-- Floating elements over image for depth -->
+                <div class="floating-badge badge-1"><span class="pulse-dot green"></span> Agent 'Sage' Ready</div>
+                <div class="floating-badge badge-2"><span class="pulse-dot blue"></span> 145ms Latency</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section id="quick-start" class="section cta-section">
+        <div class="cta-container glass reveal">
+            <div class="cta-glow"></div>
+            <h2 class="gradient-text-animated">Unleash your team.</h2>
+            <p>One command away from production-grade AI infrastructure.</p>
+
+            <div class="cta-actions mt-lg">
+                <a href="#code-snip" class="btn btn-primary btn-lg btn-magnetic cta-copy" id="ctaCopyBtn">
+                    <span class="cmd-text">npm i -g agi-farm</span>
+                    <span class="copy-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </span>
+                </a>
+                <a href="https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN" target="_blank"
+                    class="btn btn-outline btn-lg btn-magnetic">View Documentation</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="logo">
+                    <span class="logo-icon">🦅</span>
+                    <span class="logo-text">AGI Farm</span>
+                </div>
+                <p class="footer-desc">One wizard. Full multi-agent AI team. Live in minutes. Built natively for
+                    OpenClaw.</p>
+            </div>
+            <div class="footer-links">
+                <div class="link-group">
+                    <h4>Resources</h4>
+                    <a href="https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN">GitHub Repo</a>
+                    <a href="https://npmjs.com/package/agi-farm">NPM Package</a>
+                    <a href="https://docs.openclaw.ai">OpenClaw Docs</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 oabdelmaksoud. MIT Licensed.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
