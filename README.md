@@ -144,11 +144,11 @@ Answer 6 questions and your team will be live in ~2 minutes:
 ### Plugin Structure
 
 ```
-.openclaw/extensions/agi-farm/
+.openclaw/extensions/agi-farm/ (or global node_modules/agi-farm/)
 ├── 📦 package.json              Plugin manifest (ESM)
 ├── ⚙️ openclaw.plugin.json     Config schema & commands
-├── 📂 src/
-│   └── 💻 index.ts             Main plugin entry (TypeScript)
+├── 📂 dist/                    Compiled TypeScript (backend)
+├── 📂 dashboard-dist/          Built React frontend (production)
 ├── 🌐 server/
 │   ├── 🖥️ dashboard.js         SSE server (Node.js)
 │   └── 🛠️ utils.js             Core parsing & logic (Unit Tested)
@@ -161,7 +161,7 @@ Answer 6 questions and your team will be live in ~2 minutes:
 │   ├── 🖥️ dashboard.js         Dashboard launcher
 │   └── ⚡ dispatch.js          Auto-dispatcher
 ├── 📋 templates/               Agent & workspace templates
-├── ⚛️ dashboard-react/         Vite + React 18 frontend
+├── ⚛️ dashboard-react/         Vite + React 18 source (Dev)
 └── 📚 skills/
     └── 📖 SKILL.md             Embedded documentation
 ```
@@ -426,8 +426,8 @@ cd AGI-FARM-PLUGIN
 # Install dependencies
 npm install
 
-# Build TypeScript
-npm run build
+# Build backend and dashboard
+npm run build:all
 
 # Link to OpenClaw extensions
 ln -s $(pwd) ~/.openclaw/extensions/agi-farm
@@ -463,7 +463,7 @@ npm run start-dashboard
 
 | Symptom | Fix | Command |
 |---------|-----|---------|
-| ❌ Plugin fails to load | Install dependencies | `npm install` |
+| ❌ Plugin fails to load | Check global install | `npm list -g agi-farm` |
 | 📊 Dashboard shows stale data | Restart dashboard | `/agi-farm dashboard` |
 | 🤖 Agent stuck >30 min | Check broadcast | `cat comms/broadcast.md` |
 | ⚠️ `openclaw` not found | Add to PATH | `export PATH=$PATH:/path/to/openclaw` |
