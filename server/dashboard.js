@@ -7,6 +7,7 @@ import { spawn } from 'child_process';
 import chokidar from 'chokidar';
 import os from 'os';
 import open from 'open';
+import crypto from 'crypto';
 import { parseAgentsJson, parseCronList } from './utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -38,6 +39,8 @@ const WORKSPACE = process.env.AGI_FARM_WORKSPACE ||
     : path.join(os.homedir(), '.openclaw', 'workspace'));
 
 const NO_BROWSER = process.argv.includes('--no-browser');
+const CSRF_TOKEN = process.env.AGI_FARM_DASHBOARD_TOKEN || crypto.randomBytes(24).toString('hex');
+const CRON_FILE = path.join(os.homedir(), '.openclaw', 'cron', 'jobs.json');
 
 // ── Slow Data Cache ───────────────────────────────────────────────────────────
 class SlowDataCache {
@@ -127,6 +130,14 @@ function readJson(filePath) {
   }
 }
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function asObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
 function readMd(filePath) {
   try {
     return fs.readFileSync(filePath, 'utf-8');
@@ -164,9 +175,8 @@ function countInbox(workspace, agentId) {
 
 function loadCrons() {
   try {
-    const cronFile = path.join(os.homedir(), '.openclaw', 'cron', 'jobs.json');
-    const raw = readJson(cronFile);
-    const jobs = raw.jobs || [];
+    const raw = readJson(CRON_FILE);
+    const jobs = asArray(raw.jobs);
     const nowMs = Date.now();
     for (const j of jobs) {
       const state = j.state || {};
@@ -185,21 +195,89 @@ function loadCrons() {
   }
 }
 
+function constantTimeEquals(a, b) {
+  const aBuf = Buffer.from(a || '', 'utf8');
+  const bBuf = Buffer.from(b || '', 'utf8');
+  if (aBuf.length !== bBuf.length) return false;
+  return crypto.timingSafeEqual(aBuf, bBuf);
+}
+
+function requireCsrf(req, res, next) {
+  const token = req.header('x-agi-farm-csrf');
+  if (!token || !constantTimeEquals(token, CSRF_TOKEN)) {
+    res.status(403).json({ error: 'forbidden' });
+    return;
+  }
+  next();
+}
+
+function runOpenclaw(args, timeoutMs = 15000) {
+  return new Promise((resolve) => {
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+    let timeoutId = null;
+
+    try {
+      const proc = spawn('openclaw', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+      timeoutId = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        proc.kill('SIGTERM');
+        resolve({ ok: false, code: null, stdout, stderr: 'timed out' });
+      }, timeoutMs);
+
+      proc.stdout?.on('data', (d) => { stdout += d.toString(); });
+      proc.stderr?.on('data', (d) => { stderr += d.toString(); });
+      proc.on('error', (err) => {
+        if (settled) return;
+        settled = true;
+        if (timeoutId) clearTimeout(timeoutId);
+        resolve({ ok: false, code: null, stdout, stderr: err.message });
+      });
+      proc.on('close', (code) => {
+        if (settled) return;
+        settled = true;
+        if (timeoutId) clearTimeout(timeoutId);
+        resolve({ ok: code === 0, code, stdout, stderr });
+      });
+    } catch (err) {
+      if (timeoutId) clearTimeout(timeoutId);
+      resolve({ ok: false, code: null, stdout, stderr: err.message });
+    }
+  });
+}
+
+function toggleCronEnabled(id) {
+  const raw = readJson(CRON_FILE);
+  const jobs = asArray(raw.jobs);
+  const idx = jobs.findIndex((j) => j && j.id === id);
+  if (idx === -1) {
+    return { ok: false, status: 404, error: 'cron_not_found' };
+  }
+  const current = jobs[idx].enabled !== false;
+  const next = !current;
+  jobs[idx].enabled = next;
+  const out = { ...asObject(raw), jobs };
+  fs.writeFileSync(CRON_FILE, JSON.stringify(out, null, 2), 'utf-8');
+  return { ok: true, enabled: next };
+}
+
 // ── Build Workspace Snapshot ──────────────────────────────────────────────────
 function buildWorkspaceSnapshot(cache) {
-  const tasks = readJson(path.join(WORKSPACE, 'TASKS.json')) || [];
-  const agentStatus = readJson(path.join(WORKSPACE, 'AGENT_STATUS.json')) || {};
-  const agentPerf = readJson(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json')) || {};
-  const budget = readJson(path.join(WORKSPACE, 'BUDGET.json')) || {};
-  const velocity = readJson(path.join(WORKSPACE, 'VELOCITY.json')) || {};
-  const okrs = readJson(path.join(WORKSPACE, 'OKRs.json')) || {};
+  const tasks = asArray(readJson(path.join(WORKSPACE, 'TASKS.json')));
+  const agentStatus = asObject(readJson(path.join(WORKSPACE, 'AGENT_STATUS.json')));
+  const agentPerf = asObject(readJson(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json')));
+  const budget = asObject(readJson(path.join(WORKSPACE, 'BUDGET.json')));
+  const velocity = asObject(readJson(path.join(WORKSPACE, 'VELOCITY.json')));
+  const okrs = asObject(readJson(path.join(WORKSPACE, 'OKRs.json')));
   const broadcast = readMd(path.join(WORKSPACE, 'comms', 'broadcast.md'));
-  const experiments = readJson(path.join(WORKSPACE, 'EXPERIMENTS.json')) || {};
-  const improvementBacklog = readJson(path.join(WORKSPACE, 'IMPROVEMENT_BACKLOG.json')) || {};
-  const sharedKnowledge = readJson(path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json')) || [];
+  const experiments = asObject(readJson(path.join(WORKSPACE, 'EXPERIMENTS.json')));
+  const improvementBacklog = asObject(readJson(path.join(WORKSPACE, 'IMPROVEMENT_BACKLOG.json')));
+  const sharedKnowledge = asArray(readJson(path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json')));
   const memory = readMd(path.join(WORKSPACE, 'MEMORY.md'));
-  const alerts = readJson(path.join(WORKSPACE, 'ALERTS.json')) || [];
-  const projects = readJson(path.join(WORKSPACE, 'PROJECTS.json')) || [];
+  const alerts = asArray(readJson(path.join(WORKSPACE, 'ALERTS.json')));
+  const projects = asArray(readJson(path.join(WORKSPACE, 'PROJECTS.json')));
 
   const crons = loadCrons();
   const cachedAgents = cache.getAgentStatuses();
@@ -313,10 +391,8 @@ async function main() {
   const app = express();
   app.use(express.json());
 
-  // Add CORS header
-  app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    next();
+  app.get('/api/session', (req, res) => {
+    res.json({ csrfToken: CSRF_TOKEN });
   });
 
   const cache = new SlowDataCache();
@@ -372,40 +448,55 @@ async function main() {
   });
 
   // ── Cron Actions ────────────────────────────────────────────────────────────
-  app.post('/api/cron/:id/trigger', async (req, res) => {
+  app.post('/api/cron/:id/trigger', requireCsrf, async (req, res) => {
     const { id } = req.params;
     console.log(`[dashboard] Triggering cron: ${id}`);
     try {
-      spawn('openclaw', ['cron', 'run', id], { stdio: 'inherit' });
-      res.json({ ok: true });
+      const result = await runOpenclaw(['cron', 'run', id]);
+      if (result.ok) {
+        res.json({ ok: true });
+        return;
+      }
+      res.status(500).json({ ok: false, code: result.code, error: result.stderr || 'cron_run_failed' });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
   });
 
-  app.post('/api/cron/:id/toggle', async (req, res) => {
+  app.post('/api/cron/:id/toggle', requireCsrf, async (req, res) => {
     const { id } = req.params;
     console.log(`[dashboard] Toggling cron: ${id}`);
     try {
-      // Note: Generic toggle or enable/disable logic based on state
-      res.json({ ok: true, enabled: true });
+      const result = toggleCronEnabled(id);
+      if (!result.ok) {
+        res.status(result.status || 500).json({ ok: false, error: result.error || 'toggle_failed' });
+        return;
+      }
+      res.json({ ok: true, enabled: result.enabled });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
   });
 
   // ── HITL Actions ────────────────────────────────────────────────────────────
-  app.post('/api/hitl/:id/:action', async (req, res) => {
+  app.post('/api/hitl/:id/:action', requireCsrf, async (req, res) => {
     const { id, action } = req.params;
     const { note } = req.body;
+    if (!['approve', 'reject'].includes(action)) {
+      res.status(400).json({ ok: false, error: 'invalid_action' });
+      return;
+    }
     console.log(`[dashboard] HITL ${action} for task ${id}${note ? `: ${note}` : ''}`);
     try {
       const status = action === 'approve' ? 'pending' : 'blocked';
       const args = ['tasks', 'update', id, '--status', status];
       if (note) args.push('--comment', note);
-
-      spawn('openclaw', args, { stdio: 'inherit' });
-      res.json({ ok: true });
+      const result = await runOpenclaw(args);
+      if (result.ok) {
+        res.json({ ok: true });
+        return;
+      }
+      res.status(500).json({ ok: false, code: result.code, error: result.stderr || 'task_update_failed' });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }

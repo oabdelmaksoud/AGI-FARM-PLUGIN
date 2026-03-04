@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import LastUpdated from '../LastUpdated';
-
-async function apiPost(path, body = {}) {
-  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  return r.json();
-}
+import { apiPost } from '../../lib/api';
 
 function relTime(iso) {
   if (!iso) return '—';

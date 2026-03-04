@@ -34,6 +34,17 @@
 
 ---
 
+## 🆕 Recent Updates
+
+- 🔐 **Dashboard API hardening**: mutation endpoints now require a CSRF token (`/api/session` + `x-agi-farm-csrf` header).
+- ✅ **Accurate action responses**: cron/HITL APIs now wait for `openclaw` command completion and return real success/failure.
+- 🧱 **Runtime safety**: dashboard snapshot loading now guards malformed JSON types instead of crashing.
+- ⚙️ **Cron controls fixed**: dashboard cron toggle now persists enabled/disabled state in OpenClaw cron jobs.
+- 🧰 **Tooling fixed**: ESLint v9 flat config added and Jest ESM test command updated.
+- 📦 **Launcher resilience**: `agi-farm dashboard` now uses local packaged server path with legacy fallback.
+
+---
+
 ## 📸 Preview
 
 ### Dashboard Overview
@@ -102,23 +113,21 @@ openclaw plugins install agi-farm
 agi-farm setup
 ```
 
-Answer 6 questions and your team will be live in ~2 minutes:
+Answer the setup prompts and your team will be live in ~2 minutes:
 
 ```
 🧙 AGI Farm Setup Wizard
 
 ? Team name (e.g., "CooperCorp"): MyTeam
+? Orchestrator name: Cooper
 ? Team size: 11 agents (Full Stack)
-? Domain: Software Development
-? Primary framework: langgraph
-? GitHub repo: myteam/ai-agents
+? Domain: general
+? Collaboration frameworks: langgraph
 ? Confirm setup? Yes
 
 ✅ Creating 11 agents...
 ✅ Setting up workspace...
-✅ Registering cron jobs...
-✅ Creating GitHub bundle...
-✅ Launching dashboard...
+✅ Initializing AGI Farm registries...
 
 🎉 Your AI team is ready!
 ```
@@ -130,7 +139,7 @@ Answer 6 questions and your team will be live in ~2 minutes:
 | Command | Description | Example |
 |---------|-------------|---------|
 | 🎯 `agi-farm setup` | Full wizard — agents, workspace, crons | Sets up complete team |
-| 🗑️ `agi-farm teardown` | Full uninstall — removes agents & workspace | Reverts system to clean state |
+| 🗑️ `agi-farm teardown` | Full uninstall — removes agents, bundle, and AGI Farm-owned registries (`TASKS.json`, `AGENT_STATUS.json`) | Reverts system to clean state |
 | 📊 `agi-farm status` | Team health: agents, tasks, cron status | Shows real-time metrics |
 | 🔧 `agi-farm rebuild` | Regenerate workspace from bundle | After git pull |
 | 📤 `agi-farm export` | Push bundle to GitHub | Creates new release |

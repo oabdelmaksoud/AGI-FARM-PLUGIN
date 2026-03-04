@@ -2,12 +2,15 @@
 import { spawn } from 'child_process';
 import path from 'path';
 import os from 'os';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DASHBOARD_JS = path.join(os.homedir(), '.openclaw', 'extensions', 'agi-farm', 'server', 'dashboard.js');
+const LOCAL_DASHBOARD_JS = path.join(__dirname, '..', 'server', 'dashboard.js');
+const LEGACY_EXT_DASHBOARD_JS = path.join(os.homedir(), '.openclaw', 'extensions', 'agi-farm', 'server', 'dashboard.js');
+const DASHBOARD_JS = fs.existsSync(LOCAL_DASHBOARD_JS) ? LOCAL_DASHBOARD_JS : LEGACY_EXT_DASHBOARD_JS;
 
 const args = process.argv.slice(2);
 const noBrowser = args.includes('--no-browser');

@@ -45,9 +45,9 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "start-dashboard": "node server/dashboard.js",
-    "lint": "eslint src --ext .ts .js"
+    "lint": "eslint src --ext .ts,.js"
   },
   "keywords": [
     "openclaw",

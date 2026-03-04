@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import LastUpdated from '../LastUpdated';
-
-async function apiPost(path) {
-  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-  return r.json();
-}
+import { apiPost } from '../../lib/api';
 
 function fmtDuration(ms) {
   if (!ms) return '—';
