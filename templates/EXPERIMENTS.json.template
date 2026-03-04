@@ -1,0 +1,10 @@
+// Template: EXPERIMENTS.json.template
+// Purpose:  R&D experiments registry — tracks hypotheses, status, and results
+// Variables: team_name
+// Rendered by: generate.py
+{
+  "version": "1.0",
+  "team": "{{TEAM_NAME}}",
+  "updated_at": "{{DATE}}",
+  "experiments": []
+}

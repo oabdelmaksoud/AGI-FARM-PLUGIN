@@ -1,0 +1,10 @@
+// Template: SHARED_KNOWLEDGE.json.template
+// Purpose:  Shared knowledge store — facts any agent can read, keyed by topic
+// Variables: team_name
+// Rendered by: generate.py
+{
+  "version": "1.0",
+  "team": "{{TEAM_NAME}}",
+  "updated_at": "{{DATE}}",
+  "entries": []
+}

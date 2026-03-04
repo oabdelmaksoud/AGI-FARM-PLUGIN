@@ -1,0 +1,31 @@
+<!-- Template: DASHBOARD.md.template -->
+<!-- Purpose:  Live ops dashboard reference — architecture, data sources, LaunchAgent instructions -->
+<!-- Variables: team_name -->
+<!-- Rendered by: generate.py -->
+# DASHBOARD.md — {{TEAM_NAME}} Team Health
+_Updated by Vigil on every heartbeat. Last updated: {{DATE}}_
+
+## Agent Status
+| Agent | Status | Last Active | Current Task |
+|-------|--------|-------------|-------------|
+{{AGENTS_DASHBOARD_TABLE}}
+
+## Task Queue
+- **Pending**: 0
+- **In Progress**: 0
+- **Completed today**: 0
+- **Failed today**: 0
+
+## Quality Scores (last 10 outputs)
+- Average: N/A
+- Below standard (≤2): 0
+- Blocked: 0
+
+## System Health
+- Cron jobs: ✅ Running
+- Comms: ✅ Active
+- Memory: ✅ Under 200 lines
+- Frameworks: {{FRAMEWORKS}}
+
+---
+_{{TEAM_NAME}} AGI Team | Vigil 🛡️ | agi-farm | {{DATE}}_

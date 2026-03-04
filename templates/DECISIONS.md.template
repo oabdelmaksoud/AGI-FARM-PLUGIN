@@ -1,0 +1,16 @@
+<!-- Template: DECISIONS.md.template -->
+<!-- Purpose:  Architectural decision log — records key decisions and their rationale -->
+<!-- Variables: team_name -->
+<!-- Rendered by: generate.py -->
+# DECISIONS.md — {{TEAM_NAME}} Architecture Decision Records
+_Maintained by Sage and Cipher. Every significant decision documented._
+
+## ADR Format
+Each ADR includes: Context → Decision → Consequences → Status
+
+---
+
+_No decisions yet. First ADRs will be added as the team makes architectural choices._
+
+---
+_{{TEAM_NAME}} AGI Team | agi-farm | {{DATE}}_

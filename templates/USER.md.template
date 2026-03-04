@@ -1,0 +1,18 @@
+<!-- Template: USER.md.template -->
+<!-- Purpose:  User profile — name, timezone, preferences; populated by Orchestrator over time -->
+<!-- Variables: team_name -->
+<!-- Rendered by: generate.py -->
+# USER.md — About Your User
+
+_Populated by {{ORCHESTRATOR_NAME}} when they learn about the user._
+
+- **Name:** _(not yet set)_
+- **Timezone:** _(not yet set)_
+- **Notes:** _(not yet set)_
+
+## Context
+
+_(Build this over time. What do they care about? What projects are they working on?)_
+
+---
+_{{TEAM_NAME}} AGI Team | agi-farm | {{DATE}}_

@@ -1,0 +1,23 @@
+# Research Standards — {{TEAM_NAME}}
+_Maintained by Vista and Cipher._
+
+## Report Format (mandatory)
+1. **BLUF** — Bottom Line Up Front (1-2 sentences)
+2. **Key Findings** — top 3-5 insights with implications
+3. **Supporting Evidence** — MECE structure
+4. **Confidence Assessment** — high/medium/low with reasoning
+5. **Limitations** — what we don't know
+6. **Recommendations** — actionable next steps
+
+## Citation Requirements
+- Every factual claim must be sourced
+- Confidence level: high/medium/low
+- For web research: verify across 3+ sources
+
+## Prohibited
+- Raw data dumps without interpretation
+- Claims without sources
+- Missing confidence levels
+
+---
+_{{TEAM_NAME}} AGI Team | agi-farm | {{DATE}}_

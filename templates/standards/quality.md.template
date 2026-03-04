@@ -1,0 +1,37 @@
+# Quality Standards — {{TEAM_NAME}}
+_Maintained by Vigil._
+
+## Rating Scale
+- **5** — Exceptional. Ship as-is.
+- **4** — Good. Minor improvements possible, ship.
+- **3** — Acceptable. Meets minimum bar, ship with notes.
+- **2** — Below standard. Return with specific feedback.
+- **1** — Unacceptable. Full redo required.
+
+**Rule: ≥3 delivers. <3 blocks.**
+
+## Definition of Done by Type
+
+### Code
+- [ ] Tests pass
+- [ ] Linted and formatted
+- [ ] Docs/comments updated
+- [ ] Error cases handled
+
+### Architecture
+- [ ] ADR written
+- [ ] Pre-mortem completed
+- [ ] Implementation checklist provided
+
+### Research
+- [ ] BLUF format followed
+- [ ] All claims sourced
+- [ ] Confidence levels stated
+
+### Content/Documentation
+- [ ] Standards compliant
+- [ ] No contradictions with existing docs
+- [ ] Reviewed for clarity
+
+---
+_{{TEAM_NAME}} AGI Team | agi-farm | {{DATE}}_

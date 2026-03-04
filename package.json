@@ -1,0 +1,87 @@
+{
+  "name": "agi-farm",
+  "version": "1.0.0",
+  "description": "Multi-agent AI team builder for OpenClaw — bootstrap complete teams with auto-dispatcher, dashboard, and infrastructure",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "author": "oabdelmaksoud",
+  "homepage": "https://github.com/oabdelmaksoud/agi-farm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oabdelmaksoud/openclaw-skills.git",
+    "directory": "agi-farm"
+  },
+  "bugs": {
+    "url": "https://github.com/oabdelmaksoud/openclaw-skills/issues"
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "openclaw.plugin.json",
+    "server",
+    "scripts",
+    "templates",
+    "skills",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "prebuild": "rm -rf dist",
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "start-dashboard": "node server/dashboard.js",
+    "lint": "eslint src --ext .ts"
+  },
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "openclaw-extension",
+    "multi-agent",
+    "agent-orchestration",
+    "agent-team",
+    "agentic-workflow",
+    "team-management",
+    "auto-dispatcher",
+    "dashboard",
+    "cli-wizard",
+    "agi",
+    "collaborative-ai",
+    "crewai",
+    "langgraph",
+    "autogen"
+  ],
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "sse.js": "^2.2.0",
+    "chokidar": "^4.0.1",
+    "commander": "^13.1.0",
+    "chalk": "^5.4.1",
+    "ora": "^8.1.1",
+    "inquirer": "^12.4.1",
+    "open": "^10.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/express": "^5.0.0",
+    "@types/inquirer": "^9.0.8",
+    "@types/ejs": "^3.1.5",
+    "typescript": "^5.7.2",
+    "eslint": "^9.21.0",
+    "@eslint/js": "^9.21.0",
+    "typescript-eslint": "^8.24.1",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.14",
+    "ts-jest": "^29.2.5"
+  }
+}

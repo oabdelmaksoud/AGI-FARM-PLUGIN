@@ -1,0 +1,27 @@
+# Coding Standards — {{TEAM_NAME}}
+_Maintained by Forge and Vigil._
+
+## Language Standards
+- Python: PEP 8, type hints required, docstrings for all public functions
+- TypeScript: strict mode, explicit return types
+- Bash: `set -euo pipefail` on all scripts
+
+## Testing
+- All non-trivial functions must have tests
+- TDD preferred: write failing test first
+- Test coverage target: 80%+
+
+## Code Review Checklist
+- [ ] Follows spec exactly
+- [ ] Tests written and passing
+- [ ] Error cases handled
+- [ ] No hardcoded credentials
+- [ ] Docstrings/comments for complex logic
+
+## Git Standards
+- Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`
+- One commit per logical change
+- PR descriptions follow STAR format
+
+---
+_{{TEAM_NAME}} AGI Team | agi-farm | {{DATE}}_

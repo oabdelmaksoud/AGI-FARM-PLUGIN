@@ -1,0 +1,13 @@
+<!-- Template: FAILURES.md.template -->
+<!-- Purpose:  Failure post-mortem log — records incidents and lessons learned -->
+<!-- Variables: team_name -->
+<!-- Rendered by: generate.py -->
+# FAILURES.md — {{TEAM_NAME}} Failure Log
+_Maintained by Pixel and Cipher. Every failure documented, every pattern tracked._
+
+| Date | Task ID | Agent | Failure Type | Root Cause | Fix | Prevention |
+|------|---------|-------|-------------|------------|-----|------------|
+| {{DATE}} | N/A | SYSTEM | `[api-rate-limit]` | LLM Provider rejected request due to high load or limits | Wait and retry | Add job stagger or use exponential backoff in cron/proc |
+
+---
+_{{TEAM_NAME}} AGI Team | agi-farm | {{DATE}}_

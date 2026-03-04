@@ -1,0 +1,24 @@
+<!-- Template: HEARTBEAT.md.template -->
+<!-- Purpose:  Heartbeat status file — updated every 30 min by cron, shows agent health -->
+<!-- Variables: team_name, orchestrator_name, agents[] -->
+<!-- Rendered by: generate.py -->
+# HEARTBEAT.md — {{AGENT_NAME}} Heartbeat Log
+
+_Updated every 30 minutes by scheduled heartbeat._
+
+## Latest Heartbeat
+
+- **Agent**: {{AGENT_NAME}} ({{AGENT_ID}})
+- **Status**: Available
+- **Initialized**: {{DATE}}
+
+## Heartbeat Protocol
+
+Every 30 minutes:
+1. Check inbox for new tasks
+2. Check broadcast for alerts
+3. Update this file with timestamp and status
+4. Report any blocked or stuck items
+
+---
+_{{TEAM_NAME}} AGI Team | agi-farm | {{DATE}}_

@@ -1,0 +1,96 @@
+{
+  "id": "agi-farm",
+  "kind": "team-orchestration",
+  "name": "AGI Farm — Multi-Agent Team Builder",
+  "version": "1.0.0",
+  "description": "Bootstrap complete multi-agent AI teams with auto-dispatcher, live dashboard, and infrastructure. Includes interactive wizard, SOUL.md generation, comms setup, cron registration, and React + SSE ops room.",
+  "author": "oabdelmaksoud",
+  "homepage": "https://github.com/oabdelmaksoud/openclaw-skills/tree/main/agi-farm",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "dashboardPort": {
+        "type": "number",
+        "default": 8080,
+        "minimum": 1024,
+        "maximum": 65535,
+        "description": "Port for the live ops dashboard (SSE + React)"
+      },
+      "dashboardHost": {
+        "type": "string",
+        "default": "127.0.0.1",
+        "description": "Bind address for the dashboard server"
+      },
+      "autoStartDashboard": {
+        "type": "boolean",
+        "default": true,
+        "description": "Automatically start the dashboard when plugin loads"
+      },
+      "workspacePath": {
+        "type": "string",
+        "description": "Path to OpenClaw workspace (defaults to ~/.openclaw/workspace)"
+      },
+      "bundlePath": {
+        "type": "string",
+        "description": "Path to AGI Farm bundle (defaults to <workspace>/agi-farm-bundle)"
+      }
+    },
+    "required": []
+  },
+  "uiHints": {
+    "dashboardPort": {
+      "label": "Dashboard Port",
+      "description": "Port for the live ops dashboard (SSE + React)"
+    },
+    "dashboardHost": {
+      "label": "Dashboard Host",
+      "description": "Bind address for the dashboard server"
+    },
+    "autoStartDashboard": {
+      "label": "Auto-Start Dashboard",
+      "description": "Automatically start the dashboard when OpenClaw loads"
+    },
+    "workspacePath": {
+      "label": "Workspace Path",
+      "description": "Path to OpenClaw workspace directory"
+    },
+    "bundlePath": {
+      "label": "Bundle Path",
+      "description": "Path to AGI Farm team bundle directory"
+    }
+  },
+  "skills": ["skills/agi-farm"],
+  "commands": [
+    {
+      "name": "agi-farm setup",
+      "description": "Interactive wizard to create a new multi-agent AI team",
+      "handler": "./scripts/setup.js"
+    },
+    {
+      "name": "agi-farm status",
+      "description": "Show team health: agents, tasks, cron status",
+      "handler": "./scripts/status.js"
+    },
+    {
+      "name": "agi-farm rebuild",
+      "description": "Regenerate workspace from existing bundle (preserves edits)",
+      "handler": "./scripts/rebuild.js"
+    },
+    {
+      "name": "agi-farm export",
+      "description": "Push team bundle to GitHub repository",
+      "handler": "./scripts/export.js"
+    },
+    {
+      "name": "agi-farm dashboard",
+      "description": "Launch live ops room dashboard (React + SSE)",
+      "handler": "./scripts/dashboard.js"
+    },
+    {
+      "name": "agi-farm dispatch",
+      "description": "Run auto-dispatcher — fires agent sessions for pending tasks",
+      "handler": "./scripts/dispatch.js"
+    }
+  ]
+}

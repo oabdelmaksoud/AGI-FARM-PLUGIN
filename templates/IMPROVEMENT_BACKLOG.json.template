@@ -1,0 +1,29 @@
+// Template: IMPROVEMENT_BACKLOG.json.template
+// Purpose:  Process improvement backlog — queued improvements for Evolve/R&D agents
+// Variables: team_name
+// Rendered by: generate.py
+{
+  "version": "1.0",
+  "team": "{{TEAM_NAME}}",
+  "updated_at": "{{DATE}}",
+  "items": [
+    {
+      "id": "imp-001",
+      "title": "Establish baseline quality metrics",
+      "description": "Set up quality tracking to measure team output quality over time",
+      "priority": "high",
+      "owner": "vigil",
+      "status": "pending",
+      "created_at": "{{DATE}}"
+    },
+    {
+      "id": "imp-002",
+      "title": "Document first process patterns",
+      "description": "As the team runs its first tasks, Evolve should document emerging patterns",
+      "priority": "normal",
+      "owner": "evolve",
+      "status": "pending",
+      "created_at": "{{DATE}}"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+// Template: PROCESSES.json.template
+// Purpose:  Registered process definitions — maps process names to scripts and cron schedules
+// Variables: team_name
+// Rendered by: generate.py
+{
+  "version": "1.0",
+  "team": "{{TEAM_NAME}}",
+  "updated_at": "{{DATE}}",
+  "processes": [
+    {
+      "id": "proc-001",
+      "name": "Task Delegation",
+      "description": "How {{ORCHESTRATOR_NAME}} delegates tasks to specialist agents",
+      "owner": "main",
+      "maturity": "L2",
+      "steps": ["Receive request", "Decompose into subtasks", "Write to agent inbox", "Update TASKS.json", "Monitor outbox", "Synthesize results"],
+      "last_used": null,
+      "use_count": 0
+    },
+    {
+      "id": "proc-002",
+      "name": "Quality Gate",
+      "description": "Vigil reviews all outputs before delivery",
+      "owner": "vigil",
+      "maturity": "L2",
+      "steps": ["Receive output", "Score 1-5", "If >=3 deliver", "If <2 block and return with feedback"],
+      "last_used": null,
+      "use_count": 0
+    },
+    {
+      "id": "proc-003",
+      "name": "Knowledge Synthesis",
+      "description": "Cipher synthesizes agent outputs into institutional memory",
+      "owner": "cipher",
+      "maturity": "L1",
+      "steps": ["Read all outboxes", "Extract learnings", "Update MEMORY.md", "Update SHARED_KNOWLEDGE.json", "Prune if >200 lines"],
+      "last_used": null,
+      "use_count": 0
+    },
+    {
+      "id": "proc-004",
+      "name": "Process Improvement Cycle",
+      "description": "Triggered when same failure type occurs 3x",
+      "owner": "evolve",
+      "maturity": "L1",
+      "steps": ["Identify pattern", "Root cause analysis", "Propose improvement", "Get approval", "Implement", "Measure"],
+      "last_used": null,
+      "use_count": 0
+    },
+    {
+      "id": "proc-005",
+      "name": "Bug Escalation",
+      "description": "Forge escalates to Pixel after 2 failed attempts",
+      "owner": "pixel",
+      "maturity": "L2",
+      "steps": ["Receive escalation", "Reproduce bug", "5 Whys analysis", "Document in FAILURES.md", "Propose fix", "Verify fix"],
+      "last_used": null,
+      "use_count": 0
+    }
+  ]
+}

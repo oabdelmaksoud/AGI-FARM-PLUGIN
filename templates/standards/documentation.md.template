@@ -1,0 +1,26 @@
+# Documentation Standards — {{TEAM_NAME}}
+_Maintained by Anchor and Cipher._
+
+## Principles
+- Lead with the answer (BLUF)
+- One idea per section
+- Consistent terminology — never use synonyms for technical terms
+
+## Markdown Conventions
+- H1 for document title only
+- H2 for major sections
+- H3 for subsections
+- Code blocks for all code, commands, JSON
+- Tables for structured comparisons
+
+## File Naming
+- Lowercase with hyphens: `my-document.md`
+- Dates prefix for time-sensitive: `2026-02-26-decision.md`
+
+## Required Metadata (top of every doc)
+```
+_Maintained by: <agent>. Last updated: <date>._
+```
+
+---
+_{{TEAM_NAME}} AGI Team | agi-farm | {{DATE}}_

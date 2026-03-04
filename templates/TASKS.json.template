@@ -1,0 +1,34 @@
+// Template: TASKS.json.template
+// Purpose:  Task registry — tracks all delegated tasks with status, priority, and SLA
+// Variables: team_name
+// Rendered by: generate.py
+{
+  "_schema": {
+    "description": "Task registry for {{TEAM_NAME}}. Each task follows the schema below.",
+    "task_fields": {
+      "id": "string — T-NNN format",
+      "type": "string — planning|research|process-design|implementation|optimization|architecture|bug-fix",
+      "title": "string",
+      "description": "string — full task description and deliverables",
+      "priority": "string — immediate|normal|background",
+      "created_at": "ISO 8601 timestamp",
+      "assigned_to": "string — agent id (e.g. sage, forge)",
+      "status": "string — pending|in-progress|complete|failed|blocked",
+      "sla": "object — {target, deadline, priority: P1|P2|P3}",
+      "depends_on": "array — list of T-NNN prerequisite ids",
+      "proc_id": "string — optional, references PROCESSES.json proc id (e.g. proc-004). Enables use_count tracking.",
+      "backlog_ref": "string — optional, e.g. KJ-001 or PR-001",
+      "output": "string — deliverable summary written by agent on completion",
+      "started_at": "ISO 8601 timestamp — optional",
+      "completed_at": "ISO 8601 timestamp — mandatory on completion"
+    }
+  },
+  "tasks": [],
+  "meta": {
+    "last_updated": null,
+    "total_created": 0,
+    "total_completed": 0,
+    "total_failed": 0,
+    "overdue": 0
+  }
+}
