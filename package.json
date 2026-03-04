@@ -5,22 +5,22 @@
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "agi-farm": "./scripts/setup.js",
-    "agi-farm-teardown": "./scripts/teardown.js"
+    "agi-farm": "scripts/setup.js",
+    "agi-farm-teardown": "scripts/teardown.js"
   },
   "license": "MIT",
   "author": "oabdelmaksoud",
   "homepage": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN",
   "repository": {
     "type": "git",
-    "url": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN.git"
+    "url": "git+https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN.git"
   },
   "bugs": {
     "url": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN/issues"
   },
   "files": [
-    "dist/index.js",
-    "dist/index.d.ts",
+    "dist",
+    "dashboard-dist",
     "openclaw.plugin.json",
     "server",
     "scripts",
@@ -38,7 +38,9 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "postinstall": "cd dashboard-react && npm install && npm run build",
+    "build:dashboard": "cd dashboard-react && npm run build",
+    "build:all": "npm run build && npm run build:dashboard && rm -rf dashboard-dist && cp -r dashboard-react/dist dashboard-dist",
+    "prepublishOnly": "npm run build:all",
     "prebuild": "rm -rf dist",
     "build": "tsc",
     "dev": "tsc --watch",

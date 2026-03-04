@@ -88,18 +88,18 @@
 ### Install
 
 ```bash
-# Install from npm (when published)
-openclaw plugins install agi-farm
+# Install officially from npm
+npm install -g agi-farm
 
-# Or install from GitHub
-openclaw plugins install https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN.git
+# Or via OpenClaw plugin manager
+openclaw plugins install agi-farm
 ```
 
 ### Run Setup Wizard
 
 ```bash
 # Start the interactive wizard
-/agi-farm setup
+agi-farm setup
 ```
 
 Answer 6 questions and your team will be live in ~2 minutes:
@@ -129,13 +129,13 @@ Answer 6 questions and your team will be live in ~2 minutes:
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| 🎯 `/agi-farm setup` | Full wizard — agents, workspace, crons | Sets up complete team |
-| 🗑️ `/agi-farm teardown` | Full uninstall — removes agents & workspace | Reverts system to clean state |
-| 📊 `/agi-farm status` | Team health: agents, tasks, cron status | Shows real-time metrics |
-| 🔧 `/agi-farm rebuild` | Regenerate workspace from bundle | After git pull |
-| 📤 `/agi-farm export` | Push bundle to GitHub | Creates new release |
-| 🖥️ `/agi-farm dashboard` | Launch live ops room (SSE, :8080) | Opens in browser |
-| ⚡ `/agi-farm dispatch` | Run auto-dispatcher manually | Test task routing |
+| 🎯 `agi-farm setup` | Full wizard — agents, workspace, crons | Sets up complete team |
+| 🗑️ `agi-farm teardown` | Full uninstall — removes agents & workspace | Reverts system to clean state |
+| 📊 `agi-farm status` | Team health: agents, tasks, cron status | Shows real-time metrics |
+| 🔧 `agi-farm rebuild` | Regenerate workspace from bundle | After git pull |
+| 📤 `agi-farm export` | Push bundle to GitHub | Creates new release |
+| 🖥️ `agi-farm dashboard` | Launch live ops room (SSE, :8080) | Opens in browser |
+| ⚡ `agi-farm dispatch` | Run auto-dispatcher manually | Test task routing |
 
 ---
 
@@ -529,7 +529,7 @@ Copyright (c) 2025 oabdelmaksoud
 - **GitHub**: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
 - **Issues**: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN/issues
 - **OpenClaw Docs**: https://docs.openclaw.ai
-- **NPM Package**: (coming soon)
+- **NPM Package**: https://www.npmjs.com/package/agi-farm
 
 ---
 

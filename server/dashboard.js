@@ -324,11 +324,16 @@ async function main() {
 
   // Serve React build
   const reactDist = path.join(__dirname, '..', 'dashboard-react', 'dist');
+  const fallbackDist = path.join(__dirname, '..', 'dashboard-dist');
+
   if (fs.existsSync(reactDist)) {
     app.use(express.static(reactDist));
     console.log(`[dashboard] Serving React build from ${reactDist}`);
+  } else if (fs.existsSync(fallbackDist)) {
+    app.use(express.static(fallbackDist));
+    console.log(`[dashboard] Serving React build from ${fallbackDist}`);
   } else {
-    console.log(`[dashboard] React build not found at ${reactDist}, serving API only`);
+    console.log(`[dashboard] React build not found, serving API only`);
   }
 
   // SSE endpoint

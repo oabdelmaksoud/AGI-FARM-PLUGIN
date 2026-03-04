@@ -1,0 +1,32 @@
+# Ignore everything by default (if using .npmignore)
+# Node
+node_modules/
+package-lock.json
+*.log
+
+# Workspace/IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Coverage
+coverage/
+
+# Environment
+.env*
+
+# BUT DO NOT IGNORE THESE (even if in .gitignore)
+!dist/
+!dashboard-react/dist/
+!openclaw.plugin.json
+!server/
+!scripts/
+!templates/
+!skills/
+!README.md
+!LICENSE.md
