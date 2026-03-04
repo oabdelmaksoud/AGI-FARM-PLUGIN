@@ -6,6 +6,25 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-03-04
+
+### Added
+- Added Origin header validation on all mutation endpoints (only localhost origins accepted).
+- Added 22 new unit tests: extension lifecycle, security (timing-safe compare, origin validation), and shared utility tests (28 total, was 6).
+- Added shared `scripts/lib/run-command.js` utility to eliminate code duplication.
+
+### Changed
+- Extension version is now read dynamically from `package.json` instead of being hardcoded.
+- `src/index.ts` uses proper ESM `__dirname` via `import.meta.dirname` with `fileURLToPath` fallback.
+- `export.js` and `status.js` now respect the `AGI_FARM_WORKSPACE` environment variable.
+
+### Fixed
+- Fixed timing-safe CSRF comparison leaking token length (now pads buffers to equal length).
+
+### Removed
+- Removed unused `sse.js` dependency from `package.json`.
+- Removed duplicated `runCommand` functions from `setup.js` and `teardown.js`.
+
 ## [1.0.1] - 2026-03-04
 
 ### Added

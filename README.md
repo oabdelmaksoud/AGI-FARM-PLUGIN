@@ -29,19 +29,21 @@
 | 🔄 **Auto-Dispatcher** | Smart task delegation with HITL, backoff & dependencies |
 | 📦 **Portable Bundle** | Export your entire team to GitHub with one command |
 | 🏗️ **ESM Native** | Built for Node 20+ with full ES Module support |
-| 🛡️ **Production Hardened** | Audited for security, memory leaks, and CLI timeouts |
-| 🧪 **Unit Tested** | Core parsing and logic verified with a Jest/ESM test suite |
+| 🛡️ **Production Hardened** | Security-audited with CSRF, Origin validation, and timing-safe auth |
+| 🧪 **28 Unit Tests** | Extension lifecycle, security, parsing, and CLI utilities verified with Jest/ESM |
 
 ---
 
 ## 🆕 Recent Updates
 
-- 🔐 **Dashboard API hardening**: mutation endpoints now require a CSRF token (`/api/session` + `x-agi-farm-csrf` header).
-- ✅ **Accurate action responses**: cron/HITL APIs now wait for `openclaw` command completion and return real success/failure.
-- 🧱 **Runtime safety**: dashboard snapshot loading now guards malformed JSON types instead of crashing.
-- ⚙️ **Cron controls fixed**: dashboard cron toggle now persists enabled/disabled state in OpenClaw cron jobs.
-- 🧰 **Tooling fixed**: ESLint v9 flat config added and Jest ESM test command updated.
-- 📦 **Launcher resilience**: `agi-farm dashboard` now uses local packaged server path with legacy fallback.
+- 🔐 **Origin validation**: mutation endpoints now validate `Origin` header — only localhost origins accepted.
+- 🔒 **Timing-safe auth hardened**: CSRF token comparison no longer leaks token length via timing.
+- 🧪 **28 unit tests**: added extension lifecycle, security, and shared utility test suites (was 6).
+- 📦 **Removed unused `sse.js`**: dependency cleaned from `package.json`.
+- 🔄 **Dynamic versioning**: extension reads version from `package.json` instead of hardcoding.
+- 🛠️ **ESM `__dirname` fix**: `src/index.ts` now uses `import.meta.dirname` with proper fallback.
+- 🧰 **Shared utilities**: extracted `runCommand` to `scripts/lib/run-command.js` — eliminates duplication.
+- ✅ **Env var consistency**: `export.js` and `status.js` now respect `AGI_FARM_WORKSPACE` like all other scripts.
 
 ---
 
@@ -168,7 +170,9 @@ Answer the setup prompts and your team will be live in ~2 minutes:
 │   ├── 🔧 rebuild.js           Rebuilder
 │   ├── 📤 export.js            GitHub exporter
 │   ├── 🖥️ dashboard.js         Dashboard launcher
-│   └── ⚡ dispatch.js          Auto-dispatcher
+│   ├── ⚡ dispatch.js          Auto-dispatcher
+│   └── 📂 lib/
+│       └── 🛠️ run-command.js   Shared CLI utility
 ├── 📋 templates/               Agent & workspace templates
 ├── ⚛️ dashboard-react/         Vite + React 18 source (Dev)
 └── 📚 skills/
@@ -491,10 +495,11 @@ This plugin is designed with security in mind:
 
 | ✅ What It Does | ❌ What It Doesn't Do |
 |----------------|----------------------|
+| Binds dashboard to `127.0.0.1` only | Expose data to the network |
+| Validates `Origin` header on all mutations | Accept cross-origin requests |
+| Uses CSRF tokens with timing-safe comparison | Leak token length via timing |
 | Uses OpenClaw CLI (inherits credentials) | Store API keys or tokens |
 | Reads/writes local workspace files | Send data to external servers |
-| Runs local HTTP server (127.0.0.1) | Expose data to network |
-| Uses your configured LLM providers | Add additional authentication |
 
 **Your credentials stay in OpenClaw's configuration.**
 
