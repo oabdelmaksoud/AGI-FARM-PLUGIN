@@ -246,26 +246,54 @@ function createAgents(team) {
       const wsPath = path.join(WORKSPACE, 'agents-workspaces', agent.workspace);
       fs.mkdirSync(wsPath, { recursive: true });
 
+      // OpenClaw normalizes the name into an ID. 
+      // We pass the name and let OpenClaw handle the registration.
+      spinner.text = `Registering agent: ${agent.name}...`;
+
       const result = runCommand('openclaw', [
         'agents', 'add',
-        '--agent', agent.id,
-        '--name', agent.name,
-        '--emoji', agent.emoji,
-        '--model', agent.model,
         '--workspace', wsPath,
+        '--model', agent.model,
+        agent.name,
+        '--non-interactive'
       ]);
 
       if (result.status === 0) {
+        // Extract the actual ID from stdout if needed, but for now we trust the normalization.
         spinner.text = `Created agent: ${agent.name} ${agent.emoji}`;
       } else {
-        spinner.text = `Agent ${agent.id} already exists, skipping...`;
+        // If it fails, it might be a conflict.
+        spinner.text = chalk.dim(`Note: ${agent.name} setup skipped (likely already exists)`);
       }
     } catch (err) {
-      spinner.text = `Agent ${agent.id} already exists, skipping...`;
+      spinner.text = chalk.yellow(`⚠ Warning: ${agent.name} failed to initialize.`);
     }
   }
 
-  spinner.succeed(`Created ${team.agents.length - 1} agents`);
+  spinner.succeed(`Agents initialized in ${WORKSPACE}`);
+}
+
+// ── Initialize Comms ────────────────────────────────────────────────────────
+function initializeComms(team) {
+  const spinner = ora('Initializing comms infrastructure...').start();
+
+  const commsDir = path.join(WORKSPACE, 'comms');
+  const inboxesDir = path.join(commsDir, 'inboxes');
+  const outboxesDir = path.join(commsDir, 'outboxes');
+
+  fs.mkdirSync(inboxesDir, { recursive: true });
+  fs.mkdirSync(outboxesDir, { recursive: true });
+
+  // Create broadcast.md
+  fs.writeFileSync(path.join(commsDir, 'broadcast.md'), `# Team Broadcast\n\nWelcome to ${team.team_name}!\n`);
+
+  // Create inboxes and outboxes for each agent
+  for (const agent of team.agents) {
+    fs.writeFileSync(path.join(inboxesDir, `${agent.id}.md`), `# ${agent.name}'s Inbox\n\nNo messages yet.\n`);
+    fs.writeFileSync(path.join(outboxesDir, `${agent.id}.md`), `# ${agent.name}'s Outbox\n\nNo messages yet.\n`);
+  }
+
+  spinner.succeed('Comms infrastructure initialized');
 }
 
 // ── Initialize Registries ─────────────────────────────────────────────────────
@@ -330,6 +358,9 @@ async function main() {
 
     // Create agents
     createAgents(team);
+
+    // Initialize comms
+    initializeComms(team);
 
     // Initialize registries
     initializeRegistries(team);
