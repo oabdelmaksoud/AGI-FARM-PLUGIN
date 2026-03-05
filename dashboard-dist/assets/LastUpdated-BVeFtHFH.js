@@ -1,0 +1,1 @@
+import{a4 as a}from"./vendor-5MxLWm27.js";function n({ts:e,count:t}){return e?a.jsxs("span",{style:{fontSize:9,color:"var(--muted)",marginLeft:"auto",display:"flex",alignItems:"center",gap:6},children:[t!=null&&a.jsxs("span",{style:{color:"var(--cyan)",opacity:.6},children:["#",t]}),"↻ ",e.toLocaleTimeString()]}):null}export{n as L};

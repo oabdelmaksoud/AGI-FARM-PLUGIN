@@ -2,6 +2,7 @@ import { Suspense, lazy, useMemo, useState } from 'react';
 import { useDashboard } from './hooks/useDashboard';
 import Header from './components/Header';
 import Nav from './components/Nav';
+import { useToast } from './components/Toast';
 
 const Overview = lazy(() => import('./components/tabs/Overview'));
 const Agents = lazy(() => import('./components/tabs/Agents'));
@@ -74,8 +75,9 @@ function TabLoading() {
 export default function App() {
   const [activeTab, setActiveTab] = useState('Overview');
   const { data, connected, lastUpdated, updateCount } = useDashboard();
+  const toast = useToast();
 
-  const tabProps = { data, lastUpdated };
+  const tabProps = { data, lastUpdated, toast };
 
   // Badge counts for nav tabs
   const badges = data ? {
