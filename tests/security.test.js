@@ -77,3 +77,90 @@ describe('Origin validation', () => {
     expect(ALLOWED_ORIGINS.has(undefined)).toBe(false);
   });
 });
+
+// ── ID Validation Tests ──────────────────────────────────────────────────────
+
+const ID_PATTERN = /^[a-zA-Z0-9_-]{1,128}$/;
+
+function isSafeId(id) {
+  return typeof id === 'string' && ID_PATTERN.test(id);
+}
+
+describe('isSafeId', () => {
+  test('accepts valid agent IDs', () => {
+    expect(isSafeId('main')).toBe(true);
+    expect(isSafeId('researcher')).toBe(true);
+    expect(isSafeId('qa-engineer')).toBe(true);
+    expect(isSafeId('agent_01')).toBe(true);
+    expect(isSafeId('A-Z_0-9')).toBe(true);
+  });
+
+  test('rejects path traversal attempts', () => {
+    expect(isSafeId('../etc/passwd')).toBe(false);
+    expect(isSafeId('..%2F..%2Fetc')).toBe(false);
+    expect(isSafeId('foo/bar')).toBe(false);
+    expect(isSafeId('foo\\bar')).toBe(false);
+  });
+
+  test('rejects empty and oversized IDs', () => {
+    expect(isSafeId('')).toBe(false);
+    expect(isSafeId('a'.repeat(129))).toBe(false);
+  });
+
+  test('rejects non-string inputs', () => {
+    expect(isSafeId(null)).toBe(false);
+    expect(isSafeId(undefined)).toBe(false);
+    expect(isSafeId(123)).toBe(false);
+    expect(isSafeId({})).toBe(false);
+  });
+
+  test('rejects IDs with special characters', () => {
+    expect(isSafeId('agent;rm -rf')).toBe(false);
+    expect(isSafeId('agent$(cmd)')).toBe(false);
+    expect(isSafeId('agent`cmd`')).toBe(false);
+    expect(isSafeId('agent name')).toBe(false);
+  });
+});
+
+// ── Note Sanitization Tests ──────────────────────────────────────────────────
+
+function sanitizeNote(note) {
+  if (typeof note !== 'string') return '';
+  let cleaned = note.slice(0, 1000).replace(/[\x00-\x1f\x7f]/g, '');
+  if (cleaned.startsWith('-')) cleaned = ' ' + cleaned;
+  return cleaned;
+}
+
+describe('sanitizeNote', () => {
+  test('returns clean string unchanged', () => {
+    expect(sanitizeNote('This is a normal note')).toBe('This is a normal note');
+  });
+
+  test('truncates to 1000 characters', () => {
+    const long = 'x'.repeat(1500);
+    expect(sanitizeNote(long).length).toBe(1000);
+  });
+
+  test('strips control characters', () => {
+    expect(sanitizeNote('hello\x00world')).toBe('helloworld');
+    expect(sanitizeNote('test\x1b[31mred')).toBe('test[31mred');
+    expect(sanitizeNote('line\x7fend')).toBe('lineend');
+  });
+
+  test('prevents CLI flag injection by prepending space', () => {
+    expect(sanitizeNote('--malicious-flag')).toBe(' --malicious-flag');
+    expect(sanitizeNote('-x')).toBe(' -x');
+    expect(sanitizeNote('---')).toBe(' ---');
+  });
+
+  test('does not alter notes that do not start with hyphen', () => {
+    expect(sanitizeNote('normal note with --flag inside')).toBe('normal note with --flag inside');
+  });
+
+  test('handles non-string inputs', () => {
+    expect(sanitizeNote(null)).toBe('');
+    expect(sanitizeNote(undefined)).toBe('');
+    expect(sanitizeNote(123)).toBe('');
+    expect(sanitizeNote({})).toBe('');
+  });
+});

@@ -212,6 +212,34 @@ const ALLOWED_ORIGINS = new Set([
   `http://[::1]:${PORT}`,
 ]);
 
+function requireOrigin(req, res, next) {
+  // Validate Referer/Origin to ensure request comes from the served dashboard page
+  const origin = req.header('origin');
+  const referer = req.header('referer');
+  if (origin) {
+    if (!ALLOWED_ORIGINS.has(origin)) {
+      res.status(403).json({ error: 'forbidden_origin' });
+      return;
+    }
+  } else if (referer) {
+    try {
+      const refOrigin = new URL(referer).origin;
+      if (!ALLOWED_ORIGINS.has(refOrigin)) {
+        res.status(403).json({ error: 'forbidden_origin' });
+        return;
+      }
+    } catch {
+      res.status(403).json({ error: 'forbidden_origin' });
+      return;
+    }
+  } else {
+    // No origin or referer — reject (prevents cross-origin SSE/fetch)
+    res.status(403).json({ error: 'forbidden_origin' });
+    return;
+  }
+  next();
+}
+
 function requireCsrf(req, res, next) {
   // Validate Origin header to prevent cross-origin attacks
   const origin = req.header('origin');
@@ -265,19 +293,29 @@ function runOpenclaw(args, timeoutMs = 15000) {
   });
 }
 
+let cronFileLocked = false;
+
 function toggleCronEnabled(id) {
-  const raw = readJson(CRON_FILE);
-  const jobs = asArray(raw.jobs);
-  const idx = jobs.findIndex((j) => j && j.id === id);
-  if (idx === -1) {
-    return { ok: false, status: 404, error: 'cron_not_found' };
+  if (cronFileLocked) {
+    return { ok: false, status: 409, error: 'cron_file_busy' };
   }
-  const current = jobs[idx].enabled !== false;
-  const next = !current;
-  jobs[idx].enabled = next;
-  const out = { ...asObject(raw), jobs };
-  fs.writeFileSync(CRON_FILE, JSON.stringify(out, null, 2), 'utf-8');
-  return { ok: true, enabled: next };
+  cronFileLocked = true;
+  try {
+    const raw = readJson(CRON_FILE);
+    const jobs = asArray(raw.jobs);
+    const idx = jobs.findIndex((j) => j && j.id === id);
+    if (idx === -1) {
+      return { ok: false, status: 404, error: 'cron_not_found' };
+    }
+    const current = jobs[idx].enabled !== false;
+    const next = !current;
+    jobs[idx].enabled = next;
+    const out = { ...asObject(raw), jobs };
+    fs.writeFileSync(CRON_FILE, JSON.stringify(out, null, 2), 'utf-8');
+    return { ok: true, enabled: next };
+  } finally {
+    cronFileLocked = false;
+  }
 }
 
 // ── Build Workspace Snapshot ──────────────────────────────────────────────────
@@ -300,17 +338,17 @@ function buildWorkspaceSnapshot(cache) {
   const cachedAgents = cache.getAgentStatuses();
   const cronStatuses = cache.getCronStatuses();
 
-  // Enriched Comms (for Comms.jsx)
+  // Enriched Comms (for Comms.jsx) — only for IDs that pass validation
   const comms = {};
-  Object.keys(agentStatus).forEach(id => {
+  Object.keys(agentStatus).filter(isSafeId).forEach(id => {
     comms[id] = {
       inbox: readMd(path.join(WORKSPACE, 'comms', 'inboxes', `${id}.md`)),
       outbox: readMd(path.join(WORKSPACE, 'comms', 'outboxes', `${id}.md`))
     };
   });
 
-  // Enrich agents
-  const agents = Object.entries(agentStatus).map(([id, data]) => {
+  // Enrich agents — skip IDs that fail validation
+  const agents = Object.entries(agentStatus).filter(([id]) => isSafeId(id)).map(([id, data]) => {
     const cached = cachedAgents[id] || {};
     const perf = agentPerf[id] || {};
     return {
@@ -422,9 +460,13 @@ function createRateLimiter(windowMs, maxRequests) {
 // ── Input Validation ──────────────────────────────────────────────────────────
 const ID_PATTERN = /^[a-zA-Z0-9_-]{1,128}$/;
 
+function isSafeId(id) {
+  return typeof id === 'string' && ID_PATTERN.test(id);
+}
+
 function validateId(req, res, next) {
   const { id } = req.params;
-  if (id && !ID_PATTERN.test(id)) {
+  if (id && !isSafeId(id)) {
     res.status(400).json({ error: 'invalid_id' });
     return;
   }
@@ -433,11 +475,20 @@ function validateId(req, res, next) {
 
 function validateAction(req, res, next) {
   const { action } = req.params;
-  if (action && !ID_PATTERN.test(action)) {
+  if (action && !isSafeId(action)) {
     res.status(400).json({ error: 'invalid_action' });
     return;
   }
   next();
+}
+
+function sanitizeNote(note) {
+  if (typeof note !== 'string') return '';
+  // Truncate, strip control characters, and prevent CLI flag injection
+  let cleaned = note.slice(0, 1000).replace(/[\x00-\x1f\x7f]/g, '');
+  // Prevent interpretation as a CLI flag by prepending a space if starts with -
+  if (cleaned.startsWith('-')) cleaned = ' ' + cleaned;
+  return cleaned;
 }
 
 // ── Main Server ───────────────────────────────────────────────────────────────
@@ -445,11 +496,22 @@ async function main() {
   const app = express();
   app.use(express.json({ limit: '100kb' }));
 
+  // Security headers
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'same-origin');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:;");
+    next();
+  });
+
   const apiLimiter = createRateLimiter(60000, 120);   // 120 req/min
   const actionLimiter = createRateLimiter(60000, 30);  // 30 req/min for mutations
   app.use('/api', apiLimiter);
 
-  app.get('/api/session', (req, res) => {
+  // Session endpoint — origin-gated so only the served dashboard page can fetch the token
+  app.get('/api/session', requireOrigin, (req, res) => {
     res.json({ csrfToken: CSRF_TOKEN });
   });
 
@@ -470,8 +532,13 @@ async function main() {
     console.log(`[dashboard] React build not found, serving API only`);
   }
 
-  // SSE endpoint
+  // SSE endpoint — requires valid CSRF token via query param (EventSource can't set headers)
   app.get('/api/stream', (req, res) => {
+    const token = req.query.token;
+    if (!token || !constantTimeEquals(token, CSRF_TOKEN)) {
+      res.status(403).json({ error: 'forbidden' });
+      return;
+    }
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -499,8 +566,13 @@ async function main() {
     });
   });
 
-  // REST endpoint for one-shot data fetch
+  // REST endpoint for one-shot data fetch — requires CSRF token via header
   app.get('/api/data', (req, res) => {
+    const token = req.header('x-agi-farm-csrf');
+    if (!token || !constantTimeEquals(token, CSRF_TOKEN)) {
+      res.status(403).json({ error: 'forbidden' });
+      return;
+    }
     const snapshot = buildWorkspaceSnapshot(cache);
     res.json(snapshot);
   });
@@ -539,7 +611,7 @@ async function main() {
   // ── HITL Actions ────────────────────────────────────────────────────────────
   app.post('/api/hitl/:id/:action', actionLimiter, validateId, validateAction, requireCsrf, async (req, res) => {
     const { id, action } = req.params;
-    const note = typeof req.body.note === 'string' ? req.body.note.slice(0, 1000) : '';
+    const note = sanitizeNote(req.body.note);
     if (!['approve', 'reject'].includes(action)) {
       res.status(400).json({ ok: false, error: 'invalid_action' });
       return;

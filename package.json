@@ -6,7 +6,12 @@
   "type": "module",
   "bin": {
     "agi-farm": "scripts/setup.js",
-    "agi-farm-teardown": "scripts/teardown.js"
+    "agi-farm-teardown": "scripts/teardown.js",
+    "agi-farm-status": "scripts/status.js",
+    "agi-farm-dashboard": "scripts/dashboard.js",
+    "agi-farm-dispatch": "scripts/dispatch.js",
+    "agi-farm-export": "scripts/export.js",
+    "agi-farm-rebuild": "scripts/rebuild.js"
   },
   "license": "MIT",
   "author": "oabdelmaksoud",
