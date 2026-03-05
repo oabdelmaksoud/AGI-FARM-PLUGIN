@@ -18,7 +18,7 @@ function JobStep({ step }) {
 }
 
 export default function Jobs({ data, lastUpdated }) {
-  const { jobs = [], featureFlags = {} } = data;
+  const { jobs = [], featureFlags = {} } = data || {};
   const [intent, setIntent] = useState('');
   const [priority, setPriority] = useState('P2');
   const [tags, setTags] = useState('');

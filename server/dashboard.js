@@ -16,6 +16,10 @@ import {
 import { getFeatureFlags } from './services/feature-flags.js';
 import { AuditService } from './services/audit.js';
 import { JobsService } from './services/jobs.js';
+import { ProjectService } from './services/projects.js';
+import { TaskService } from './services/tasks.js';
+import { IntakeService } from './services/intake.js';
+import { TimelineService } from './services/timeline.js';
 import { SkillsService } from './services/skills.js';
 import { MemoryService } from './services/memory.js';
 import { PolicyService } from './services/policy.js';
@@ -145,11 +149,61 @@ function asObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
+function asString(value, fallback = '') {
+  if (value == null) return fallback;
+  return String(value);
+}
+
+function asIsoOrNull(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 function readMd(filePath) {
   try {
     return fs.readFileSync(filePath, 'utf-8');
   } catch {
     return '';
+  }
+}
+
+function writeJsonIfMissing(filePath, value) {
+  if (fs.existsSync(filePath)) return false;
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(value, null, 2), 'utf-8');
+  return true;
+}
+
+function ensureOperationalFiles() {
+  const created = [];
+
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'TASKS.json'), [])) created.push('TASKS.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'AGENT_STATUS.json'), {})) created.push('AGENT_STATUS.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json'), {})) created.push('AGENT_PERFORMANCE.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'BUDGET.json'), {
+    period: 'monthly',
+    currency: 'USD',
+    limit: 0,
+    spent: 0,
+    threshold_warn: 0.8,
+  })) created.push('BUDGET.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'VELOCITY.json'), {
+    daily: [],
+    weekly: [],
+    by_agent: {},
+    by_type: {},
+  })) created.push('VELOCITY.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'OKRs.json'), { objectives: [] })) created.push('OKRs.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'EXPERIMENTS.json'), { experiments: [] })) created.push('EXPERIMENTS.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'IMPROVEMENT_BACKLOG.json'), { items: [] })) created.push('IMPROVEMENT_BACKLOG.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json'), [])) created.push('SHARED_KNOWLEDGE.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'ALERTS.json'), [])) created.push('ALERTS.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'PROJECTS.json'), [])) created.push('PROJECTS.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'PROJECT_EVENTS.json'), { events: [] })) created.push('PROJECT_EVENTS.json');
+
+  if (created.length > 0) {
+    console.log(`[dashboard] Seeded missing workspace files: ${created.join(', ')}`);
   }
 }
 
@@ -303,7 +357,7 @@ function buildWorkspaceSnapshot(cache, services) {
   const sharedKnowledge = asArray(readJson(path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json')));
   const memory = readMd(path.join(WORKSPACE, 'MEMORY.md'));
   const alerts = asArray(readJson(path.join(WORKSPACE, 'ALERTS.json')));
-  const projects = asArray(readJson(path.join(WORKSPACE, 'PROJECTS.json')));
+  const projectsRaw = asArray(readJson(path.join(WORKSPACE, 'PROJECTS.json')));
   const flags = getFeatureFlags();
 
   const crons = loadCrons();
@@ -357,6 +411,8 @@ function buildWorkspaceSnapshot(cache, services) {
   const jobs = flags.jobs ? services.jobs.list({}).slice(0, 100) : [];
   const approvals = flags.approvals ? services.policy.listApprovals() : [];
   const usage = flags.metering ? services.metering.getUsage() : { records: [], perAgent: {}, perModel: {}, totals: {} };
+  const projects = enrichProjects(projectsRaw, tasks, agentPerf);
+  const projectEvents = services.timeline ? services.timeline.list(null, { limit: 120 }) : [];
 
   return {
     timestamp: new Date().toISOString(),
@@ -379,6 +435,7 @@ function buildWorkspaceSnapshot(cache, services) {
     crons,
     alerts,
     projects,
+    project_events: projectEvents,
     comms,
     jobs,
     approvals,
@@ -497,6 +554,7 @@ function createPolicyGate(services, actionFactory) {
 async function main() {
   const app = express();
   app.use(express.json({ limit: '100kb' }));
+  ensureOperationalFiles();
 
   const apiLimiter = createRateLimiter(60000, 120);
   const actionLimiter = createRateLimiter(60000, 30);
@@ -508,6 +566,10 @@ async function main() {
   const services = {
     audit: new AuditService(WORKSPACE),
     jobs: null,
+    projects: null,
+    tasks: null,
+    intake: null,
+    timeline: null,
     skills: null,
     memory: null,
     policy: null,
@@ -516,10 +578,37 @@ async function main() {
   };
 
   services.jobs = new JobsService(WORKSPACE, services.audit);
+  services.projects = new ProjectService(WORKSPACE);
+  services.tasks = new TaskService(WORKSPACE);
+  services.timeline = new TimelineService(WORKSPACE);
   services.skills = new SkillsService(WORKSPACE);
   services.memory = new MemoryService(WORKSPACE);
   services.policy = new PolicyService(WORKSPACE);
   services.metering = new MeteringService(WORKSPACE);
+  services.intake = new IntakeService({
+    projects: services.projects,
+    tasks: services.tasks,
+    jobs: services.jobs,
+    timeline: services.timeline,
+  });
+
+  services.jobs.setUpdateHook((job, prev) => {
+    services.tasks.syncFromJob(job);
+    if (job.projectId) {
+      services.projects.linkJob(job.projectId, job.id);
+      if (job.rootTaskId) services.projects.linkTask(job.projectId, job.rootTaskId);
+      if (!prev || prev.status !== job.status) {
+        services.timeline.append({
+          project_id: job.projectId,
+          entity_type: 'job',
+          entity_id: job.id,
+          event_type: 'job_status_changed',
+          summary: `${job.title || job.id}: ${prev?.status || 'new'} -> ${job.status}`,
+          payload: { previous: prev?.status || null, current: job.status, jobId: job.id, rootTaskId: job.rootTaskId || null },
+        });
+      }
+    }
+  });
 
   services.worker = new WorkerService({
     jobs: services.jobs,
@@ -579,6 +668,363 @@ async function main() {
 
   app.get('/api/data', (req, res) => {
     res.json(buildWorkspaceSnapshot(cache, services));
+  });
+
+  app.post('/api/intake/task', actionLimiter, requireCsrf, createPolicyGate(services, () => 'intake:task:create'), requireFeature('jobs'), (req, res) => {
+    try {
+      const body = asObject(req.body);
+      const out = services.intake.submit({
+        title: body.title,
+        intent: body.intent,
+        description: body.description,
+        priority: body.priority,
+        tags: asArray(body.tags),
+        project_hint: body.project_hint || null,
+        constraints: asObject(body.constraints),
+      });
+      services.audit.log('intake_task_created', { intakeId: out.intakeId, projectId: out.projectId, jobId: out.jobId });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json(out);
+    } catch (err) {
+      res.status(400).json({ error: err.message || 'intake_failed' });
+    }
+  });
+
+  app.get('/api/projects', (req, res) => {
+    const snapshot = buildWorkspaceSnapshot(cache, services);
+    const filters = {
+      status: req.query.status ? String(req.query.status) : undefined,
+      owner: req.query.owner ? String(req.query.owner) : undefined,
+      risk: req.query.risk ? String(req.query.risk) : undefined,
+      search: req.query.search ? String(req.query.search) : undefined,
+      sort: req.query.sort ? String(req.query.sort) : undefined,
+    };
+    const projects = services.projects.list(filters, snapshot.tasks || [], asObject(readJson(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json'))));
+    res.json({ projects });
+  });
+
+  app.get('/api/projects/:id', validateId, (req, res) => {
+    const snapshot = buildWorkspaceSnapshot(cache, services);
+    const project = services.projects.get(req.params.id, snapshot.tasks || [], asObject(readJson(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json'))));
+    if (!project) {
+      res.status(404).json({ error: 'project_not_found' });
+      return;
+    }
+    const tasks = (snapshot.tasks || []).filter((t) => t.project_id === project.id || (project.task_ids || []).includes(t.id));
+    const jobs = services.jobs.list({ projectId: project.id }).slice(0, 200);
+    const approvals = services.policy.listApprovals().filter((a) => jobs.some((j) => j.id === a.jobId));
+    const timeline = services.timeline.list(project.id, { limit: 400 });
+    res.json({ project, tasks, jobs, approvals, timeline });
+  });
+
+  app.post('/api/projects', actionLimiter, requireCsrf, createPolicyGate(services, () => 'project:create'), (req, res) => {
+    try {
+      const body = asObject(req.body);
+      const created = services.projects.create({
+        name: asString(body.name || body.title, 'Untitled Project'),
+        description: asString(body.description || ''),
+        status: asString(body.status || 'active'),
+        owner: asString(body.owner || 'main'),
+        team: asArray(body.team).map(String),
+        objective: asString(body.objective || body.description || ''),
+        target_completion: asIsoOrNull(body.target_completion),
+        tags: asArray(body.tags).map(String),
+        priority_weight: Number(body.priority_weight || 0),
+        budget: asObject(body.budget),
+        okr_refs: asObject(body.okr_refs),
+        milestones: asArray(body.milestones),
+      });
+      services.timeline.append({
+        project_id: created.id,
+        entity_type: 'project',
+        entity_id: created.id,
+        event_type: 'project_created',
+        summary: created.name,
+      });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, project: created });
+    } catch (err) {
+      res.status(400).json({ error: err.message || 'project_create_failed' });
+    }
+  });
+
+  app.patch('/api/projects/:id', actionLimiter, validateId, requireCsrf, createPolicyGate(services, (req) => `project:update:${req.params.id}`), (req, res) => {
+    try {
+      const body = asObject(req.body);
+      const criticalStatus = ['cancelled', 'archived', 'blocked'].includes(String(body.status || '').toLowerCase());
+      if (criticalStatus && getFeatureFlags().policy && getFeatureFlags().approvals) {
+        const ap = services.policy.createApproval({
+          jobId: null,
+          action: `project:critical_status:${req.params.id}`,
+          payload: body,
+          reason: 'critical status change requires approval',
+        });
+        res.status(409).json({ error: 'approval_required', approvalId: ap.id });
+        return;
+      }
+      const updated = services.projects.update(req.params.id, {
+        ...body,
+        target_completion: body.target_completion ? asIsoOrNull(body.target_completion) : undefined,
+      });
+      if (!updated) {
+        res.status(404).json({ error: 'project_not_found' });
+        return;
+      }
+      services.timeline.append({
+        project_id: updated.id,
+        entity_type: 'project',
+        entity_id: updated.id,
+        event_type: 'project_updated',
+        summary: updated.name,
+        payload: { patch: body },
+      });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, project: updated });
+    } catch (err) {
+      res.status(400).json({ error: err.message || 'project_update_failed' });
+    }
+  });
+
+  app.post('/api/projects/:id/tasks', actionLimiter, validateId, requireCsrf, createPolicyGate(services, (req) => `project:task:add:${req.params.id}`), (req, res) => {
+    try {
+      const body = asObject(req.body);
+      const project = services.projects.get(req.params.id);
+      if (!project) {
+        res.status(404).json({ error: 'project_not_found' });
+        return;
+      }
+      const task = services.tasks.create({
+        id: body.id || undefined,
+        title: asString(body.title || 'Untitled task'),
+        description: asString(body.description || ''),
+        type: asString(body.type || 'dev'),
+        priority: asString(body.priority || 'P2'),
+        status: asString(body.status || 'pending'),
+        assigned_to: asString(body.assigned_to || project.owner || 'main'),
+        depends_on: asArray(body.depends_on).map(String),
+        project_id: project.id,
+        sla: asObject(body.sla),
+        estimate: body.estimate || null,
+      });
+      services.projects.linkTask(project.id, task.id);
+      services.timeline.append({
+        project_id: project.id,
+        entity_type: 'task',
+        entity_id: task.id,
+        event_type: 'task_created',
+        summary: task.title,
+      });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, task });
+    } catch (err) {
+      res.status(400).json({ error: err.message || 'task_create_failed' });
+    }
+  });
+
+  app.post('/api/tasks', actionLimiter, requireCsrf, createPolicyGate(services, () => 'task:create'), (req, res) => {
+    try {
+      const body = asObject(req.body);
+      const task = services.tasks.create({
+        id: body.id || undefined,
+        title: asString(body.title || ''),
+        description: asString(body.description || ''),
+        type: asString(body.type || 'dev'),
+        priority: asString(body.priority || 'P2'),
+        status: asString(body.status || 'pending'),
+        assigned_to: asString(body.assigned_to || ''),
+        depends_on: asArray(body.depends_on).map(String),
+        project_id: body.project_id || null,
+        sla: asObject(body.sla),
+        estimate: body.estimate || null,
+      });
+      if (task.project_id) {
+        services.projects.linkTask(task.project_id, task.id);
+      }
+      services.timeline.append({
+        project_id: task.project_id,
+        entity_type: 'task',
+        entity_id: task.id,
+        event_type: 'task_created',
+        summary: task.title,
+      });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, task });
+    } catch (err) {
+      res.status(400).json({ error: err.message || 'task_create_failed' });
+    }
+  });
+
+  app.patch('/api/tasks/:id', actionLimiter, validateId, requireCsrf, createPolicyGate(services, (req) => `task:update:${req.params.id}`), (req, res) => {
+    try {
+      const body = asObject(req.body);
+      const destructive = body.status === 'cancelled' || body.status === 'failed';
+      if (destructive && getFeatureFlags().policy && getFeatureFlags().approvals) {
+        const ap = services.policy.createApproval({
+          jobId: null,
+          action: `task:destructive_update:${req.params.id}`,
+          payload: body,
+          reason: 'destructive task change requires approval',
+        });
+        res.status(409).json({ error: 'approval_required', approvalId: ap.id });
+        return;
+      }
+      const task = services.tasks.update(req.params.id, body);
+      if (!task) {
+        res.status(404).json({ error: 'task_not_found' });
+        return;
+      }
+      services.timeline.append({
+        project_id: task.project_id,
+        entity_type: 'task',
+        entity_id: task.id,
+        event_type: 'task_updated',
+        summary: task.title,
+        payload: body,
+      });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, task });
+    } catch (err) {
+      res.status(400).json({ error: err.message || 'task_update_failed' });
+    }
+  });
+
+  app.post('/api/projects/:id/plan', actionLimiter, validateId, requireCsrf, createPolicyGate(services, (req) => `project:plan:${req.params.id}`), (req, res) => {
+    const project = services.projects.get(req.params.id);
+    if (!project) {
+      res.status(404).json({ error: 'project_not_found' });
+      return;
+    }
+    const milestones = [
+      { id: crypto.randomUUID(), title: 'Discovery', status: 'pending', due: project.target_completion || null, task_ids: [] },
+      { id: crypto.randomUUID(), title: 'Execution', status: 'pending', due: project.target_completion || null, task_ids: [] },
+      { id: crypto.randomUUID(), title: 'Validation', status: 'pending', due: project.target_completion || null, task_ids: [] },
+    ];
+    const updated = services.projects.update(project.id, { milestones });
+    services.timeline.append({
+      project_id: project.id,
+      entity_type: 'project',
+      entity_id: project.id,
+      event_type: 'project_replanned',
+      summary: `${project.name} replanned`,
+    });
+    broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+    res.json({ ok: true, project: updated, milestones });
+  });
+
+  app.post('/api/projects/:id/execute', actionLimiter, validateId, requireCsrf, createPolicyGate(services, (req) => `project:execute:${req.params.id}`), requireFeature('jobs'), (req, res) => {
+    const project = services.projects.get(req.params.id);
+    if (!project) {
+      res.status(404).json({ error: 'project_not_found' });
+      return;
+    }
+    const body = asObject(req.body);
+    const task = services.tasks.create({
+      title: asString(body.title || `Execute ${project.name}`),
+      description: asString(body.description || project.objective || project.description || ''),
+      type: 'execution',
+      priority: asString(body.priority || 'P2'),
+      status: 'pending',
+      assigned_to: project.owner || 'main',
+      depends_on: [],
+      project_id: project.id,
+      sla: body.deadline ? { deadline: asIsoOrNull(body.deadline) } : null,
+    });
+    services.projects.linkTask(project.id, task.id);
+    const job = services.jobs.create({
+      title: task.title,
+      intent: task.description || task.title,
+      priority: task.priority,
+      requestedBy: 'human',
+      tags: Array.isArray(project.tags) ? project.tags : [],
+      rootTaskId: task.id,
+      projectId: project.id,
+    });
+    services.projects.linkJob(project.id, job.id);
+    services.timeline.append({
+      project_id: project.id,
+      entity_type: 'job',
+      entity_id: job.id,
+      event_type: 'project_execution_started',
+      summary: task.title,
+      payload: { taskId: task.id, jobId: job.id },
+    });
+    broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+    res.json({ ok: true, projectId: project.id, taskId: task.id, jobId: job.id });
+  });
+
+  app.get('/api/projects/:id/timeline', validateId, (req, res) => {
+    const project = services.projects.get(req.params.id);
+    if (!project) {
+      res.status(404).json({ error: 'project_not_found' });
+      return;
+    }
+    const limit = Math.max(1, Math.min(Number(req.query.limit) || 200, 2000));
+    const timeline = services.timeline.list(project.id, { limit });
+    res.json({ events: timeline });
+  });
+
+  app.post('/api/projects/:id/budget', actionLimiter, validateId, requireCsrf, createPolicyGate(services, (req) => `project:budget:${req.params.id}`), (req, res) => {
+    const project = services.projects.get(req.params.id);
+    if (!project) {
+      res.status(404).json({ error: 'project_not_found' });
+      return;
+    }
+    const body = asObject(req.body);
+    const nextBudget = {
+      allocated_usd: Number(body.allocated_usd ?? project.budget?.allocated_usd ?? 0),
+      spent_usd: Number(body.spent_usd ?? project.budget?.spent_usd ?? 0),
+      forecast_usd: Number(body.forecast_usd ?? project.budget?.forecast_usd ?? 0),
+      alert_threshold: Number(body.alert_threshold ?? project.budget?.alert_threshold ?? 0.8),
+    };
+
+    const overrun = nextBudget.allocated_usd > 0 && nextBudget.forecast_usd > nextBudget.allocated_usd;
+    if (overrun && getFeatureFlags().policy && getFeatureFlags().approvals) {
+      const ap = services.policy.createApproval({
+        jobId: null,
+        action: `project:budget_overrun:${project.id}`,
+        payload: nextBudget,
+        reason: 'budget overrun requires approval',
+      });
+      res.status(409).json({ error: 'approval_required', approvalId: ap.id });
+      return;
+    }
+
+    const updated = services.projects.update(project.id, { budget: nextBudget });
+    services.timeline.append({
+      project_id: project.id,
+      entity_type: 'project',
+      entity_id: project.id,
+      event_type: 'budget_updated',
+      summary: `Budget updated for ${project.name}`,
+      payload: nextBudget,
+    });
+    broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+    res.json({ ok: true, project: updated });
+  });
+
+  app.post('/api/projects/:id/okr-link', actionLimiter, validateId, requireCsrf, createPolicyGate(services, (req) => `project:okr_link:${req.params.id}`), (req, res) => {
+    const project = services.projects.get(req.params.id);
+    if (!project) {
+      res.status(404).json({ error: 'project_not_found' });
+      return;
+    }
+    const body = asObject(req.body);
+    const updated = services.projects.update(project.id, {
+      okr_refs: {
+        objective_id: body.objective_id || null,
+        kr_ids: asArray(body.kr_ids).map(String),
+      },
+    });
+    services.timeline.append({
+      project_id: project.id,
+      entity_type: 'project',
+      entity_id: project.id,
+      event_type: 'okr_link_updated',
+      summary: `OKR linkage updated for ${project.name}`,
+      payload: updated.okr_refs,
+    });
+    broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+    res.json({ ok: true, project: updated });
   });
 
   // Existing cron and HITL endpoints
@@ -650,15 +1096,26 @@ async function main() {
       requestedBy: body.requestedBy || 'human',
       tags: asArray(body.tags).slice(0, 12),
       rootTaskId: body.rootTaskId || null,
+      projectId: body.projectId || null,
     });
     services.audit.log('api_job_created', { jobId: job.id });
+    if (job.projectId) {
+      services.projects.linkJob(job.projectId, job.id);
+      services.timeline.append({
+        project_id: job.projectId,
+        entity_type: 'job',
+        entity_id: job.id,
+        event_type: 'job_created',
+        summary: job.title || job.id,
+      });
+    }
     broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
     res.json({ ok: true, jobId: job.id, job });
   });
 
   app.get('/api/jobs', requireFeature('jobs'), (req, res) => {
-    const { status, agent, created_after: createdAfter } = req.query;
-    const jobs = services.jobs.list({ status, agent, createdAfter });
+    const { status, agent, created_after: createdAfter, project_id: projectId } = req.query;
+    const jobs = services.jobs.list({ status, agent, createdAfter, projectId });
     res.json({ jobs });
   });
 

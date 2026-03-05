@@ -23,7 +23,7 @@ export default function Broadcast({ data, toast }) {
     setPosting(false);
   };
 
-  const lines = broadcast.split('\n');
+  const lines = (broadcast || '').split('\n');
 
   return (
     <div className="fade-in">
@@ -52,12 +52,12 @@ export default function Broadcast({ data, toast }) {
 function BroadcastLine({ line }) {
   const low = line.toLowerCase();
   let color = 'var(--text)';
-  if (low.includes('[critical]') || low.includes('🔴'))   color = 'var(--red)';
+  if (low.includes('[critical]') || low.includes('🔴')) color = 'var(--red)';
   else if (low.includes('[blocked]') || low.includes('⚠')) color = 'var(--amber)';
-  else if (low.includes('[hitl]')    || low.includes('🚨')) color = 'var(--purple)';
-  else if (low.includes('[done]')    || low.includes('✅')) color = 'var(--green)';
-  else if (line.startsWith('#'))                           color = 'var(--cyan)';
-  else if (line.startsWith('---'))                        color = 'rgba(84,110,122,.5)';
+  else if (low.includes('[hitl]') || low.includes('🚨')) color = 'var(--purple)';
+  else if (low.includes('[done]') || low.includes('✅')) color = 'var(--green)';
+  else if (line.startsWith('#')) color = 'var(--cyan)';
+  else if (line.startsWith('---')) color = 'rgba(84,110,122,.5)';
   else if (low.includes('task_id:') || low.includes('from:')) color = 'var(--muted)';
 
   return (

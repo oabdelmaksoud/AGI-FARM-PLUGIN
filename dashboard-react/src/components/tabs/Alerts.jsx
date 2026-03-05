@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import LastUpdated from '../LastUpdated';
 
-const SEV_COLOR  = { critical: 'var(--red)', high: 'var(--red)', medium: 'var(--amber)', low: 'var(--muted)' };
-const TYPE_ICON  = { hitl: '🚨', sla_breach: '⏰', agent_error: '🔴', cron_error: '⚙️', blocked: '🚫' };
+const SEV_COLOR = { critical: 'var(--red)', high: 'var(--red)', medium: 'var(--amber)', low: 'var(--muted)' };
+const TYPE_ICON = { hitl: '🚨', sla_breach: '⏰', agent_error: '🔴', cron_error: '⚙️', blocked: '🚫' };
 const TYPE_LABEL = { hitl: 'HITL', sla_breach: 'SLA', agent_error: 'Agent', cron_error: 'Cron', blocked: 'Blocked' };
 
 function relTime(iso) {
@@ -16,7 +16,7 @@ function relTime(iso) {
 }
 
 export default function AlertsTab({ data, lastUpdated }) {
-  const { alerts = [], agents = [] } = data;
+  const { alerts = [], agents = [] } = data || {};
   const [dismissed, setDismissed] = useState(new Set());
   const [typeFilter, setTypeFilter] = useState('all');
 
@@ -80,8 +80,10 @@ export default function AlertsTab({ data, lastUpdated }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                 <span style={{ fontWeight: 700, fontSize: 13 }}>{alert.title}</span>
-                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 3, fontWeight: 700,
-                  textTransform: 'uppercase', color, background: `${color}18`, border: `1px solid ${color}44` }}>
+                <span style={{
+                  fontSize: 10, padding: '1px 6px', borderRadius: 3, fontWeight: 700,
+                  textTransform: 'uppercase', color, background: `${color}18`, border: `1px solid ${color}44`
+                }}>
                   {alert.severity}
                 </span>
               </div>

@@ -42,7 +42,12 @@ export class JobsService {
     this.jobsPath = path.join(workspace, 'JOBS.json');
     this.runsPath = path.join(workspace, 'JOB_RUNS.jsonl');
     this.audit = auditService;
+    this.onJobUpdated = null;
     ensureJsonFile(this.jobsPath, DEFAULT_JOBS);
+  }
+
+  setUpdateHook(fn) {
+    this.onJobUpdated = typeof fn === 'function' ? fn : null;
   }
 
   _read() {
@@ -57,11 +62,12 @@ export class JobsService {
     appendJsonl(this.runsPath, { timestamp: nowIso(), jobId, stepId, event, payload });
   }
 
-  list({ status, agent, createdAfter } = {}) {
+  list({ status, agent, createdAfter, projectId } = {}) {
     let jobs = this._read().jobs || [];
     if (status) jobs = jobs.filter((j) => j.status === status);
     if (agent) jobs = jobs.filter((j) => j.steps?.some((s) => s.assignedAgent === agent));
     if (createdAfter) jobs = jobs.filter((j) => new Date(j.createdAt) >= new Date(createdAfter));
+    if (projectId) jobs = jobs.filter((j) => j.projectId === projectId);
     return jobs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 
@@ -69,7 +75,7 @@ export class JobsService {
     return (this._read().jobs || []).find((j) => j.id === jobId) || null;
   }
 
-  create({ title, intent, priority = 'P2', requestedBy = 'human', tags = [], rootTaskId = null }) {
+  create({ title, intent, priority = 'P2', requestedBy = 'human', tags = [], rootTaskId = null, projectId = null }) {
     const data = this._read();
     const job = {
       id: crypto.randomUUID(),
@@ -81,6 +87,7 @@ export class JobsService {
       updatedAt: nowIso(),
       requestedBy,
       rootTaskId,
+      projectId,
       steps: buildStepsFromIntent(intent || ''),
       currentStep: 0,
       error: null,
@@ -90,6 +97,7 @@ export class JobsService {
     data.jobs = Array.isArray(data.jobs) ? data.jobs : [];
     data.jobs.push(job);
     this._write(data);
+    try { this.onJobUpdated?.(job, null); } catch { }
     this._logRun(job.id, null, 'job_created', { status: job.status });
     this.audit?.log('job_created', { jobId: job.id });
     return job;
@@ -99,9 +107,11 @@ export class JobsService {
     const data = this._read();
     const idx = (data.jobs || []).findIndex((j) => j.id === jobId);
     if (idx < 0) return null;
+    const prev = data.jobs[idx];
     const next = updater(data.jobs[idx]);
     data.jobs[idx] = { ...next, updatedAt: nowIso() };
     this._write(data);
+    try { this.onJobUpdated?.(data.jobs[idx], prev); } catch { }
     return data.jobs[idx];
   }
 

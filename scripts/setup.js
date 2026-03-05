@@ -303,6 +303,44 @@ function initializeRegistries(team) {
   }
   fs.writeFileSync(path.join(WORKSPACE, 'AGENT_STATUS.json'), JSON.stringify(status, null, 2));
 
+  // AGENT_PERFORMANCE.json
+  const perf = {};
+  for (const a of team.agents) {
+    perf[a.id] = {
+      tasks_completed: 0,
+      tasks_failed: 0,
+      quality_score: 0,
+      credibility: 1.0,
+    };
+  }
+  fs.writeFileSync(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json'), JSON.stringify(perf, null, 2));
+
+  // BUDGET.json
+  fs.writeFileSync(path.join(WORKSPACE, 'BUDGET.json'), JSON.stringify({
+    period: 'monthly',
+    currency: 'USD',
+    limit: 0,
+    spent: 0,
+    threshold_warn: 0.8,
+  }, null, 2));
+
+  // VELOCITY.json
+  fs.writeFileSync(path.join(WORKSPACE, 'VELOCITY.json'), JSON.stringify({
+    daily: [],
+    weekly: [],
+    by_agent: {},
+    by_type: {},
+  }, null, 2));
+
+  // OKRs.json
+  fs.writeFileSync(path.join(WORKSPACE, 'OKRs.json'), JSON.stringify({ objectives: [] }, null, 2));
+
+  // EXPERIMENTS.json
+  fs.writeFileSync(path.join(WORKSPACE, 'EXPERIMENTS.json'), JSON.stringify({ experiments: [] }, null, 2));
+
+  // IMPROVEMENT_BACKLOG.json
+  fs.writeFileSync(path.join(WORKSPACE, 'IMPROVEMENT_BACKLOG.json'), JSON.stringify({ items: [] }, null, 2));
+
   spinner.succeed('Registries initialized');
 }
 

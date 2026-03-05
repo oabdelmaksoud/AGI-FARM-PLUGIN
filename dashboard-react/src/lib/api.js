@@ -119,3 +119,75 @@ export async function rejectApproval(id, note = '') {
 export async function getUsage() {
   return apiGet('/api/usage');
 }
+
+export async function submitIntakeTask(payload) {
+  return apiPost('/api/intake/task', payload);
+}
+
+export async function listProjects(params = {}) {
+  const qs = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value == null || value === '' || value === 'all') return;
+    qs.set(key, String(value));
+  });
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+  return apiGet(`/api/projects${suffix}`);
+}
+
+export async function getProject(projectId) {
+  return apiGet(`/api/projects/${projectId}`);
+}
+
+export async function createProject(payload) {
+  return apiPost('/api/projects', payload);
+}
+
+export async function updateProject(projectId, patch) {
+  return apiPatch(`/api/projects/${projectId}`, patch);
+}
+
+export async function addProjectTask(projectId, payload) {
+  return apiPost(`/api/projects/${projectId}/tasks`, payload);
+}
+
+export async function createTask(payload) {
+  return apiPost('/api/tasks', payload);
+}
+
+export async function updateTask(taskId, patch) {
+  return apiPatch(`/api/tasks/${taskId}`, patch);
+}
+
+export async function planProject(projectId, payload = {}) {
+  return apiPost(`/api/projects/${projectId}/plan`, payload);
+}
+
+export async function executeProject(projectId, payload = {}) {
+  return apiPost(`/api/projects/${projectId}/execute`, payload);
+}
+
+export async function getProjectTimeline(projectId, limit = 200) {
+  return apiGet(`/api/projects/${projectId}/timeline?limit=${encodeURIComponent(String(limit))}`);
+}
+
+export async function updateProjectBudget(projectId, payload) {
+  return apiPost(`/api/projects/${projectId}/budget`, payload);
+}
+
+export async function updateProjectOkrLink(projectId, payload) {
+  return apiPost(`/api/projects/${projectId}/okr-link`, payload);
+}
+
+export async function apiPatch(path, body = null) {
+  const token = await getCsrfToken();
+  const opts = {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'x-agi-farm-csrf': token },
+  };
+  if (body !== null) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  let payload = {};
+  try { payload = await res.json(); } catch { payload = {}; }
+  if (!res.ok) throw new Error(payload?.error || `request_failed_${res.status}`);
+  return payload;
+}

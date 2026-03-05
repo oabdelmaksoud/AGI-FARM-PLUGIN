@@ -3,7 +3,7 @@ import LastUpdated from '../LastUpdated';
 import { approveApproval, rejectApproval } from '../../lib/api';
 
 export default function Approvals({ data, lastUpdated }) {
-  const { approvals = [], featureFlags = {} } = data;
+  const { approvals = [], featureFlags = {} } = data || {};
   const [notes, setNotes] = useState({});
 
   if (!featureFlags.approvals) {

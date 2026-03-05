@@ -6,6 +6,24 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-03-05
+
+### Added
+- **Mission Control Dashboard UI** — complete visual overhaul of all dashboard tabs with a futuristic "Mission Control" aesthetic featuring neon accents, glassmorphism, JetBrains Mono typography, and high-density data visualizations.
+- **Project Command Board** — new hero section on the Overview tab showing every project as a card with health indicator, animated progress bar, task/milestone stats, live active task titles, team avatar row, and deadline countdown.
+- **Agent Activity Matrix** — full-width agent list on Overview showing real-time active task per agent, HITL alerts, project assignment, heartbeat freshness, and task counts. Agents are sorted: HITL → Active → Error → Idle.
+- **Agents tab enhancements** — each agent card now shows: active task badge (or IDLE), HITL gate alert, workload ring (animated SVG), heartbeat health bar (color-coded), collapsible recent cycles feed, and status filter dropdown.
+- **Velocity tab charts** — added per-agent stacked workload bar chart (done/active/blocked/failed), throughput vs quality scatter plot with emoji agent markers, and enhanced leaderboard with failure rate % and heartbeat indicator.
+- **Autonomous Task Intake** — new intake form on the Projects tab to submit work items that are automatically routed to new or existing projects via the AGI planner.
+- **Project actions** — EXECUTE_NOW and REPLAN buttons in project detail view; inline budget and OKR link editors.
+- **New server services** — `intake.js`, `projects.js`, `tasks.js`, `timeline.js` for project lifecycle management.
+
+### Changed
+- Overview tab is now project-centered: Project Command Board is the primary hero section; task count stats and agent activity are secondary.
+- Agent activity rows on Overview now display the current project each agent is serving.
+- Recent tasks feed shows agent emoji for instant agent identification.
+- Projects tab accepts `data` prop for consistency with other tabs; fetches its own project list via `listProjects()` API helper.
+
 ## [1.2.1] - 2026-03-05
 
 ### Fixed

@@ -66,8 +66,10 @@ function CronRow({ job, agents, onTrigger, onToggle }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <StatusDot status={job._status} errors={errors} />
             <div>
-              <div style={{ fontSize: 12, fontWeight: errors >= 3 ? 700 : 400,
-                color: isError ? 'var(--red)' : 'var(--text)' }}>{job.name}</div>
+              <div style={{
+                fontSize: 12, fontWeight: errors >= 3 ? 700 : 400,
+                color: isError ? 'var(--red)' : 'var(--text)'
+              }}>{job.name}</div>
               {job.description && <div style={{ fontSize: 10, color: 'var(--muted)' }}>{job.description.slice(0, 60)}</div>}
             </div>
           </div>
@@ -91,14 +93,18 @@ function CronRow({ job, agents, onTrigger, onToggle }) {
         </td>
         <td style={{ padding: '8px 12px' }}>
           {isError && (
-            <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 3, fontWeight: 700,
-              background: 'rgba(255,23,68,.15)', color: 'var(--red)', border: '1px solid rgba(255,23,68,.3)' }}>
+            <span style={{
+              fontSize: 10, padding: '2px 6px', borderRadius: 3, fontWeight: 700,
+              background: 'rgba(255,23,68,.15)', color: 'var(--red)', border: '1px solid rgba(255,23,68,.3)'
+            }}>
               {errors}× err
             </span>
           )}
           {!isError && job._status === 'ok' && (
-            <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 3,
-              background: 'rgba(0,230,118,.1)', color: 'var(--green)', border: '1px solid rgba(0,230,118,.25)' }}>ok</span>
+            <span style={{
+              fontSize: 10, padding: '2px 6px', borderRadius: 3,
+              background: 'rgba(0,230,118,.1)', color: 'var(--green)', border: '1px solid rgba(0,230,118,.25)'
+            }}>ok</span>
           )}
         </td>
         <td style={{ padding: '8px 12px' }}>
@@ -130,15 +136,15 @@ function CronRow({ job, agents, onTrigger, onToggle }) {
 }
 
 export default function Crons({ data, lastUpdated }) {
-  const { crons = [], agents = [] } = data;
+  const { crons = [], agents = [] } = data || {};
   const [filter, setFilter] = useState('all');
 
-  const erroring  = crons.filter(j => (j._consecutive_errors || 0) >= 3 || j._status === 'error');
-  const running   = crons.filter(j => j._status === 'running');
-  const disabled  = crons.filter(j => j.enabled === false);
+  const erroring = crons.filter(j => (j._consecutive_errors || 0) >= 3 || j._status === 'error');
+  const running = crons.filter(j => j._status === 'running');
+  const disabled = crons.filter(j => j.enabled === false);
 
   const filtered = crons.filter(j => {
-    if (filter === 'error')   return (j._consecutive_errors || 0) >= 3 || j._status === 'error';
+    if (filter === 'error') return (j._consecutive_errors || 0) >= 3 || j._status === 'error';
     if (filter === 'running') return j._status === 'running';
     if (filter === 'disabled') return j.enabled === false;
     return true;
@@ -172,7 +178,7 @@ export default function Crons({ data, lastUpdated }) {
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        {['all','error','running','disabled'].map(f => (
+        {['all', 'error', 'running', 'disabled'].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             background: filter === f ? 'rgba(0,229,255,.15)' : 'var(--surface)',
             border: `1px solid ${filter === f ? 'rgba(0,229,255,.4)' : 'var(--border)'}`,
@@ -189,8 +195,10 @@ export default function Crons({ data, lastUpdated }) {
           <thead>
             <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
               {['Job', 'Agent', 'Schedule', 'Next', 'Last Run', 'Duration', 'Status', 'Actions'].map(h => (
-                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10,
-                  color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</th>
+                <th key={h} style={{
+                  padding: '8px 12px', textAlign: 'left', fontSize: 10,
+                  color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em'
+                }}>{h}</th>
               ))}
             </tr>
           </thead>

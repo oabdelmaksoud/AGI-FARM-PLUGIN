@@ -71,9 +71,11 @@ function HITLCard({ task, agents, onAction }) {
         <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 6 }}>Optional note (sent to agent)</div>
         <input value={note} onChange={e => setNote(e.target.value)}
           placeholder="Add context for the agent..."
-          style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5,
+          style={{
+            width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5,
             padding: '8px 10px', fontSize: 12, color: 'var(--text)', fontFamily: 'inherit', outline: 'none',
-            boxSizing: 'border-box' }} />
+            boxSizing: 'border-box'
+          }} />
       </div>
 
       {/* Action buttons */}
@@ -98,7 +100,7 @@ function HITLCard({ task, agents, onAction }) {
 }
 
 export default function HITLTab({ data, lastUpdated }) {
-  const { hitl_tasks = [], agents = [] } = data;
+  const { hitl_tasks = [], agents = [] } = data || {};
   const [resolved, setResolved] = useState(new Set());
 
   const pending = hitl_tasks.filter(t => !resolved.has(t.id));

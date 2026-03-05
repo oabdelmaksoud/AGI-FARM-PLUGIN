@@ -2,20 +2,21 @@ const BADGE_COLOR = { 'HITL': 'var(--red)', 'Alerts': 'var(--red)', 'Crons': 'va
 
 export default function Nav({ tabs, active, onChange, badges = {} }) {
   return (
-    <nav style={{
-      height: 44, background: 'var(--bg3)', borderBottom: '1px solid var(--border)',
-      display: 'flex', alignItems: 'stretch', padding: '0 16px', gap: 2,
+    <nav className="glass-panel" style={{
+      height: 48, borderBottom: '1px solid var(--border)',
+      display: 'flex', alignItems: 'stretch', padding: '0 16px', gap: 4,
       position: 'sticky', top: 52, zIndex: 99, overflowX: 'auto',
     }}>
       {tabs.map(tab => {
         const badge = badges[tab];
         return (
           <button key={tab} onClick={() => onChange(tab)} style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: '0 14px',
+            background: 'none', border: 'none', cursor: 'pointer', padding: '0 16px',
             fontSize: 12, fontFamily: 'inherit', fontWeight: active === tab ? 600 : 400,
             color: active === tab ? 'var(--cyan)' : 'var(--muted)',
             borderBottom: active === tab ? '2px solid var(--cyan)' : '2px solid transparent',
-            transition: 'all .15s', whiteSpace: 'nowrap',
+            textShadow: active === tab ? '0 0 10px rgba(0,240,255,0.4)' : 'none',
+            transition: 'all .25s cubic-bezier(0.16, 1, 0.3, 1)', whiteSpace: 'nowrap',
             position: 'relative', display: 'flex', alignItems: 'center', gap: 5,
           }}>
             {tab}
