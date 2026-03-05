@@ -20,6 +20,29 @@ jobs:
 
       - run: npm install
 
+      - name: Preflight version checks
+        id: preflight
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          PLUGIN_VERSION=$(node -p "require('./openclaw.plugin.json').version")
+          PUBLISHED_VERSION=$(npm view agi-farm version 2>/dev/null || echo "")
+
+          echo "package_version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
+          echo "plugin_version=$PLUGIN_VERSION" >> "$GITHUB_OUTPUT"
+          echo "published_version=$PUBLISHED_VERSION" >> "$GITHUB_OUTPUT"
+
+          if [ "$PKG_VERSION" != "$PLUGIN_VERSION" ]; then
+            echo "::error::Version mismatch: package.json=$PKG_VERSION openclaw.plugin.json=$PLUGIN_VERSION"
+            exit 1
+          fi
+
+          if [ -n "$PUBLISHED_VERSION" ] && [ "$PKG_VERSION" = "$PUBLISHED_VERSION" ]; then
+            echo "skip_publish=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping npm publish: agi-farm@$PKG_VERSION is already published."
+          else
+            echo "skip_publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - run: npm run build
 
       - run: npm test
@@ -28,6 +51,13 @@ jobs:
           cd dashboard-react && npm install && npm run build && cd ..
           rm -rf dashboard-dist && cp -r dashboard-react/dist dashboard-dist
 
-      - run: npm publish --provenance --access public
+      - name: Publish package
+        if: steps.preflight.outputs.skip_publish != 'true'
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish skipped summary
+        if: steps.preflight.outputs.skip_publish == 'true'
+        run: |
+          echo "Publish skipped because agi-farm@${{ steps.preflight.outputs.package_version }} already exists on npm."
