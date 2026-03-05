@@ -26,23 +26,26 @@ async function main() {
     console.log(chalk.cyan.bold('\n🚜 AGI Farm — Teardown & Uninstall\n'));
 
     const teamJsonPath = path.join(BUNDLE_DIR, 'team.json');
-    if (!fs.existsSync(teamJsonPath)) {
-        console.log(chalk.yellow('No active team bundle found at ' + BUNDLE_DIR));
-        console.log(chalk.dim('Nothing to teardown. Exiting...'));
-        process.exit(0);
+    let team = { agents: [] };
+
+    if (fs.existsSync(teamJsonPath)) {
+        try {
+            team = JSON.parse(fs.readFileSync(teamJsonPath, 'utf8'));
+            console.log(chalk.yellow(`Found active team: "${team.team_name}"`));
+        } catch (err) {
+            console.error(chalk.red('Failed to read team.json:'), err.message);
+        }
+    } else {
+        console.log(chalk.yellow('No active team bundle found. Proceeding to search for stray AGI Farm components...'));
     }
 
-    let team;
-    try {
-        team = JSON.parse(fs.readFileSync(teamJsonPath, 'utf8'));
-    } catch (err) {
-        console.error(chalk.red('Failed to read team.json:'), err.message);
-        process.exit(1);
+    if (team.team_name) {
+        console.log(chalk.red('WARNING! This action is IRREVERSIBLE.'));
+        console.log(chalk.yellow(`This will delete the "${team.team_name}" team bundle and ALL associated agents.`));
+        console.log(chalk.yellow('All agent workspaces, memories, and tracking files will be removed.\n'));
+    } else {
+        console.log(chalk.red('WARNING! This will search and destroy any stray AGI Farm agents and shared directories.'));
     }
-
-    console.log(chalk.red('WARNING! This action is IRREVERSIBLE.'));
-    console.log(chalk.yellow(`This will delete the "${team.team_name}" team bundle and ALL associated agents.`));
-    console.log(chalk.yellow('All agent workspaces, memories, and tracking files will be removed.\n'));
 
     const { confirm } = await inquirer.prompt([
         {

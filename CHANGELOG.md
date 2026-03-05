@@ -6,6 +6,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-03-05
+
+### Changed
+- Improved `teardown.js` to proceed with stray agent detection and `comms` cleanup even if `team.json` is missing.
+- Enhanced robustness of the uninstallation flow for partially initialized systems.
+
 ## [1.1.3] - 2026-03-05
 
 ### Fixed
