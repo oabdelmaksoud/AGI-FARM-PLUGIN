@@ -1,24 +1,25 @@
-import { useState } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { useDashboard } from './hooks/useDashboard';
 import Header from './components/Header';
 import Nav from './components/Nav';
-import Overview from './components/tabs/Overview';
-import Agents from './components/tabs/Agents';
-import Tasks from './components/tabs/Tasks';
-import Projects from './components/tabs/Projects';
-import Velocity from './components/tabs/Velocity';
-import Budget from './components/tabs/Budget';
-import OKRs from './components/tabs/OKRs';
-import RD from './components/tabs/RD';
-import Broadcast from './components/tabs/Broadcast';
-import Crons from './components/tabs/Crons';
-import HITLTab from './components/tabs/HITL';
-import Knowledge from './components/tabs/Knowledge';
-import Comms from './components/tabs/Comms';
-import AlertsTab from './components/tabs/Alerts';
-import Jobs from './components/tabs/Jobs';
-import Approvals from './components/tabs/Approvals';
-import Usage from './components/tabs/Usage';
+
+const Overview = lazy(() => import('./components/tabs/Overview'));
+const Agents = lazy(() => import('./components/tabs/Agents'));
+const Tasks = lazy(() => import('./components/tabs/Tasks'));
+const Projects = lazy(() => import('./components/tabs/Projects'));
+const Jobs = lazy(() => import('./components/tabs/Jobs'));
+const Approvals = lazy(() => import('./components/tabs/Approvals'));
+const Usage = lazy(() => import('./components/tabs/Usage'));
+const Crons = lazy(() => import('./components/tabs/Crons'));
+const HITLTab = lazy(() => import('./components/tabs/HITL'));
+const AlertsTab = lazy(() => import('./components/tabs/Alerts'));
+const Velocity = lazy(() => import('./components/tabs/Velocity'));
+const Budget = lazy(() => import('./components/tabs/Budget'));
+const OKRs = lazy(() => import('./components/tabs/OKRs'));
+const Knowledge = lazy(() => import('./components/tabs/Knowledge'));
+const Comms = lazy(() => import('./components/tabs/Comms'));
+const RD = lazy(() => import('./components/tabs/RD'));
+const Broadcast = lazy(() => import('./components/tabs/Broadcast'));
 
 const TABS = [
   'Overview', 'Agents', 'Tasks', 'Projects',
@@ -29,6 +30,26 @@ const TABS = [
   'R&D', 'Broadcast',
 ];
 
+const TAB_COMPONENTS = {
+  'Overview': Overview,
+  'Agents': Agents,
+  'Tasks': Tasks,
+  'Projects': Projects,
+  'Jobs': Jobs,
+  'Approvals': Approvals,
+  'Usage': Usage,
+  'Crons': Crons,
+  'HITL': HITLTab,
+  'Alerts': AlertsTab,
+  'Velocity': Velocity,
+  'Budget': Budget,
+  'OKRs': OKRs,
+  'Knowledge': Knowledge,
+  'Comms': Comms,
+  'R&D': RD,
+  'Broadcast': Broadcast,
+};
+
 function Connecting() {
   return (
     <div style={{
@@ -38,6 +59,14 @@ function Connecting() {
       <span style={{ fontSize: 32 }}>🦅</span>
       <div style={{ color: 'var(--cyan)', fontSize: 14, fontWeight: 600 }}>Connecting to Ops Room…</div>
       <div style={{ color: 'var(--muted)', fontSize: 11 }}>Waiting for SSE push from dashboard.js</div>
+    </div>
+  );
+}
+
+function TabLoading() {
+  return (
+    <div className="card" style={{ color: 'var(--muted)' }}>
+      Loading tab...
     </div>
   );
 }
@@ -56,36 +85,18 @@ export default function App() {
     'Approvals': (data.approvals || []).filter(a => a.status === 'pending').length,
   } : {};
 
-  const renderTab = () => {
-    if (!data) return <Connecting />;
-    switch (activeTab) {
-      case 'Overview': return <Overview  {...tabProps} />;
-      case 'Agents': return <Agents    {...tabProps} />;
-      case 'Tasks': return <Tasks     {...tabProps} />;
-      case 'Projects': return <Projects  {...tabProps} />;
-      case 'Jobs': return <Jobs {...tabProps} />;
-      case 'Approvals': return <Approvals {...tabProps} />;
-      case 'Usage': return <Usage {...tabProps} />;
-      case 'Velocity': return <Velocity  {...tabProps} />;
-      case 'Budget': return <Budget    {...tabProps} />;
-      case 'OKRs': return <OKRs      {...tabProps} />;
-      case 'R&D': return <RD        {...tabProps} />;
-      case 'Broadcast': return <Broadcast {...tabProps} />;
-      case 'Crons': return <Crons     {...tabProps} />;
-      case 'HITL': return <HITLTab   {...tabProps} />;
-      case 'Knowledge': return <Knowledge {...tabProps} />;
-      case 'Comms': return <Comms     {...tabProps} />;
-      case 'Alerts': return <AlertsTab {...tabProps} />;
-      default: return <Overview  {...tabProps} />;
-    }
-  };
+  const ActiveTab = useMemo(() => TAB_COMPONENTS[activeTab] || Overview, [activeTab]);
 
   return (
     <div style={{ minHeight: '100vh' }}>
       <Header data={data} connected={connected} lastUpdated={lastUpdated} updateCount={updateCount} />
       <Nav tabs={TABS} active={activeTab} onChange={setActiveTab} badges={badges} />
       <main style={{ padding: 16 }}>
-        {renderTab()}
+        {!data ? <Connecting /> : (
+          <Suspense fallback={<TabLoading />}>
+            <ActiveTab {...tabProps} />
+          </Suspense>
+        )}
       </main>
     </div>
   );
