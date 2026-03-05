@@ -110,11 +110,11 @@
 ### Install
 
 ```bash
-# Install officially from npm
-npm install -g agi-farm
-
-# Or via OpenClaw plugin manager
+# Recommended: install via OpenClaw plugin manager
 openclaw plugins install agi-farm
+
+# Optional: install standalone global CLI binary
+npm install -g agi-farm
 ```
 
 ### Run Setup Wizard
@@ -150,7 +150,7 @@ Answer the setup prompts and your team will be live in ~2 minutes:
 | Command | CLI Shortcut | Description |
 |---------|-------------|-------------|
 | 🎯 `agi-farm setup` | `agi-farm` | Full wizard — agents, workspace, crons |
-| 🗑️ `agi-farm teardown` | `agi-farm-teardown` | Full uninstall — removes agents, bundle, and registries |
+| 🗑️ `agi-farm teardown` | `agi-farm-teardown` | Team teardown — removes AGI Farm agents, bundle, and workspace registries |
 | 📊 `agi-farm status` | `agi-farm-status` | Team health: agents, tasks, cron status |
 | 🔧 `agi-farm rebuild` | `agi-farm-rebuild` | Regenerate workspace from bundle |
 | 📤 `agi-farm export` | `agi-farm-export` | Push bundle to GitHub |
@@ -539,6 +539,28 @@ npm run build:all
 # Link to OpenClaw extensions
 ln -s $(pwd) ~/.openclaw/extensions/agi-farm
 ```
+
+> If you later switch to `openclaw plugins install agi-farm`, remove the dev symlink first:
+> `rm -f ~/.openclaw/extensions/agi-farm`
+
+---
+
+## 🧹 Uninstall Guide
+
+```bash
+# 1) Remove AGI Farm team data (agents, bundle, registries)
+agi-farm teardown
+
+# 2) Remove plugin from OpenClaw
+openclaw plugins uninstall agi-farm --force
+
+# 3) Optional: remove standalone global CLI binary
+npm uninstall -g agi-farm
+```
+
+Notes:
+- `agi-farm teardown` does not uninstall the plugin package.
+- `openclaw plugins uninstall agi-farm --force` removes the plugin install used by OpenClaw.
 
 ---
 
