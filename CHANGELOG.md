@@ -6,6 +6,23 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-03-05
+
+### Added
+- Added feature-flagged core runtime services for jobs, worker execution, skills, memory index, policies, approvals, audit, metering, and encrypted secrets.
+- Added new dashboard APIs: jobs, skills, memory search, policies, approvals, and usage.
+- Added dashboard tabs for Jobs, Approvals, and Usage with live SSE updates.
+- Added API integration smoke test coverage for dashboard server runtime and policy-gated flows.
+
+### Changed
+- Added policy-gate middleware for high-impact mutation routes (cron trigger/toggle, HITL actions, job control, skill toggles).
+- Added dispatch step mode support with `--job-id` and `--step-id`.
+- Added plugin configuration flags for runtime module enablement.
+- Improved dashboard frontend load performance via lazy-loaded tabs and Vite chunk splitting.
+
+### Fixed
+- Fixed build reproducibility by clearing stale TypeScript incremental metadata in prebuild.
+
 ## [1.0.2] - 2026-03-04
 
 ### Added
