@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { getCsrfToken } from '../lib/api.js';
 
 const POLL_INTERVAL_MS = 10_000; // guaranteed refresh every 10s even if SSE stalls
 const SSE_RECONNECT_MS = 3_000;
@@ -13,6 +14,7 @@ export function useDashboard() {
   const aliveRef    = useRef(true);
   const pollTimer   = useRef(null);
   const reconnTimer = useRef(null);
+  const tokenRef    = useRef(null);
 
   const applyData = useCallback((d) => {
     if (!d || d.error || d.type === 'keepalive') return;
@@ -25,20 +27,33 @@ export function useDashboard() {
   const startPolling = useCallback(() => {
     if (pollTimer.current) clearInterval(pollTimer.current);
     pollTimer.current = setInterval(async () => {
-      if (!aliveRef.current) return;
+      if (!aliveRef.current || !tokenRef.current) return;
       try {
-        const res = await fetch('/api/data');
+        const res = await fetch('/api/data', {
+          headers: { 'x-agi-farm-csrf': tokenRef.current },
+        });
         if (res.ok) applyData(await res.json());
       } catch {}
     }, POLL_INTERVAL_MS);
   }, [applyData]);
 
   // SSE connection with auto-reconnect
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (!aliveRef.current) return;
     if (esRef.current) { try { esRef.current.close(); } catch {} }
 
-    const es = new EventSource('/api/stream');
+    // Ensure we have the CSRF token before connecting
+    if (!tokenRef.current) {
+      try {
+        tokenRef.current = await getCsrfToken();
+      } catch {
+        // Retry after delay
+        reconnTimer.current = setTimeout(connect, SSE_RECONNECT_MS);
+        return;
+      }
+    }
+
+    const es = new EventSource(`/api/stream?token=${encodeURIComponent(tokenRef.current)}`);
     esRef.current = es;
 
     es.onopen = () => {
