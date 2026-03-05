@@ -89,7 +89,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh' }}>
-      <Header data={data} connected={connected} lastUpdated={lastUpdated} updateCount={updateCount} />
+      <Header data={data} connected={connected} lastUpdated={lastUpdated} updateCount={updateCount} toast={toast} />
       <Nav tabs={TABS} active={activeTab} onChange={setActiveTab} badges={badges} />
       <main style={{ padding: 16 }}>
         {!data ? <Connecting /> : (

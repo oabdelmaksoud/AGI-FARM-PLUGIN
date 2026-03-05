@@ -2,7 +2,7 @@
   "id": "agi-farm",
   "kind": "team-orchestration",
   "name": "AGI Farm — Multi-Agent Team Builder",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Bootstrap complete multi-agent AI teams with auto-dispatcher, live dashboard, and infrastructure. Includes interactive wizard, SOUL.md generation, comms setup, cron registration, and React + SSE ops room.",
   "author": "oabdelmaksoud",
   "homepage": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN",
@@ -34,6 +34,11 @@
       "bundlePath": {
         "type": "string",
         "description": "Path to AGI Farm bundle (defaults to <workspace>/agi-farm-bundle)"
+      },
+      "autoCheckUpdates": {
+        "type": "boolean",
+        "default": true,
+        "description": "Automatically check GitHub for plugin updates on startup"
       },
       "featureJobs": {
         "type": "boolean",
@@ -88,6 +93,10 @@
     "bundlePath": {
       "label": "Bundle Path",
       "description": "Path to AGI Farm team bundle directory"
+    },
+    "autoCheckUpdates": {
+      "label": "Auto-Check Updates",
+      "description": "Check GitHub for new releases when plugin loads"
     },
     "featureJobs": {
       "label": "Feature: Jobs",
