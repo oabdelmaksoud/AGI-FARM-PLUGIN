@@ -6,6 +6,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-03-05
+
+First public production release.
+
+### Changed
+- Enabled all feature flags by default (`featureJobs`, `featureSkills`, `featureMemory`, `featurePolicy`, `featureMetering`, `featureApprovals`). Users no longer need manual configuration to access the full feature set.
+- Synced `openclaw.plugin.json` version with `package.json`.
+- Replaced hardcoded stray agent name patterns in teardown with a dynamic set derived from all roster presets (3, 5, and 11 agents). Ensures a clean uninstall regardless of the preset chosen.
+- Removed all hardcoded model IDs. Agents use OpenClaw's configured default model (no `--model` flag passed).
+
 ## [1.1.5] - 2026-03-05
 
 ### Changed

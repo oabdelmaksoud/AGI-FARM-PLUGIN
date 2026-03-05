@@ -76,12 +76,12 @@ const DEFAULT_CONFIG: AGIFarmConfig = {
   dashboardHost: "127.0.0.1",
   autoStartDashboard: true,
   autoCheckUpdates: true,
-  featureJobs: false,
-  featureSkills: false,
-  featureMemory: false,
-  featurePolicy: false,
-  featureMetering: false,
-  featureApprovals: false,
+  featureJobs: true,
+  featureSkills: true,
+  featureMemory: true,
+  featurePolicy: true,
+  featureMetering: true,
+  featureApprovals: true,
 };
 
 const GITHUB_RELEASES_URL = "https://api.github.com/repos/oabdelmaksoud/AGI-FARM-PLUGIN/releases/latest";
@@ -123,7 +123,7 @@ class AGIFarmExtension implements OpenClawExtension {
 
     // Non-blocking update check
     if (this.config.autoCheckUpdates) {
-      this.checkForUpdates().catch(() => {});
+      this.checkForUpdates().catch(() => { });
     }
   }
 

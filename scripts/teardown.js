@@ -21,7 +21,15 @@ const __dirname = path.dirname(__filename);
 const WORKSPACE = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
 const BUNDLE_DIR = path.join(WORKSPACE, 'agi-farm-bundle');
 
-// ── Main ───────────────────────────────────────────────────────────────────────
+// All known agent IDs from every roster preset (3, 5, 11 agents)
+// Used to clean up any stray agents regardless of which preset was installed.
+const ALL_KNOWN_ROSTER_IDS = new Set([
+    'researcher', 'builder',                                     // 3-agent roster
+    'qa', 'content',                                             // 5-agent extras
+    'sage', 'forge', 'pixel', 'vista', 'cipher',                // 11-agent extras
+    'vigil', 'anchor', 'lens', 'evolve', 'nova',                // 11-agent extras
+]);
+
 async function main() {
     console.log(chalk.cyan.bold('\n🚜 AGI Farm — Teardown & Uninstall\n'));
 
@@ -78,19 +86,18 @@ async function main() {
         }
     }
 
-    // Phase 2: Live search for stray agents (like sage, forge, pixel, or test agents)
+    // Phase 2: Live search for stray agents using the full known roster ID set
     try {
         spinner.text = 'Searching for stray agents...';
         const listResult = runCommand('openclaw', ['agents', 'list', '--json']);
         if (listResult.status === 0) {
             const liveAgents = JSON.parse(listResult.stdout);
-            const patterns = ['sage', 'forge', 'pixel', 'vigil', 'anchor', 'lens', 'evolve', 'nova', 'cipher', 'vista', 'test-agent', 'stray-agent'];
 
             for (const a of liveAgents) {
                 if (a.id === 'main' || deletedIds.has(a.id)) continue;
 
-                // If ID matches one of our known defaults or session test IDs, delete it
-                if (patterns.some(p => a.id.includes(p))) {
+                // Clean up any agent whose ID matches a known AGI Farm roster entry
+                if (ALL_KNOWN_ROSTER_IDS.has(a.id)) {
                     spinner.text = `Cleaning up stray agent: ${a.id}...`;
                     runCommand('openclaw', ['agents', 'delete', '--force', a.id]);
                     deletedCount++;

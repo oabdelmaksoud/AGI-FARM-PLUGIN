@@ -2,7 +2,7 @@
   "id": "agi-farm",
   "kind": "team-orchestration",
   "name": "AGI Farm — Multi-Agent Team Builder",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Bootstrap complete multi-agent AI teams with auto-dispatcher, live dashboard, and infrastructure. Includes interactive wizard, SOUL.md generation, comms setup, cron registration, and React + SSE ops room.",
   "author": "oabdelmaksoud",
   "homepage": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN",
@@ -42,32 +42,32 @@
       },
       "featureJobs": {
         "type": "boolean",
-        "default": false,
+        "default": true,
         "description": "Enable jobs runtime APIs and background worker"
       },
       "featureSkills": {
         "type": "boolean",
-        "default": false,
+        "default": true,
         "description": "Enable skills registry APIs"
       },
       "featureMemory": {
         "type": "boolean",
-        "default": false,
+        "default": true,
         "description": "Enable memory indexing and search APIs"
       },
       "featurePolicy": {
         "type": "boolean",
-        "default": false,
+        "default": true,
         "description": "Enable policy engine for runtime actions"
       },
       "featureMetering": {
         "type": "boolean",
-        "default": false,
+        "default": true,
         "description": "Enable usage metering APIs and dashboard data"
       },
       "featureApprovals": {
         "type": "boolean",
-        "default": false,
+        "default": true,
         "description": "Enable approval workflows for policy-gated actions"
       }
     },
