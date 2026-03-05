@@ -1,3 +1,4 @@
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import LastUpdated from '../LastUpdated';
 
 export default function Budget({ data, lastUpdated }) {
@@ -69,6 +70,28 @@ export default function Budget({ data, lastUpdated }) {
           );
         })}
       </div>
+
+      {/* Spend distribution chart */}
+      {Object.keys(byAgent).length > 0 && (
+        <div className="card">
+          <div className="section-title" style={{ marginBottom: 12 }}>Agent Spend Distribution</div>
+          <ResponsiveContainer width="100%" height={Math.max(200, Object.keys(byAgent).length * 32)}>
+            <BarChart data={Object.entries(byAgent).map(([name, v]) => ({
+              name, spent: typeof v === 'object' ? (v.spent ?? 0) : v
+            })).sort((a, b) => b.spent - a.spent)} layout="vertical" margin={{ left: 80, right: 20, top: 5, bottom: 5 }}>
+              <XAxis type="number" tick={{ fill: '#546e7a', fontSize: 10 }} tickFormatter={v => `$${v.toFixed(2)}`} />
+              <YAxis type="category" dataKey="name" tick={{ fill: '#b0bec5', fontSize: 11 }} width={75} />
+              <Tooltip formatter={(v) => [`$${v.toFixed(3)}`, 'Spent']}
+                contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 6, fontSize: 11 }} />
+              <Bar dataKey="spent" radius={[0, 4, 4, 0]}>
+                {Object.entries(byAgent).map(([name], i) => (
+                  <Cell key={name} fill={['#00e5ff','#00e676','#ffd600','#e040fb','#ff6e40','#18ffff','#76ff03','#ffab40'][i % 8]} fillOpacity={0.7} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         <BreakdownTable title="By Agent" data={byAgent} />

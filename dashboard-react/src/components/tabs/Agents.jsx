@@ -1,33 +1,58 @@
+import { useState } from 'react';
+import { apiPost } from '../../lib/api';
 import LastUpdated from '../LastUpdated';
 
-export default function Agents({ data, lastUpdated }) {
+export default function Agents({ data, lastUpdated, toast }) {
   const { agents = [], cache_age_seconds } = data;
   const cacheAge = cache_age_seconds ?? null;
+  const [search, setSearch] = useState('');
+
+  const filtered = agents.filter(a => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (a.name || '').toLowerCase().includes(q) || (a.id || '').toLowerCase().includes(q) || (a.role || '').toLowerCase().includes(q);
+  });
 
   return (
     <div className="fade-in">
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12, gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
+        <input className="input-base" placeholder="Search agents..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: '0 1 200px' }} />
         <span style={{ fontSize: 10, color: 'var(--muted)' }}>
-          {agents.length} agents
+          {filtered.length} agent{filtered.length !== 1 ? 's' : ''}
         </span>
         {cacheAge != null && (
           <span style={{ fontSize: 10, color: cacheAge > 25 ? 'var(--amber)' : 'var(--muted)' }}>
-            🔄 Agent/cron data cached {cacheAge}s ago (refreshes every 30s)
+            🔄 cached {cacheAge}s ago
           </span>
         )}
         <LastUpdated ts={lastUpdated} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 14 }}>
-        {agents.map(a => <AgentCard key={a.id} agent={a} />)}
+        {filtered.map(a => <AgentCard key={a.id} agent={a} toast={toast} />)}
       </div>
     </div>
   );
 }
 
-function AgentCard({ agent: a }) {
+function AgentCard({ agent: a, toast }) {
+  const [msgOpen, setMsgOpen] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [sending, setSending] = useState(false);
   const dotCls = { active: 'dot-active', available: 'dot-available', busy: 'dot-busy', error: 'dot-error' }[a.status] || 'dot-offline';
   const badgeCls = { active: 'badge-active', available: 'badge-available', busy: 'badge-busy', error: 'badge-error' }[a.status] || 'badge-offline';
   const cred = a.credibility ?? 1.0;
+
+  const handleSend = async () => {
+    if (!msg.trim()) return;
+    setSending(true);
+    try {
+      await apiPost(`/api/comms/${a.id}/send`, { message: msg.trim() });
+      toast(`Message sent to ${a.name}`, 'success');
+      setMsg(''); setMsgOpen(false);
+    } catch (e) { toast(e.message, 'error'); }
+    setSending(false);
+  };
+
   return (
     <div className="card">
       {/* Header */}
@@ -81,7 +106,7 @@ function AgentCard({ agent: a }) {
 
       {/* Specializations */}
       {a.specializations?.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
           {a.specializations.map(s => (
             <span key={s} style={{
               fontSize: 9, padding: '2px 6px', background: 'rgba(0,229,255,.07)',
@@ -89,6 +114,17 @@ function AgentCard({ agent: a }) {
             }}>{s}</span>
           ))}
         </div>
+      )}
+
+      {/* Send Message */}
+      {msgOpen ? (
+        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+          <input className="input-base" style={{ flex: 1 }} placeholder="Type a message..." value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} maxLength={2000} />
+          <button className="btn-primary" onClick={handleSend} disabled={sending || !msg.trim()}>{sending ? '...' : 'Send'}</button>
+          <button className="input-base" style={{ cursor: 'pointer', padding: '4px 8px' }} onClick={() => setMsgOpen(false)}>X</button>
+        </div>
+      ) : (
+        <button className="input-base" style={{ width: '100%', cursor: 'pointer', marginTop: 8, textAlign: 'center', fontSize: 10, color: 'var(--muted)' }} onClick={() => setMsgOpen(true)}>Send Message</button>
       )}
     </div>
   );

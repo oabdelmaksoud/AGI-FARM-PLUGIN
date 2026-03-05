@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiPost } from '../../lib/api';
 import LastUpdated from '../LastUpdated';
 
 const FILTERS = ['all', 'pending', 'in-progress', 'complete', 'failed', 'blocked', '🚨 hitl'];
@@ -120,20 +121,50 @@ function TaskRow({ task: t, expanded, onToggle }) {
   );
 }
 
-export default function Tasks({ data, lastUpdated }) {
-  const { tasks = [] } = data;
+export default function Tasks({ data, lastUpdated, toast }) {
+  const { tasks = [], agents = [] } = data;
   const [filter, setFilter] = useState('all');
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState(null);
+  const [search, setSearch] = useState('');
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
+  const [showNew, setShowNew] = useState(false);
+  const [newTask, setNewTask] = useState({ id: '', title: '', description: '', priority: 'P2', assigned_to: '', type: 'dev' });
+  const [saving, setSaving] = useState(false);
+
+  const handleSort = (col) => {
+    if (sortCol === col) { setSortDir(d => d === 'asc' ? 'desc' : 'asc'); }
+    else { setSortCol(col); setSortDir('asc'); }
+  };
+
+  const handleCreate = async () => {
+    if (!newTask.id || !newTask.title) return;
+    setSaving(true);
+    try {
+      await apiPost('/api/tasks', newTask);
+      toast('Task created', 'success');
+      setShowNew(false);
+      setNewTask({ id: '', title: '', description: '', priority: 'P2', assigned_to: '', type: 'dev' });
+    } catch (e) { toast(e.message, 'error'); }
+    setSaving(false);
+  };
 
   const filtered = tasks.filter(t => {
-    if (filter === 'all') return true;
-    if (filter === '🚨 hitl') return t.status === 'needs_human_decision';
-    return t.status === filter;
+    if (filter === '🚨 hitl' ? t.status !== 'needs_human_decision' : (filter !== 'all' && t.status !== filter)) return false;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (t.id || '').toLowerCase().includes(q) || (t.title || '').toLowerCase().includes(q) || (t.assigned_to || '').toLowerCase().includes(q);
   });
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const sorted = sortCol ? [...filtered].sort((a, b) => {
+    const va = (a[sortCol] || '').toString().toLowerCase();
+    const vb = (b[sortCol] || '').toString().toLowerCase();
+    return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+  }) : filtered;
+
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+  const paged = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const toggle = (id) => setExpanded(prev => prev === id ? null : id);
 
@@ -148,6 +179,7 @@ export default function Tasks({ data, lastUpdated }) {
     <div className="fade-in">
       {/* Filter bar */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input className="input-base" placeholder="Search tasks..." value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} style={{ flex: '0 1 180px' }} />
         {FILTERS.map(f => (
           <button key={f} onClick={() => setFilterAndReset(f)} style={{
             background: filter === f ? 'rgba(0,229,255,.15)' : 'var(--surface)',
@@ -159,21 +191,46 @@ export default function Tasks({ data, lastUpdated }) {
           </button>
         ))}
         <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--muted)' }}>
-          {filtered.length} task{filtered.length !== 1 ? 's' : ''}
+          {sorted.length} task{sorted.length !== 1 ? 's' : ''}
         </span>
+        <button className="btn-primary" onClick={() => setShowNew(v => !v)}>+ New Task</button>
         <LastUpdated ts={lastUpdated} />
       </div>
+
+      {/* New task form */}
+      {showNew && (
+        <div className="card" style={{ marginBottom: 14, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          <input className="input-base" placeholder="Task ID *" value={newTask.id} onChange={e => setNewTask(p => ({ ...p, id: e.target.value }))} />
+          <input className="input-base" placeholder="Title *" value={newTask.title} onChange={e => setNewTask(p => ({ ...p, title: e.target.value }))} style={{ gridColumn: 'span 2' }} />
+          <input className="input-base" placeholder="Description" value={newTask.description} onChange={e => setNewTask(p => ({ ...p, description: e.target.value }))} style={{ gridColumn: 'span 2' }} />
+          <select className="input-base" value={newTask.priority} onChange={e => setNewTask(p => ({ ...p, priority: e.target.value }))}>
+            <option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option>
+          </select>
+          <select className="input-base" value={newTask.assigned_to} onChange={e => setNewTask(p => ({ ...p, assigned_to: e.target.value }))}>
+            <option value="">Assign to...</option>
+            {agents.map(a => <option key={a.id} value={a.id}>{a.emoji} {a.name}</option>)}
+          </select>
+          <select className="input-base" value={newTask.type} onChange={e => setNewTask(p => ({ ...p, type: e.target.value }))}>
+            <option value="dev">dev</option><option value="research">research</option><option value="review">review</option><option value="ops">ops</option>
+          </select>
+          <div style={{ gridColumn: 'span 3', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button className="btn-primary" onClick={handleCreate} disabled={saving || !newTask.id || !newTask.title}>{saving ? 'Creating...' : 'Create Task'}</button>
+            <button className="input-base" style={{ cursor: 'pointer' }} onClick={() => setShowNew(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead>
             <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
-              {['ID', 'Title', 'Assigned To', 'Priority', 'Status', 'Deadline', ''].map(h => (
-                <th key={h} style={{
+              {[['id','ID'],['title','Title'],['assigned_to','Assigned To'],['priority','Priority'],['status','Status'],[null,'Deadline'],[null,'']].map(([col,h]) => (
+                <th key={h} onClick={col ? () => handleSort(col) : undefined} style={{
                   padding: '8px 12px', textAlign: 'left', fontSize: 10,
-                  color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em'
-                }}>{h}</th>
+                  color: sortCol === col ? 'var(--cyan)' : 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em',
+                  cursor: col ? 'pointer' : 'default', userSelect: 'none',
+                }}>{h}{sortCol === col ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</th>
               ))}
             </tr>
           </thead>
@@ -207,7 +264,7 @@ export default function Tasks({ data, lastUpdated }) {
             ← Prev
           </button>
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-            Page {page + 1} / {totalPages} ({filtered.length} total)
+            Page {page + 1} / {totalPages} ({sorted.length} total)
           </span>
           <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1}
             style={{

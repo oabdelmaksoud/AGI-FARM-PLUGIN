@@ -8,7 +8,11 @@ import chokidar from 'chokidar';
 import os from 'os';
 import open from 'open';
 import crypto from 'crypto';
-import { parseAgentsJson, parseCronList } from './utils.js';
+import {
+  parseAgentsJson, parseCronList,
+  extractExperiments, extractBacklogItems, extractProcesses,
+  enrichProjects,
+} from './utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,7 +55,11 @@ class SlowDataCache {
     this.REFRESH_MS = 30000;
 
     this.refresh();
-    setInterval(() => this.refresh(), this.REFRESH_MS);
+    this._interval = setInterval(() => this.refresh(), this.REFRESH_MS);
+  }
+
+  stop() {
+    if (this._interval) clearInterval(this._interval);
   }
 
   async fetchAgents() {
@@ -327,12 +335,15 @@ function buildWorkspaceSnapshot(cache) {
   const velocity = asObject(readJson(path.join(WORKSPACE, 'VELOCITY.json')));
   const okrs = asObject(readJson(path.join(WORKSPACE, 'OKRs.json')));
   const broadcast = readMd(path.join(WORKSPACE, 'comms', 'broadcast.md'));
-  const experiments = asObject(readJson(path.join(WORKSPACE, 'EXPERIMENTS.json')));
-  const improvementBacklog = asObject(readJson(path.join(WORKSPACE, 'IMPROVEMENT_BACKLOG.json')));
+  const experiments = extractExperiments(readJson(path.join(WORKSPACE, 'EXPERIMENTS.json')));
+  const backlog = extractBacklogItems(readJson(path.join(WORKSPACE, 'IMPROVEMENT_BACKLOG.json')));
   const sharedKnowledge = asArray(readJson(path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json')));
   const memory = readMd(path.join(WORKSPACE, 'MEMORY.md'));
   const alerts = asArray(readJson(path.join(WORKSPACE, 'ALERTS.json')));
-  const projects = asArray(readJson(path.join(WORKSPACE, 'PROJECTS.json')));
+  const rawProjects = asArray(readJson(path.join(WORKSPACE, 'PROJECTS.json')));
+  const failures = readMd(path.join(WORKSPACE, 'FAILURES.md'));
+  const decisions = readMd(path.join(WORKSPACE, 'DECISIONS.md'));
+  const processes = extractProcesses(readJson(path.join(WORKSPACE, 'PROCESSES.json')));
 
   const crons = loadCrons();
   const cachedAgents = cache.getAgentStatuses();
@@ -385,6 +396,9 @@ function buildWorkspaceSnapshot(cache) {
   const hitl_tasks = tasks.filter(t => t.status === 'needs_human_decision');
   const sla_at_risk = tasks.filter(t => t.status !== 'complete' && t.sla?.deadline && new Date(t.sla.deadline) < new Date(Date.now() + 3600000));
 
+  // Enrich projects with computed fields the frontend expects
+  const projects = enrichProjects(rawProjects, tasks, agentPerf);
+
   return {
     timestamp: new Date().toISOString(),
     workspace: WORKSPACE,
@@ -398,11 +412,15 @@ function buildWorkspaceSnapshot(cache) {
     okrs,
     broadcast,
     experiments,
-    improvement_backlog: improvementBacklog,
+    backlog,
     shared_knowledge: sharedKnowledge,
     knowledge: sharedKnowledge, // Alias for frontend
     knowledge_count: sharedKnowledge.length,
+    memory,
     memory_lines: memory.split('\n').length,
+    failures,
+    decisions,
+    processes,
     crons,
     alerts,
     projects,
@@ -632,6 +650,149 @@ async function main() {
     }
   });
 
+  // ── Task CRUD ──────────────────────────────────────────────────────────────
+  const fileLocks = new Map();
+
+  function withFileLock(filePath, fn) {
+    if (fileLocks.get(filePath)) {
+      return { ok: false, status: 409, error: 'file_busy' };
+    }
+    fileLocks.set(filePath, true);
+    try {
+      return fn();
+    } finally {
+      fileLocks.delete(filePath);
+    }
+  }
+
+  function atomicWriteJson(filePath, data) {
+    const tmp = filePath + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
+    fs.renameSync(tmp, filePath);
+  }
+
+  app.post('/api/tasks', actionLimiter, requireCsrf, (req, res) => {
+    const { id, title, description, priority, assigned_to, type } = req.body;
+    if (!id || !isSafeId(id)) return res.status(400).json({ error: 'invalid_id' });
+    if (!title || typeof title !== 'string' || title.length > 500) return res.status(400).json({ error: 'invalid_title' });
+
+    const tasksPath = path.join(WORKSPACE, 'TASKS.json');
+    const result = withFileLock(tasksPath, () => {
+      const tasks = asArray(readJson(tasksPath));
+      if (tasks.some(t => t.id === id)) return { ok: false, status: 409, error: 'duplicate_id' };
+      const task = {
+        id,
+        title: sanitizeNote(title),
+        description: sanitizeNote(description || ''),
+        priority: sanitizeNote(priority || 'P3'),
+        assigned_to: assigned_to && isSafeId(assigned_to) ? assigned_to : undefined,
+        type: sanitizeNote(type || 'task'),
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      };
+      tasks.push(task);
+      atomicWriteJson(tasksPath, tasks);
+      return { ok: true, task };
+    });
+    if (!result.ok) return res.status(result.status || 500).json({ error: result.error });
+    res.json(result);
+  });
+
+  app.put('/api/tasks/:id', actionLimiter, validateId, requireCsrf, (req, res) => {
+    const { id } = req.params;
+    const tasksPath = path.join(WORKSPACE, 'TASKS.json');
+    const result = withFileLock(tasksPath, () => {
+      const tasks = asArray(readJson(tasksPath));
+      const idx = tasks.findIndex(t => t.id === id);
+      if (idx === -1) return { ok: false, status: 404, error: 'task_not_found' };
+      const { title, description, priority, status, assigned_to } = req.body;
+      if (title) tasks[idx].title = sanitizeNote(title);
+      if (description !== undefined) tasks[idx].description = sanitizeNote(description);
+      if (priority) tasks[idx].priority = sanitizeNote(priority);
+      if (status) tasks[idx].status = sanitizeNote(status);
+      if (assigned_to !== undefined) tasks[idx].assigned_to = assigned_to && isSafeId(assigned_to) ? assigned_to : undefined;
+      tasks[idx].updated_at = new Date().toISOString();
+      atomicWriteJson(tasksPath, tasks);
+      return { ok: true, task: tasks[idx] };
+    });
+    if (!result.ok) return res.status(result.status || 500).json({ error: result.error });
+    res.json(result);
+  });
+
+  // ── Comms Send ────────────────────────────────────────────────────────────
+  app.post('/api/comms/:id/send', actionLimiter, validateId, requireCsrf, (req, res) => {
+    const agentId = req.params.id;
+    const { message } = req.body;
+    if (!message || typeof message !== 'string' || message.length > 2000) {
+      return res.status(400).json({ error: 'invalid_message' });
+    }
+    const inboxDir = path.join(WORKSPACE, 'comms', 'inboxes');
+    if (!fs.existsSync(inboxDir)) fs.mkdirSync(inboxDir, { recursive: true });
+    const inboxPath = path.join(inboxDir, `${agentId}.md`);
+    const timestamp = new Date().toISOString();
+    const entry = `\n\n## Dashboard Message — ${timestamp}\n\n${sanitizeNote(message)}\n\n---\n`;
+    fs.appendFileSync(inboxPath, entry, 'utf-8');
+    console.log(`[dashboard] Message sent to ${agentId}`);
+    res.json({ ok: true });
+  });
+
+  // ── Broadcast Post ────────────────────────────────────────────────────────
+  app.post('/api/broadcast', actionLimiter, requireCsrf, (req, res) => {
+    const { message } = req.body;
+    if (!message || typeof message !== 'string' || message.length > 2000) {
+      return res.status(400).json({ error: 'invalid_message' });
+    }
+    const broadcastDir = path.join(WORKSPACE, 'comms');
+    if (!fs.existsSync(broadcastDir)) fs.mkdirSync(broadcastDir, { recursive: true });
+    const broadcastPath = path.join(broadcastDir, 'broadcast.md');
+    const timestamp = new Date().toISOString();
+    const entry = `\n## [DASHBOARD] ${timestamp}\n${sanitizeNote(message)}\n\n---\n`;
+    fs.appendFileSync(broadcastPath, entry, 'utf-8');
+    console.log('[dashboard] Broadcast posted');
+    res.json({ ok: true });
+  });
+
+  // ── Knowledge CRUD ────────────────────────────────────────────────────────
+  app.post('/api/knowledge', actionLimiter, requireCsrf, (req, res) => {
+    const { title, content, category, tags } = req.body;
+    if (!content || typeof content !== 'string' || content.length > 5000) {
+      return res.status(400).json({ error: 'invalid_content' });
+    }
+    const kPath = path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json');
+    const result = withFileLock(kPath, () => {
+      const knowledge = asArray(readJson(kPath));
+      const entry = {
+        id: `k-${Date.now()}`,
+        title: sanitizeNote(title || ''),
+        content: sanitizeNote(content),
+        category: sanitizeNote(category || 'general'),
+        tags: asArray(tags).map(t => sanitizeNote(String(t))).slice(0, 10),
+        added_by: 'dashboard',
+        added_at: new Date().toISOString(),
+      };
+      knowledge.push(entry);
+      atomicWriteJson(kPath, knowledge);
+      return { ok: true, entry };
+    });
+    if (!result.ok) return res.status(result.status || 500).json({ error: result.error });
+    res.json(result);
+  });
+
+  app.delete('/api/knowledge/:id', actionLimiter, validateId, requireCsrf, (req, res) => {
+    const { id } = req.params;
+    const kPath = path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json');
+    const result = withFileLock(kPath, () => {
+      const knowledge = asArray(readJson(kPath));
+      const idx = knowledge.findIndex(e => e.id === id);
+      if (idx === -1) return { ok: false, status: 404, error: 'entry_not_found' };
+      knowledge.splice(idx, 1);
+      atomicWriteJson(kPath, knowledge);
+      return { ok: true };
+    });
+    if (!result.ok) return res.status(result.status || 500).json({ error: result.error });
+    res.json(result);
+  });
+
   // ── File Watcher ───────────────────────────────────────────────────────────
   let debounceTimer = null;
   const watcher = chokidar.watch(WORKSPACE, {
@@ -645,25 +806,54 @@ async function main() {
   });
 
   watcher.on('all', (event, filePath) => {
-    const ext = path.extname(filePath);
-    if (!WATCHED_EXTENSIONS.includes(ext)) return;
+    try {
+      const ext = path.extname(filePath);
+      if (!WATCHED_EXTENSIONS.includes(ext)) return;
 
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      console.log(`[dashboard] File changed: ${filePath} (${event})`);
-      const snapshot = buildWorkspaceSnapshot(cache);
-      broadcaster.broadcast(snapshot);
-    }, DEBOUNCE_MS);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        try {
+          console.log(`[dashboard] File changed: ${filePath} (${event})`);
+          const snapshot = buildWorkspaceSnapshot(cache);
+          broadcaster.broadcast(snapshot);
+        } catch (err) {
+          console.error('[dashboard] Error building snapshot after file change:', err.message);
+        }
+      }, DEBOUNCE_MS);
+    } catch (err) {
+      console.error('[dashboard] Error in file watcher callback:', err.message);
+    }
+  });
+
+  watcher.on('error', (err) => {
+    console.error('[dashboard] File watcher error:', err.message);
   });
 
   // Fallback: periodic full refresh
-  setInterval(() => {
-    const snapshot = buildWorkspaceSnapshot(cache);
-    broadcaster.broadcast(snapshot);
+  const fallbackInterval = setInterval(() => {
+    try {
+      const snapshot = buildWorkspaceSnapshot(cache);
+      broadcaster.broadcast(snapshot);
+    } catch (err) {
+      console.error('[dashboard] Error in fallback refresh:', err.message);
+    }
   }, FALLBACK_MS);
 
+  // ── SPA Fallback ──────────────────────────────────────────────────────────
+  const indexPath = fs.existsSync(path.join(reactDist, 'index.html'))
+    ? path.join(reactDist, 'index.html')
+    : fs.existsSync(path.join(fallbackDist, 'index.html'))
+      ? path.join(fallbackDist, 'index.html')
+      : null;
+
+  if (indexPath) {
+    app.get('*', (req, res) => {
+      res.sendFile(indexPath);
+    });
+  }
+
   // ── Start Server ───────────────────────────────────────────────────────────
-  app.listen(PORT, HOST, () => {
+  const server = app.listen(PORT, HOST, () => {
     console.log(`[dashboard] AGI Farm Dashboard running at http://${HOST}:${PORT}`);
     console.log(`[dashboard] Workspace: ${WORKSPACE}`);
     console.log(`[dashboard] SSE endpoint: http://${HOST}:${PORT}/api/stream`);
@@ -672,6 +862,27 @@ async function main() {
       open(`http://${HOST}:${PORT}`).catch(() => { });
     }
   });
+
+  // ── Graceful Shutdown ─────────────────────────────────────────────────────
+  function shutdown(signal) {
+    console.log(`[dashboard] ${signal} received, shutting down...`);
+    for (const client of broadcaster.clients) {
+      try { client.end(); } catch {}
+    }
+    broadcaster.clients.clear();
+    watcher.close();
+    cache.stop();
+    clearInterval(fallbackInterval);
+    if (debounceTimer) clearTimeout(debounceTimer);
+    server.close(() => {
+      console.log('[dashboard] Server closed');
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 5000);
+  }
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 main().catch(err => {

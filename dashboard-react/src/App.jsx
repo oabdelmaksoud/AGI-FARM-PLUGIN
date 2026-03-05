@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useDashboard } from './hooks/useDashboard';
+import { ToastProvider, useToast } from './components/Toast';
 import Header from './components/Header';
 import Nav from './components/Nav';
 import Overview from './components/tabs/Overview';
@@ -16,6 +17,10 @@ import HITLTab from './components/tabs/HITL';
 import Knowledge from './components/tabs/Knowledge';
 import Comms from './components/tabs/Comms';
 import AlertsTab from './components/tabs/Alerts';
+import Processes from './components/tabs/Processes';
+import Failures from './components/tabs/Failures';
+import Decisions from './components/tabs/Decisions';
+import Memory from './components/tabs/Memory';
 
 const TABS = [
   'Overview', 'Agents', 'Tasks', 'Projects',
@@ -23,6 +28,7 @@ const TABS = [
   'Velocity', 'Budget', 'OKRs',
   'Knowledge', 'Comms',
   'R&D', 'Broadcast',
+  'Processes', 'Failures', 'Decisions', 'Memory',
 ];
 
 function Connecting() {
@@ -38,11 +44,12 @@ function Connecting() {
   );
 }
 
-export default function App() {
+function AppContent() {
   const [activeTab, setActiveTab] = useState('Overview');
   const { data, connected, lastUpdated, updateCount } = useDashboard();
+  const toast = useToast();
 
-  const tabProps = { data, lastUpdated };
+  const tabProps = { data, lastUpdated, toast };
 
   // Badge counts for nav tabs
   const badges = data ? {
@@ -68,6 +75,10 @@ export default function App() {
       case 'Knowledge': return <Knowledge {...tabProps} />;
       case 'Comms': return <Comms     {...tabProps} />;
       case 'Alerts': return <AlertsTab {...tabProps} />;
+      case 'Processes': return <Processes {...tabProps} />;
+      case 'Failures': return <Failures  {...tabProps} />;
+      case 'Decisions': return <Decisions {...tabProps} />;
+      case 'Memory': return <Memory    {...tabProps} />;
       default: return <Overview  {...tabProps} />;
     }
   };
@@ -80,5 +91,13 @@ export default function App() {
         {renderTab()}
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
