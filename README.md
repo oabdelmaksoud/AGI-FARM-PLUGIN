@@ -117,6 +117,16 @@ openclaw plugins install agi-farm
 npm install -g agi-farm
 ```
 
+### Upgrade (Existing Install)
+
+```bash
+# Update an already installed OpenClaw plugin
+openclaw plugins update agi-farm
+
+# One-liner: install first, or update if already installed
+openclaw plugins install agi-farm || openclaw plugins update agi-farm
+```
+
 ### Run Setup Wizard
 
 ```bash
@@ -596,6 +606,7 @@ npm run start-dashboard
 | Symptom | Fix | Command |
 |---------|-----|---------|
 | ❌ Plugin fails to load | Check global install | `npm list -g agi-farm` |
+| ❌ `plugin already exists` on install | Use plugin update command | `openclaw plugins update agi-farm` |
 | 📊 Dashboard shows stale data | Sync with workspace | `agi-farm status` |
 | 🤖 Agent stuck >30 min | Verify heartbeats | `cat ~/.openclaw/workspace/HEARTBEAT.md` |
 | ⚠️ `openclaw` not found | Add to PATH | `export PATH=$PATH:$(npm bin -g)` |
