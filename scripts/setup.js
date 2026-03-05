@@ -13,6 +13,7 @@ import path from 'path';
 import os from 'os';
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import open from 'open';
 import { runCommand } from './lib/run-command.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -336,6 +337,31 @@ function healthCheck(team) {
   }
 }
 
+// ── Post-Setup UX ────────────────────────────────────────────────────────────
+async function offerOpenDashboard() {
+  const host = process.env.AGI_FARM_DASHBOARD_HOST || '127.0.0.1';
+  const port = process.env.AGI_FARM_DASHBOARD_PORT || '8080';
+  const url = `http://${host}:${port}`;
+
+  const { openDashboard } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'openDashboard',
+      message: `Open dashboard in browser now? (${url})`,
+      default: true,
+    },
+  ]);
+
+  if (!openDashboard) return;
+
+  try {
+    await open(url);
+    console.log(chalk.green(`✅ Opened dashboard: ${url}`));
+  } catch {
+    console.log(chalk.yellow(`⚠ Could not open browser automatically. Open manually: ${url}`));
+  }
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────────
 async function main() {
   try {
@@ -365,6 +391,7 @@ async function main() {
     console.log(chalk.white(`Workspace: ${WORKSPACE}`));
     console.log(chalk.white(`Bundle:    ${BUNDLE_DIR}`));
     console.log(chalk.dim(`\nNext: talk to ${config.orchestratorName} · /agi-farm status · /agi-farm dashboard\n`));
+    await offerOpenDashboard();
 
   } catch (err) {
     console.error(chalk.red('Error:'), err.message);

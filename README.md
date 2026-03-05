@@ -380,12 +380,12 @@ Configure AGI Farm in your `openclaw.json`:
           "autoCheckUpdates": true,
           "workspacePath": "~/.openclaw/workspace",
           "bundlePath": "~/.openclaw/workspace/agi-farm-bundle",
-          "featureJobs": false,
-          "featureSkills": false,
-          "featureMemory": false,
-          "featurePolicy": false,
-          "featureMetering": false,
-          "featureApprovals": false
+          "featureJobs": true,
+          "featureSkills": true,
+          "featureMemory": true,
+          "featurePolicy": true,
+          "featureMetering": true,
+          "featureApprovals": true
         }
       }
     }
@@ -403,12 +403,12 @@ Configure AGI Farm in your `openclaw.json`:
 | `autoCheckUpdates` | boolean | true | Check GitHub for new releases on startup |
 | `workspacePath` | string | ~/.openclaw/workspace | Path to OpenClaw workspace |
 | `bundlePath` | string | <workspace>/agi-farm-bundle | Path to bundle directory |
-| `featureJobs` | boolean | false | Enable jobs runtime APIs + background worker |
-| `featureSkills` | boolean | false | Enable skills registry and routing endpoints |
-| `featureMemory` | boolean | false | Enable memory indexing + search endpoint |
-| `featurePolicy` | boolean | false | Enable policy evaluation on runtime/mutation actions |
-| `featureMetering` | boolean | false | Enable usage metering collection + API |
-| `featureApprovals` | boolean | false | Enable approval workflows for policy-gated actions |
+| `featureJobs` | boolean | true | Enable jobs runtime APIs + background worker |
+| `featureSkills` | boolean | true | Enable skills registry and routing endpoints |
+| `featureMemory` | boolean | true | Enable memory indexing + search endpoint |
+| `featurePolicy` | boolean | true | Enable policy evaluation on runtime/mutation actions |
+| `featureMetering` | boolean | true | Enable usage metering collection + API |
+| `featureApprovals` | boolean | true | Enable approval workflows for policy-gated actions |
 
 ### Runtime Files Added By Core Modules
 
