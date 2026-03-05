@@ -170,6 +170,39 @@ Answer the setup prompts and your team will be live in ~2 minutes:
 | 📤 `agi-farm export` | `agi-farm-export` | Push bundle to GitHub |
 | 🖥️ `agi-farm dashboard` | `agi-farm-dashboard` | Launch live ops room (SSE, :8080) |
 | ⚡ `agi-farm dispatch` | `agi-farm-dispatch` | Run auto-dispatcher manually |
+| 🍎 `agi-farm launchagent` | `agi-farm-launchagent` | Install/uninstall macOS LaunchAgent for persistent dashboard |
+
+---
+
+## 🍎 Persistent Dashboard (macOS LaunchAgent)
+
+The dashboard can run as a macOS LaunchAgent — it starts on login and auto-restarts if it crashes, independent of the OpenClaw gateway lifecycle.
+
+### Install
+
+```bash
+# Install with defaults (port 8080, localhost)
+agi-farm-launchagent
+
+# Custom port and workspace
+agi-farm-launchagent --port 9090 --workspace ~/my-workspace
+```
+
+### Uninstall
+
+```bash
+agi-farm-launchagent --uninstall
+```
+
+### Why use this?
+
+The plugin lifecycle (`onLoad`) spawns the dashboard as a child process. If the gateway exits, restarts, or doesn't reliably complete the lifecycle, the dashboard dies with it. The LaunchAgent runs the dashboard as an independent OS-level service:
+
+- **RunAtLoad** — starts automatically on login
+- **KeepAlive** — restarts if it crashes
+- **Logs** — stdout/stderr saved to `/tmp/openclaw/agi-farm-dashboard.log`
+
+> **Linux users**: Use `systemd` with a similar service unit. See the plist template in `templates/` for reference.
 
 ---
 
