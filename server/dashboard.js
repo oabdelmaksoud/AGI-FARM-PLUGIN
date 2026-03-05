@@ -274,6 +274,8 @@ function toggleCronEnabled(id) {
   return { ok: true, enabled: next };
 }
 
+const updateChecker = new UpdateChecker();
+
 function buildWorkspaceSnapshot(cache, services) {
   const tasks = asArray(readJson(path.join(WORKSPACE, 'TASKS.json')));
   const agentStatus = asObject(readJson(path.join(WORKSPACE, 'AGENT_STATUS.json')));
@@ -487,7 +489,6 @@ async function main() {
   app.use('/api', apiLimiter);
 
   const cache = new SlowDataCache();
-  const updateChecker = new UpdateChecker();
   const broadcaster = new Broadcaster();
 
   const services = {
