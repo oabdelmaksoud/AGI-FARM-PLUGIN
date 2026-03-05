@@ -54,6 +54,16 @@ const AGENT_ROSTERS = {
 async function runWizard() {
   console.log(chalk.cyan.bold('\n🚜 AGI Farm — Multi-Agent Team Builder\n'));
 
+  // Pre-flight check: Verify openclaw is available
+  const versionResult = spawnSync('openclaw', ['--version'], { encoding: 'utf-8', timeout: 8000 });
+  if (versionResult.status !== 0 || versionResult.error) {
+    console.error(chalk.red('❌ OpenClaw not found. Please install OpenClaw before using AGI Farm.'));
+    console.log(chalk.dim('   https://openclaw.ai/install'));
+    process.exit(1);
+  }
+  const versionLine = (versionResult.stdout || '').split('\n')[0].trim();
+  console.log(chalk.dim(`OpenClaw: ${versionLine}\n`));
+
   // Pre-flight check: Does a team already exist?
   const teamJsonPath = path.join(BUNDLE_DIR, 'team.json');
   if (fs.existsSync(teamJsonPath)) {

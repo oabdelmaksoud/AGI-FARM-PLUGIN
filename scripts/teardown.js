@@ -132,13 +132,28 @@ async function main() {
     }
 
     // Remove registries
-    spinner.start('Removing shared registries...');
+    spinner.start('Removing shared workspace registries...');
+    const registryFiles = [
+        'TASKS.json', 'AGENT_STATUS.json', 'AGENT_PERFORMANCE.json',
+        'BUDGET.json', 'VELOCITY.json', 'OKRs.json', 'EXPERIMENTS.json',
+        'IMPROVEMENT_BACKLOG.json', 'SHARED_KNOWLEDGE.json', 'ALERTS.json',
+        'PROJECTS.json', 'MEMORY.md',
+    ];
+    for (const f of registryFiles) {
+        try { fs.rmSync(path.join(WORKSPACE, f), { force: true }); } catch { /* ignore */ }
+    }
+    spinner.succeed('Shared workspace registries removed');
+
+    // Remove agents-workspaces (individual agent workspaces)
+    spinner.start('Removing agent workspaces...');
     try {
-        fs.rmSync(path.join(WORKSPACE, 'TASKS.json'), { force: true });
-        fs.rmSync(path.join(WORKSPACE, 'AGENT_STATUS.json'), { force: true });
-        spinner.succeed('Shared registries removed');
+        const agentWsDir = path.join(WORKSPACE, 'agents-workspaces');
+        if (fs.existsSync(agentWsDir)) {
+            fs.rmSync(agentWsDir, { recursive: true, force: true });
+        }
+        spinner.succeed('Agent workspaces removed');
     } catch (e) {
-        spinner.succeed('Shared registries removed');
+        spinner.warn('Could not fully remove agent workspaces');
     }
 
     console.log(chalk.green('\n✅ AGI Farm teardown complete. Your workspace is clean.\n'));

@@ -6,6 +6,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-03-05
+
+### Fixed
+- **Critical**: Rewrote `dispatch.js` in pure Node.js — no Python dependency. Now reads `TASKS.json` directly, handles HITL, stale resets, dependency checking, and fires `openclaw sessions start`.
+- **Critical**: Rewrote `rebuild.js` in pure Node.js — reconstructs all workspace files (TASKS.json, AGENT_STATUS.json, SOUL.md personas, comms) from `team.json` without Python.
+- **High**: Replaced hardcoded `gateway_online: true` in dashboard with a real `openclaw --version` probe via `spawnSync`.
+- **High**: Added OpenClaw availability check at start of `agi-farm setup` — exits with a friendly error if `openclaw` is not installed.
+- **Medium**: `teardown.js` now deletes `agents-workspaces/` directory and all 12 shared registry files.
+- **Medium**: Replaced raw ANSI escape codes in `status.js` with chalk. Added comms health check section.
+- **Medium**: `export.js` now detects missing git remote and prints exact commands to resolve it.
+
 ## [1.2.0] - 2026-03-05
 
 First public production release.

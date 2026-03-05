@@ -3,7 +3,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import chokidar from 'chokidar';
 import os from 'os';
 import open from 'open';
@@ -49,6 +49,20 @@ const WORKSPACE = process.env.AGI_FARM_WORKSPACE ||
     : path.join(os.homedir(), '.openclaw', 'workspace'));
 
 const NO_BROWSER = process.argv.includes('--no-browser');
+
+let _gatewayCache = { result: true, checkedAt: 0 };
+const GATEWAY_TTL_MS = 30_000;
+function probeGateway() {
+  const now = Date.now();
+  if (now - _gatewayCache.checkedAt < GATEWAY_TTL_MS) return _gatewayCache.result;
+  try {
+    const r = spawnSync('openclaw', ['--version'], { timeout: 3000 });
+    _gatewayCache = { result: r.status === 0, checkedAt: now };
+  } catch {
+    _gatewayCache = { result: false, checkedAt: now };
+  }
+  return _gatewayCache.result;
+}
 const CSRF_TOKEN = process.env.AGI_FARM_DASHBOARD_TOKEN || crypto.randomBytes(24).toString('hex');
 const CRON_FILE = path.join(os.homedir(), '.openclaw', 'cron', 'jobs.json');
 
@@ -370,7 +384,7 @@ function buildWorkspaceSnapshot(cache, services) {
     approvals,
     usage,
     featureFlags: flags,
-    gateway_online: true,
+    gateway_online: probeGateway(),
     cache_age_seconds: Math.floor(cache.ageSeconds()),
     update_info: updateChecker.getStatus(),
   };
@@ -798,11 +812,11 @@ async function main() {
     console.log(`[dashboard] SSE endpoint: http://${HOST}:${PORT}/api/stream`);
 
     if (!NO_BROWSER) {
-      open(`http://${HOST}:${PORT}`).catch(() => {});
+      open(`http://${HOST}:${PORT}`).catch(() => { });
     }
 
     // Non-blocking update check on startup
-    updateChecker.check().catch(() => {});
+    updateChecker.check().catch(() => { });
   });
 }
 
