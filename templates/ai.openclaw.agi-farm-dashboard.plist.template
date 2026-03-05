@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>ai.openclaw.agi-farm-dashboard</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string><%= nodePath %></string>
+      <string><%= dashboardScript %></string>
+      <string>--no-browser</string>
+      <string>--port</string>
+      <string><%= port %></string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string><%= systemPath %></string>
+      <key>AGI_FARM_DASHBOARD_PORT</key>
+      <string><%= port %></string>
+      <key>AGI_FARM_DASHBOARD_HOST</key>
+      <string><%= host %></string>
+      <key>AGI_FARM_WORKSPACE</key>
+      <string><%= workspace %></string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>WorkingDirectory</key>
+    <string><%= pluginDir %></string>
+
+    <key>StandardOutPath</key>
+    <string><%= logDir %>/agi-farm-dashboard.log</string>
+    <key>StandardErrorPath</key>
+    <string><%= logDir %>/agi-farm-dashboard.err.log</string>
+  </dict>
+</plist>

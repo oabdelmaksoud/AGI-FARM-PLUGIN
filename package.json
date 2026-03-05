@@ -1,6 +1,6 @@
 {
   "name": "agi-farm",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Multi-agent AI team builder for OpenClaw — bootstrap complete teams with auto-dispatcher, dashboard, and infrastructure",
   "main": "dist/index.js",
   "type": "module",
@@ -11,7 +11,8 @@
     "agi-farm-dashboard": "scripts/dashboard.js",
     "agi-farm-dispatch": "scripts/dispatch.js",
     "agi-farm-export": "scripts/export.js",
-    "agi-farm-rebuild": "scripts/rebuild.js"
+    "agi-farm-rebuild": "scripts/rebuild.js",
+    "agi-farm-launchagent": "scripts/install-launchagent.js"
   },
   "license": "MIT",
   "author": "oabdelmaksoud",
