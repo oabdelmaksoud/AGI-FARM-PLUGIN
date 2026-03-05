@@ -6,6 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-03-05
+
+### Fixed
+- Fixed `agi-farm setup` failure by correcting `openclaw agents add` command flags.
+- Fixed health check failure by properly initializing the `comms` directory and agent inboxes/outboxes.
+- Improved agent creation logic with better error handling and name-to-ID normalization awareness.
+
 ## [1.0.3] - 2026-03-05
 
 ### Added
