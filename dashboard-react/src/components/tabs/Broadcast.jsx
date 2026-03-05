@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { apiPost } from '../../lib/api';
 
-export default function Broadcast({ data }) {
+export default function Broadcast({ data, toast }) {
   const { broadcast = '' } = data;
   const ref = useRef(null);
 
@@ -8,10 +9,31 @@ export default function Broadcast({ data }) {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
   }, [broadcast]);
 
+  const [msg, setMsg] = useState('');
+  const [posting, setPosting] = useState(false);
+
+  const handlePost = async () => {
+    if (!msg.trim()) return;
+    setPosting(true);
+    try {
+      await apiPost('/api/broadcast', { message: msg.trim() });
+      toast('Broadcast posted', 'success');
+      setMsg('');
+    } catch (e) { toast(e.message, 'error'); }
+    setPosting(false);
+  };
+
   const lines = broadcast.split('\n');
 
   return (
     <div className="fade-in">
+      {/* Compose bar */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+        <input className="input-base" style={{ flex: 1 }} placeholder="Post a broadcast message..." value={msg}
+          onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === 'Enter' && handlePost()} maxLength={2000} />
+        <button className="btn-primary" onClick={handlePost} disabled={posting || !msg.trim()}>{posting ? 'Posting...' : 'Post'}</button>
+      </div>
+
       <div style={{
         background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8,
         padding: 16, fontFamily: 'JetBrains Mono, monospace', fontSize: 12,

@@ -22,6 +22,32 @@ export async function getCsrfToken() {
   return csrfTokenPromise;
 }
 
+export async function apiPut(path, body = null) {
+  const token = await getCsrfToken();
+  const opts = {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'x-agi-farm-csrf': token },
+  };
+  if (body !== null) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  let payload = {};
+  try { payload = await res.json(); } catch { payload = {}; }
+  if (!res.ok) throw new Error(payload?.error || `request_failed_${res.status}`);
+  return payload;
+}
+
+export async function apiDelete(path) {
+  const token = await getCsrfToken();
+  const res = await fetch(path, {
+    method: 'DELETE',
+    headers: { 'x-agi-farm-csrf': token },
+  });
+  let payload = {};
+  try { payload = await res.json(); } catch { payload = {}; }
+  if (!res.ok) throw new Error(payload?.error || `request_failed_${res.status}`);
+  return payload;
+}
+
 export async function apiPost(path, body = null) {
   const token = await getCsrfToken();
   const headers = {

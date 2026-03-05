@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { apiPost } from '../../lib/api';
 import LastUpdated from '../LastUpdated';
 
 function CommsPanel({ content, label, color }) {
@@ -27,10 +28,23 @@ function CommsPanel({ content, label, color }) {
   );
 }
 
-export default function Comms({ data, lastUpdated }) {
+export default function Comms({ data, lastUpdated, toast }) {
   const { comms = {}, agents = [] } = data;
   const [selectedAgent, setSelectedAgent] = useState(agents[0]?.id || null);
   const [view, setView] = useState('inbox');
+  const [composeMsg, setComposeMsg] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const handleSend = async () => {
+    if (!composeMsg.trim() || !selectedAgent) return;
+    setSending(true);
+    try {
+      await apiPost(`/api/comms/${selectedAgent}/send`, { message: composeMsg.trim() });
+      toast('Message sent', 'success');
+      setComposeMsg('');
+    } catch (e) { toast(e.message, 'error'); }
+    setSending(false);
+  };
 
   const agentComms = comms[selectedAgent] || { inbox: '', outbox: '' };
   const agent = agents.find(a => a.id === selectedAgent);
@@ -93,6 +107,18 @@ export default function Comms({ data, lastUpdated }) {
             color={view === 'inbox' ? 'var(--cyan)' : 'var(--green)'}
           />
         </div>
+
+        {/* Compose */}
+        {selectedAgent && (
+          <div className="card" style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+            <textarea className="input-base" placeholder={`Send message to ${agent?.name || selectedAgent}...`}
+              value={composeMsg} onChange={e => setComposeMsg(e.target.value)}
+              style={{ flex: 1, minHeight: 60, resize: 'vertical', fontFamily: 'inherit' }} maxLength={2000} />
+            <button className="btn-primary" onClick={handleSend} disabled={sending || !composeMsg.trim()}>
+              {sending ? 'Sending...' : 'Send'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

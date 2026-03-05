@@ -1,10 +1,35 @@
 import { useState, useMemo } from 'react';
+import { apiPost, apiDelete } from '../../lib/api';
 import LastUpdated from '../LastUpdated';
 
-export default function Knowledge({ data, lastUpdated }) {
+export default function Knowledge({ data, lastUpdated, toast }) {
   const { shared_knowledge: knowledge = [], agents = [] } = data;
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
+  const [showNew, setShowNew] = useState(false);
+  const [newEntry, setNewEntry] = useState({ title: '', content: '', category: 'general', tags: '' });
+  const [saving, setSaving] = useState(false);
+
+  const handleCreate = async () => {
+    if (!newEntry.content.trim()) return;
+    setSaving(true);
+    try {
+      const payload = { ...newEntry, tags: newEntry.tags ? newEntry.tags.split(',').map(t => t.trim()).filter(Boolean) : [] };
+      await apiPost('/api/knowledge', payload);
+      toast('Knowledge entry created', 'success');
+      setShowNew(false);
+      setNewEntry({ title: '', content: '', category: 'general', tags: '' });
+    } catch (e) { toast(e.message, 'error'); }
+    setSaving(false);
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Delete this knowledge entry?')) return;
+    try {
+      await apiDelete(`/api/knowledge/${id}`);
+      toast('Entry deleted', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+  };
 
   const categories = useMemo(() => {
     const cats = new Set(knowledge.map(e => e.category || 'general'));
@@ -42,8 +67,24 @@ export default function Knowledge({ data, lastUpdated }) {
             textTransform: 'capitalize',
           }}>{c}</button>
         ))}
+        <button className="btn-primary" onClick={() => setShowNew(v => !v)}>+ New Entry</button>
         <LastUpdated ts={lastUpdated} />
       </div>
+
+      {showNew && (
+        <div className="card" style={{ display: 'grid', gap: 8 }}>
+          <input className="input-base" placeholder="Title" value={newEntry.title} onChange={e => setNewEntry(p => ({ ...p, title: e.target.value }))} />
+          <textarea className="input-base" placeholder="Content *" value={newEntry.content} onChange={e => setNewEntry(p => ({ ...p, content: e.target.value }))} style={{ minHeight: 80, resize: 'vertical', fontFamily: 'inherit' }} maxLength={5000} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="input-base" placeholder="Category" value={newEntry.category} onChange={e => setNewEntry(p => ({ ...p, category: e.target.value }))} style={{ flex: 1 }} />
+            <input className="input-base" placeholder="Tags (comma separated)" value={newEntry.tags} onChange={e => setNewEntry(p => ({ ...p, tags: e.target.value }))} style={{ flex: 2 }} />
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button className="btn-primary" onClick={handleCreate} disabled={saving || !newEntry.content.trim()}>{saving ? 'Creating...' : 'Create'}</button>
+            <button className="input-base" style={{ cursor: 'pointer' }} onClick={() => setShowNew(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       <div style={{ fontSize: 11, color: 'var(--muted)' }}>
         {filtered.length} / {knowledge.length} entries
@@ -76,6 +117,7 @@ export default function Knowledge({ data, lastUpdated }) {
                   background: 'rgba(0,229,255,.07)', color: 'var(--cyan)', border: '1px solid rgba(0,229,255,.2)',
                   textTransform: 'capitalize'
                 }}>{entry.category || 'general'}</span>
+                {entry.id && <button className="btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}>X</button>}
               </div>
 
               {entry.tags?.length > 0 && (
