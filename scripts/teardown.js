@@ -61,15 +61,43 @@ async function main() {
     // Delete agents
     const spinner = ora('Deleting OpenClaw agents...').start();
     let deletedCount = 0;
+    const deletedIds = new Set();
+
+    // Phase 1: Delete agents listed in team.json
     for (const agent of team.agents) {
-        if (agent.id === 'main') continue; // Orchestrator handles its own state
+        if (agent.id === 'main') continue;
         try {
             runCommand('openclaw', ['agents', 'delete', '--force', agent.id]);
+            deletedIds.add(agent.id);
             deletedCount++;
         } catch (e) {
-            // Ignore errors for individual deletions
+            // Ignore errors
         }
     }
+
+    // Phase 2: Live search for stray agents (like sage, forge, pixel, or test agents)
+    try {
+        spinner.text = 'Searching for stray agents...';
+        const listResult = runCommand('openclaw', ['agents', 'list', '--json']);
+        if (listResult.status === 0) {
+            const liveAgents = JSON.parse(listResult.stdout);
+            const patterns = ['sage', 'forge', 'pixel', 'vigil', 'anchor', 'lens', 'evolve', 'nova', 'cipher', 'vista', 'test-agent', 'stray-agent'];
+
+            for (const a of liveAgents) {
+                if (a.id === 'main' || deletedIds.has(a.id)) continue;
+
+                // If ID matches one of our known defaults or session test IDs, delete it
+                if (patterns.some(p => a.id.includes(p))) {
+                    spinner.text = `Cleaning up stray agent: ${a.id}...`;
+                    runCommand('openclaw', ['agents', 'delete', '--force', a.id]);
+                    deletedCount++;
+                }
+            }
+        }
+    } catch (e) {
+        // Fail silently
+    }
+
     spinner.succeed(`Deleted ${deletedCount} agents`);
 
     // Remove bundle
@@ -79,6 +107,18 @@ async function main() {
         spinner.succeed('Bundle directory removed');
     } catch (e) {
         spinner.fail('Failed to remove bundle directory');
+    }
+
+    // Remove comms
+    spinner.start('Removing comms infrastructure...');
+    try {
+        const commsDir = path.join(WORKSPACE, 'comms');
+        if (fs.existsSync(commsDir)) {
+            fs.rmSync(commsDir, { recursive: true, force: true });
+        }
+        spinner.succeed('Comms infrastructure removed');
+    } catch (e) {
+        spinner.succeed('Comms infrastructure removed');
     }
 
     // Remove registries

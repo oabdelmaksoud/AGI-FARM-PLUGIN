@@ -6,6 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-03-05
+
+### Fixed
+- Fixed robust teardown by implementing live agent detection (removes stray agents not listed in `team.json`).
+- Added automatic `comms` directory cleanup during teardown.
+- Hardened uninstallation flow to ensure a completely clean workspace.
+
 ## [1.1.2] - 2026-03-05
 
 ### Fixed
