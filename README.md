@@ -29,7 +29,6 @@
 | 🔄 **Auto-Dispatcher** | Smart task delegation with HITL, backoff & dependencies |
 | 📦 **Portable Bundle** | Export your entire team to GitHub with one command |
 | 🏗️ **ESM Native** | Built for Node 20+ with full ES Module support |
-<<<<<<< HEAD
 | 🛡️ **Production Hardened** | Security-audited with CSRF, Origin validation, and timing-safe auth |
 | ⚙️ **Feature-Flagged Runtime** | Optional jobs, skills, memory, policy, approvals, and metering modules |
 | 🧪 **103 Automated Tests** | Unit + integration + API smoke coverage with Jest/ESM |
