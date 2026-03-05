@@ -36,33 +36,19 @@
 
 ---
 
-## 🆕 What's New in v1.1.0
+## 🆕 What's New in v1.2.0 & v1.2.1
 
-### Auto-Update System
-- 🔄 **GitHub release detection**: plugin polls GitHub Releases API (6-hour cache) to detect new versions
-- 📢 **Dashboard update banner**: amber notification bar shows current → latest version with release notes link
-- ⚡ **One-click install**: "Update Now" button runs `npm install -g agi-farm@latest` directly from the dashboard
-- ⚙️ **Configurable**: `autoCheckUpdates` option in plugin config (default: `true`)
+### Production Ready & Seamless OpenClaw Integration
+- 🚀 **Default Model Support**: Removed all hardcoded model IDs in favor of OpenClaw's intelligent default auto-routing (`manifest/auto`).
+- 🧹 **Robust Cleanup**: Enhanced `agi-farm teardown` ensures complete cleanup of bundles, crons, and communication logs.
+- 🔍 **Gateway Health Probe**: Dashboard proactively monitors OpenClaw gateway connection.
+- 🐍 **Zero Python Dependencies**: Re-architected for seamless universal installation without Python prerequisites.
+- 🍎 **macOS LaunchAgent**: Optional `agi-farm-launchagent` command to install dashboard as a persistent OS-level login service.
 
-### Feature-Flagged Core Runtime
-- 🚀 **Core runtime added**: jobs, background worker, skills, memory index, policy gates, approvals, audit log, and usage metering
-- 🧭 **New dashboard tabs**: Jobs, Approvals, Usage, Processes, Failures, Decisions, Memory
-- 🔌 **New REST APIs**: `/api/jobs`, `/api/skills`, `/api/memory/search`, `/api/policies`, `/api/approvals`, `/api/usage`
-- 🧪 **API integration smoke tests**: dashboard server tested end-to-end
-
-### Interactive Dashboard
-- ➕ **Task Creation** — create tasks directly from the Tasks tab with assignee, priority, and dependencies
-- 💬 **Agent Messaging** — send messages to individual agents from their cards
-- 📝 **Broadcast Compose** — post team-wide announcements from the Broadcast tab
-- 📚 **Knowledge CRUD** — add and remove knowledge entries from the dashboard
-- 🔍 **Search & Sort** — filter tasks and agents with real-time search; sortable task columns
-
-### Security & Infrastructure
-- 🔐 **CSRF + Origin hardening**: same-origin validation, timing-safe auth, CSP headers
-- 🛡️ **Input validation**: `isSafeId()`, `sanitizeNote()`, path traversal protection
-- 🧪 **103 automated tests** — unit, integration, API, updater, data extraction
-- 🔔 **Toast notifications** — non-blocking success/error toasts for all actions
-- 🛡️ **Atomic file writes** — `.tmp` → `rename` pattern with in-memory file locks
+### Previous Highlights (v1.1.x)
+- 🔄 **GitHub release detection & Auto-Update system directly from dashboard**
+- ⚙️ **Feature-Flagged Core Runtime** (Jobs, Approvals, Memory, Skills)
+- 🛡️ **Extensive Security Hardening** (CSRF, CSP, token validation, atomic file writes)
 
 ---
 
