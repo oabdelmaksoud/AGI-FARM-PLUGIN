@@ -44,6 +44,8 @@ export interface AGIFarmConfig {
   dashboardHost: string;
   /** Auto-start dashboard on plugin load */
   autoStartDashboard: boolean;
+  /** Check GitHub for plugin updates on startup */
+  autoCheckUpdates: boolean;
   /** Path to OpenClaw workspace */
   workspacePath?: string;
   /** Path to AGI Farm bundle */
@@ -63,6 +65,7 @@ const DEFAULT_CONFIG: AGIFarmConfig = {
   dashboardPort: 8080,
   dashboardHost: "127.0.0.1",
   autoStartDashboard: true,
+  autoCheckUpdates: true,
   featureJobs: false,
   featureSkills: false,
   featureMemory: false,
@@ -70,6 +73,8 @@ const DEFAULT_CONFIG: AGIFarmConfig = {
   featureMetering: false,
   featureApprovals: false,
 };
+
+const GITHUB_RELEASES_URL = "https://api.github.com/repos/oabdelmaksoud/AGI-FARM-PLUGIN/releases/latest";
 
 // ── AGI Farm Extension ────────────────────────────────────────────────────────
 
@@ -105,6 +110,11 @@ class AGIFarmExtension implements OpenClawExtension {
 
     // Register commands
     this.registerCommands(context);
+
+    // Non-blocking update check
+    if (this.config.autoCheckUpdates) {
+      this.checkForUpdates().catch(() => {});
+    }
   }
 
   /**
@@ -172,6 +182,54 @@ class AGIFarmExtension implements OpenClawExtension {
     // Commands in this plugin are statically defined in openclaw.plugin.json
     // This method stub exists for future programmatic runtime command registration if needed
     context.logger.debug("[agi-farm] Commands registered statically via openclaw.plugin.json");
+  }
+
+  /**
+   * Check GitHub for plugin updates (non-blocking, best-effort)
+   */
+  private async checkForUpdates(): Promise<void> {
+    try {
+      const res = await fetch(GITHUB_RELEASES_URL, {
+        headers: {
+          Accept: "application/vnd.github+json",
+          "User-Agent": `agi-farm/${this.version}`,
+        },
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (!res.ok) return;
+
+      const data = (await res.json()) as {
+        tag_name?: string;
+        html_url?: string;
+      };
+      const latest = (data.tag_name || "").replace(/^v/, "");
+
+      if (!latest) return;
+
+      // Simple SemVer compare
+      const cur = this.version.split(".").map(Number);
+      const lat = latest.split(".").map(Number);
+      let isNewer = false;
+      for (let i = 0; i < 3; i++) {
+        if ((lat[i] || 0) > (cur[i] || 0)) { isNewer = true; break; }
+        if ((lat[i] || 0) < (cur[i] || 0)) break;
+      }
+
+      if (isNewer) {
+        this.context?.logger.info(
+          `[agi-farm] ⚡ Update available: v${this.version} → v${latest}`
+        );
+        if (data.html_url) {
+          this.context?.logger.info(`[agi-farm]    Release: ${data.html_url}`);
+        }
+        this.context?.logger.info(
+          `[agi-farm]    Run: npm update -g agi-farm`
+        );
+      }
+    } catch {
+      // Network errors silently ignored — update check is best-effort
+    }
   }
 
   /**

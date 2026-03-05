@@ -29,34 +29,40 @@
 | 🔄 **Auto-Dispatcher** | Smart task delegation with HITL, backoff & dependencies |
 | 📦 **Portable Bundle** | Export your entire team to GitHub with one command |
 | 🏗️ **ESM Native** | Built for Node 20+ with full ES Module support |
-| 🛡️ **Production Hardened** | Security-audited with CSRF, Origin validation, and timing-safe auth |
+| 🛡️ **Production Hardened** | Security-audited with CSRF, Origin validation, CSP headers, and timing-safe auth |
+| 🔄 **Auto-Update** | Detects new releases on GitHub with one-click install from the dashboard |
 | ⚙️ **Feature-Flagged Runtime** | Optional jobs, skills, memory, policy, approvals, and metering modules |
 | 🧪 **103 Automated Tests** | Unit + integration + API smoke coverage with Jest/ESM |
 
 ---
 
-## 🆕 Recent Updates
+## 🆕 What's New in v1.1.0
 
-- 🚀 **Core runtime added (feature-flagged)**: jobs, background worker, skills, memory index, policy gates, approvals, audit log, and usage metering.
-- 🧭 **New dashboard tabs**: Jobs, Approvals, and Usage with live SSE updates.
-- 🔌 **New REST APIs**: `/api/jobs`, `/api/skills`, `/api/memory/search`, `/api/policies`, `/api/approvals`, `/api/usage`.
-- 🧪 **API integration smoke tests**: dashboard server is now tested end-to-end (job creation, approvals, metering, policy denies).
-- ⚡ **Frontend performance pass**: lazy-loaded tabs + chunked Vite bundles to reduce initial payload.
-- 🔐 **CSRF token endpoint hardened**: `/api/session` now requires same-origin validation.
-- 🛡️ **SSE & data endpoints authenticated**: `/api/stream` and `/api/data` require CSRF token.
-- 🔒 **Security headers**: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, XSS-Protection.
-- 🧹 **Path traversal fix**: agent IDs from `AGENT_STATUS.json` are validated through `isSafeId()`.
-- 🚫 **HITL note sanitization**: `sanitizeNote()` strips control chars and prevents CLI flag injection.
-- 🔄 **Cron file locking**: `toggleCronEnabled` uses a mutex to prevent concurrent write races.
-- ⚙️ **CI hardened**: added eslint + `npm audit --audit-level=high`.
-- 📦 **All commands exposed**: all 7 commands available as global executables via `package.json` `bin`.
-- 🔐 **Origin validation**: mutation endpoints now validate `Origin` header — only localhost origins accepted.
-- 🔒 **Timing-safe auth hardened**: CSRF token comparison no longer leaks token length via timing.
-- 📦 **Removed unused `sse.js`**: dependency cleaned from `package.json`.
-- 🔄 **Dynamic versioning**: extension reads version from `package.json` instead of hardcoding.
-- 🛠️ **ESM `__dirname` fix**: `src/index.ts` now uses `import.meta.dirname` with proper fallback.
-- 🧰 **Shared utilities**: extracted `runCommand` to `scripts/lib/run-command.js` — eliminates duplication.
-- ✅ **Env var consistency**: `export.js` and `status.js` now respect `AGI_FARM_WORKSPACE` like all other scripts.
+### Auto-Update System
+- 🔄 **GitHub release detection**: plugin polls GitHub Releases API (6-hour cache) to detect new versions
+- 📢 **Dashboard update banner**: amber notification bar shows current → latest version with release notes link
+- ⚡ **One-click install**: "Update Now" button runs `npm install -g agi-farm@latest` directly from the dashboard
+- ⚙️ **Configurable**: `autoCheckUpdates` option in plugin config (default: `true`)
+
+### Feature-Flagged Core Runtime
+- 🚀 **Core runtime added**: jobs, background worker, skills, memory index, policy gates, approvals, audit log, and usage metering
+- 🧭 **New dashboard tabs**: Jobs, Approvals, Usage, Processes, Failures, Decisions, Memory
+- 🔌 **New REST APIs**: `/api/jobs`, `/api/skills`, `/api/memory/search`, `/api/policies`, `/api/approvals`, `/api/usage`
+- 🧪 **API integration smoke tests**: dashboard server tested end-to-end
+
+### Interactive Dashboard
+- ➕ **Task Creation** — create tasks directly from the Tasks tab with assignee, priority, and dependencies
+- 💬 **Agent Messaging** — send messages to individual agents from their cards
+- 📝 **Broadcast Compose** — post team-wide announcements from the Broadcast tab
+- 📚 **Knowledge CRUD** — add and remove knowledge entries from the dashboard
+- 🔍 **Search & Sort** — filter tasks and agents with real-time search; sortable task columns
+
+### Security & Infrastructure
+- 🔐 **CSRF + Origin hardening**: same-origin validation, timing-safe auth, CSP headers
+- 🛡️ **Input validation**: `isSafeId()`, `sanitizeNote()`, path traversal protection
+- 🧪 **103 automated tests** — unit, integration, API, updater, data extraction
+- 🔔 **Toast notifications** — non-blocking success/error toasts for all actions
+- 🛡️ **Atomic file writes** — `.tmp` → `rename` pattern with in-memory file locks
 
 ---
 
@@ -64,22 +70,26 @@
 
 ### Dashboard Overview
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  🦅 AGI Farm Dashboard              Budget: $45.23/100  [LIVE] │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │
-│  │ 📊 42    │  │ ✅ 38    │  │ ⏳ 4      │  │ 🚨 2     │       │
-│  │ Tasks    │  │ Done     │  │ Active   │  │ SLA Risk │       │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘       │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ 🔮 Sage        ✅ Ready    📨 3 msgs    ⭐ 94% quality  │   │
-│  │ ⚒️ Forge       🔄 Busy     📨 7 msgs    ⭐ 89% quality  │   │
-│  │ 🐛 Pixel       ✅ Ready    📨 2 msgs    ⭐ 96% quality  │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  🦅 AGI Ops Room   ● LIVE   Online: 8/11  Pending: 4  Budget: $45  │
+├──────────────────────────────────────────────────────────────────────┤
+│  🔄 Update available: v1.0.2 → v1.1.0  [Release Notes] [Update Now]│
+├──────────────────────────────────────────────────────────────────────┤
+│ Overview │ Agents │ Tasks │ Projects │ Crons │ HITL │ Alerts │ ...  │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐            │
+│  │ 📊 42    │  │ ✅ 38    │  │ ⏳ 4      │  │ 🚨 2     │            │
+│  │ Tasks    │  │ Done     │  │ Active   │  │ HITL     │            │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘            │
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────┐      │
+│  │ 🔮 Sage    ✅ Ready  📨 3 msgs  ⭐ 94%  [Send Message]   │      │
+│  │ ⚒️ Forge   🔄 Busy   📨 7 msgs  ⭐ 89%  [Send Message]   │      │
+│  │ 🐛 Pixel   ✅ Ready  📨 2 msgs  ⭐ 96%  [Send Message]   │      │
+│  └───────────────────────────────────────────────────────────┘      │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Team Architecture
@@ -174,7 +184,8 @@ Answer the setup prompts and your team will be live in ~2 minutes:
 ├── 📂 dist/                    Compiled TypeScript (backend)
 ├── 📂 dashboard-dist/          Built React frontend (production)
 ├── 🌐 server/
-│   ├── 🖥️ dashboard.js         SSE server (Node.js)
+│   ├── 🖥️ dashboard.js         SSE server + CRUD API (Node.js)
+│   ├── 🔄 updater.js           GitHub release checker + auto-update
 │   └── 🛠️ utils.js             Core parsing & logic (Unit Tested)
 ├── 📜 scripts/
 │   ├── 🎯 setup.js             Setup wizard
@@ -215,13 +226,13 @@ Answer the setup prompts and your team will be live in ~2 minutes:
 │  │ SlowDataCache       │    │ Broadcaster      │           │
 │  │ (30s cache)         │───▶│ (SSE fan-out)    │           │
 │  └─────────────────────┘    └──────────────────┘           │
-│                                      │                       │
-│                                      │ SSE stream            │
-│                                      ▼                       │
-│                            ┌──────────────────┐             │
-│                            │ React Frontend   │             │
-│                            │ (Vite + Recharts)│             │
-│                            └──────────────────┘             │
+│           │                          │                       │
+│  ┌─────────────────────┐             │ SSE stream            │
+│  │ UpdateChecker       │             ▼                       │
+│  │ (6h GitHub cache)   │   ┌──────────────────┐             │
+│  └─────────────────────┘   │ React Frontend   │             │
+│                             │ (Vite + Recharts)│             │
+│                             └──────────────────┘             │
 │                                                              │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -337,6 +348,7 @@ Configure AGI Farm in your `openclaw.json`:
           "dashboardPort": 8080,
           "dashboardHost": "127.0.0.1",
           "autoStartDashboard": true,
+          "autoCheckUpdates": true,
           "workspacePath": "~/.openclaw/workspace",
           "bundlePath": "~/.openclaw/workspace/agi-farm-bundle",
           "featureJobs": false,
@@ -359,6 +371,7 @@ Configure AGI Farm in your `openclaw.json`:
 | `dashboardPort` | number | 8080 | Port for live ops dashboard |
 | `dashboardHost` | string | "127.0.0.1" | Bind address for dashboard |
 | `autoStartDashboard` | boolean | true | Auto-start dashboard on load |
+| `autoCheckUpdates` | boolean | true | Check GitHub for new releases on startup |
 | `workspacePath` | string | ~/.openclaw/workspace | Path to OpenClaw workspace |
 | `bundlePath` | string | <workspace>/agi-farm-bundle | Path to bundle directory |
 | `featureJobs` | boolean | false | Enable jobs runtime APIs + background worker |
@@ -411,6 +424,7 @@ All data updates in real-time from workspace files:
 
 The dashboard enables direct control over team operations via authenticated REST endpoints (all require CSRF token):
 
+**HITL & Cron Controls:**
 - `POST /api/hitl/:id/approve` — Continue task with optional notes
 - `POST /api/hitl/:id/reject` — Block task and notify agent
 - `POST /api/cron/:id/trigger` — Manually run a specific cron job
@@ -423,6 +437,17 @@ The dashboard enables direct control over team operations via authenticated REST
 - `GET /api/policies` — Retrieve active policy rules
 - `GET /api/approvals` + `POST /api/approvals/:id/(approve|reject)` — Human approval queue
 - `GET /api/usage` — Usage and cost aggregates for dashboard
+
+**CRUD Operations:**
+- `POST /api/task` — Create a new task with assignee, priority, dependencies
+- `POST /api/agent/:id/message` — Send a message to a specific agent
+- `POST /api/broadcast` — Post a team-wide broadcast message
+- `POST /api/knowledge` — Add a shared knowledge entry
+- `DELETE /api/knowledge/:id` — Remove a knowledge entry
+
+**Auto-Update:**
+- `GET /api/update-check` — Force a fresh GitHub release check
+- `POST /api/update-install` — Install latest version via npm
 
 **Total push latency:** ~350ms from file change to browser update
 
@@ -554,6 +579,8 @@ This plugin is designed with defense-in-depth security:
 | **Note sanitization** | HITL notes stripped of control chars; CLI flag injection prevented |
 | **Rate limiting** | 120 req/min (read), 30 req/min (mutations) per IP |
 | **File locking** | Cron file writes use mutex to prevent concurrent corruption |
+| **Atomic writes** | All file mutations use `.tmp` → `rename` pattern with in-memory locks |
+| **Shell injection** | Update installer uses `execFile` (not `exec`) to prevent injection |
 | **Credential isolation** | Uses OpenClaw CLI — no API keys stored in plugin |
 | Supports encrypted secrets (`SECRETS/`, AES-256-GCM) | Expose secret values in API responses |
 

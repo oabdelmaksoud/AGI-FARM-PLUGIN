@@ -8,7 +8,11 @@ import chokidar from 'chokidar';
 import os from 'os';
 import open from 'open';
 import crypto from 'crypto';
-import { parseAgentsJson, parseCronList } from './utils.js';
+import {
+  parseAgentsJson, parseCronList,
+  extractExperiments, extractBacklogItems, extractProcesses,
+  enrichProjects,
+} from './utils.js';
 import { getFeatureFlags } from './services/feature-flags.js';
 import { AuditService } from './services/audit.js';
 import { JobsService } from './services/jobs.js';
@@ -17,6 +21,7 @@ import { MemoryService } from './services/memory.js';
 import { PolicyService } from './services/policy.js';
 import { MeteringService } from './services/metering.js';
 import { WorkerService } from './services/worker.js';
+import { UpdateChecker } from './updater.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -365,6 +370,7 @@ function buildWorkspaceSnapshot(cache, services) {
     featureFlags: flags,
     gateway_online: true,
     cache_age_seconds: Math.floor(cache.ageSeconds()),
+    update_info: updateChecker.getStatus(),
   };
 }
 
@@ -481,6 +487,7 @@ async function main() {
   app.use('/api', apiLimiter);
 
   const cache = new SlowDataCache();
+  const updateChecker = new UpdateChecker();
   const broadcaster = new Broadcaster();
 
   const services = {
@@ -738,6 +745,26 @@ async function main() {
     res.json(services.metering.getUsage());
   });
 
+  // ── Update Check Endpoints ─────────────────────────────────────────────────
+  app.get('/api/update-check', requireCsrf, async (req, res) => {
+    try {
+      const status = await updateChecker.check();
+      res.json(status);
+    } catch (err) {
+      res.status(500).json({ error: 'update_check_failed' });
+    }
+  });
+
+  app.post('/api/update-install', requireCsrf, actionLimiter, async (req, res) => {
+    try {
+      const result = await updateChecker.performUpdate();
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ── File Watcher ───────────────────────────────────────────────────────────
   let debounceTimer = null;
   const watcher = chokidar.watch(WORKSPACE, {
     ignored: /(^|[\/\\])\../,
@@ -772,6 +799,9 @@ async function main() {
     if (!NO_BROWSER) {
       open(`http://${HOST}:${PORT}`).catch(() => {});
     }
+
+    // Non-blocking update check on startup
+    updateChecker.check().catch(() => {});
   });
 }
 
