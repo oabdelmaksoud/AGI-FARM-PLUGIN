@@ -29,22 +29,35 @@
 | 🔄 **Auto-Dispatcher** | Smart task delegation with HITL, backoff & dependencies |
 | 📦 **Portable Bundle** | Export your entire team to GitHub with one command |
 | 🏗️ **ESM Native** | Built for Node 20+ with full ES Module support |
-| 🛡️ **Production Hardened** | Security-audited with CSRF, Origin validation, CSP headers, and timing-safe auth |
-| 🧪 **39 Unit Tests** | Extension lifecycle, security (ID validation, note sanitization), parsing, and CLI utilities verified with Jest/ESM |
+<<<<<<< HEAD
+| 🛡️ **Production Hardened** | Security-audited with CSRF, Origin validation, and timing-safe auth |
+| ⚙️ **Feature-Flagged Runtime** | Optional jobs, skills, memory, policy, approvals, and metering modules |
+| 🧪 **103 Automated Tests** | Unit + integration + API smoke coverage with Jest/ESM |
 
 ---
 
 ## 🆕 Recent Updates
 
-- 🔐 **CSRF token endpoint hardened**: `/api/session` now requires same-origin validation — cross-origin token theft blocked.
-- 🛡️ **SSE & data endpoints authenticated**: `/api/stream` and `/api/data` now require CSRF token — prevents cross-origin data exfiltration.
-- 🔒 **Security headers**: added CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and XSS-Protection.
-- 🧹 **Path traversal fix**: agent IDs from `AGENT_STATUS.json` are validated through `isSafeId()` before filesystem use.
-- 🚫 **HITL note sanitization**: `sanitizeNote()` strips control characters and prevents CLI flag injection.
-- 🔄 **Cron file locking**: `toggleCronEnabled` uses a mutex to prevent concurrent read-modify-write races.
-- 🧪 **39 unit tests**: added `isSafeId` and `sanitizeNote` test suites (was 28).
-- ⚙️ **CI hardened**: added eslint lint step and `npm audit --audit-level=high` to CI pipeline.
-- 📦 **All commands exposed**: all 7 commands now available as global executables via `package.json` bin field.
+- 🚀 **Core runtime added (feature-flagged)**: jobs, background worker, skills, memory index, policy gates, approvals, audit log, and usage metering.
+- 🧭 **New dashboard tabs**: Jobs, Approvals, and Usage with live SSE updates.
+- 🔌 **New REST APIs**: `/api/jobs`, `/api/skills`, `/api/memory/search`, `/api/policies`, `/api/approvals`, `/api/usage`.
+- 🧪 **API integration smoke tests**: dashboard server is now tested end-to-end (job creation, approvals, metering, policy denies).
+- ⚡ **Frontend performance pass**: lazy-loaded tabs + chunked Vite bundles to reduce initial payload.
+- 🔐 **CSRF token endpoint hardened**: `/api/session` now requires same-origin validation.
+- 🛡️ **SSE & data endpoints authenticated**: `/api/stream` and `/api/data` require CSRF token.
+- 🔒 **Security headers**: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, XSS-Protection.
+- 🧹 **Path traversal fix**: agent IDs from `AGENT_STATUS.json` are validated through `isSafeId()`.
+- 🚫 **HITL note sanitization**: `sanitizeNote()` strips control chars and prevents CLI flag injection.
+- 🔄 **Cron file locking**: `toggleCronEnabled` uses a mutex to prevent concurrent write races.
+- ⚙️ **CI hardened**: added eslint + `npm audit --audit-level=high`.
+- 📦 **All commands exposed**: all 7 commands available as global executables via `package.json` `bin`.
+- 🔐 **Origin validation**: mutation endpoints now validate `Origin` header — only localhost origins accepted.
+- 🔒 **Timing-safe auth hardened**: CSRF token comparison no longer leaks token length via timing.
+- 📦 **Removed unused `sse.js`**: dependency cleaned from `package.json`.
+- 🔄 **Dynamic versioning**: extension reads version from `package.json` instead of hardcoding.
+- 🛠️ **ESM `__dirname` fix**: `src/index.ts` now uses `import.meta.dirname` with proper fallback.
+- 🧰 **Shared utilities**: extracted `runCommand` to `scripts/lib/run-command.js` — eliminates duplication.
+- ✅ **Env var consistency**: `export.js` and `status.js` now respect `AGI_FARM_WORKSPACE` like all other scripts.
 
 ---
 
@@ -326,7 +339,13 @@ Configure AGI Farm in your `openclaw.json`:
           "dashboardHost": "127.0.0.1",
           "autoStartDashboard": true,
           "workspacePath": "~/.openclaw/workspace",
-          "bundlePath": "~/.openclaw/workspace/agi-farm-bundle"
+          "bundlePath": "~/.openclaw/workspace/agi-farm-bundle",
+          "featureJobs": false,
+          "featureSkills": false,
+          "featureMemory": false,
+          "featurePolicy": false,
+          "featureMetering": false,
+          "featureApprovals": false
         }
       }
     }
@@ -343,6 +362,26 @@ Configure AGI Farm in your `openclaw.json`:
 | `autoStartDashboard` | boolean | true | Auto-start dashboard on load |
 | `workspacePath` | string | ~/.openclaw/workspace | Path to OpenClaw workspace |
 | `bundlePath` | string | <workspace>/agi-farm-bundle | Path to bundle directory |
+| `featureJobs` | boolean | false | Enable jobs runtime APIs + background worker |
+| `featureSkills` | boolean | false | Enable skills registry and routing endpoints |
+| `featureMemory` | boolean | false | Enable memory indexing + search endpoint |
+| `featurePolicy` | boolean | false | Enable policy evaluation on runtime/mutation actions |
+| `featureMetering` | boolean | false | Enable usage metering collection + API |
+| `featureApprovals` | boolean | false | Enable approval workflows for policy-gated actions |
+
+### Runtime Files Added By Core Modules
+
+When feature flags are enabled, AGI Farm lazily creates these additive workspace files:
+
+- `JOBS.json`
+- `JOB_RUNS.jsonl`
+- `SKILLS_REGISTRY.json`
+- `MEMORY_INDEX.json`
+- `POLICIES.json`
+- `APPROVALS.json`
+- `AUDIT_LOG.jsonl`
+- `USAGE_METERING.json`
+- `SECRETS/` (encrypted blobs + metadata)
 
 ---
 
@@ -365,6 +404,9 @@ All data updates in real-time from workspace files:
 | 📚 Knowledge | `SHARED_KNOWLEDGE.json` | Instant | ~50ms |
 | 🧠 Memory | `MEMORY.md` | Instant | ~50ms |
 | 🔄 Agent Models | `openclaw agents list` | Cached | ~30s |
+| 🗂️ Jobs | `JOBS.json` | Instant | ~50ms |
+| ✅ Approvals | `APPROVALS.json` | Instant | ~50ms |
+| 📊 Usage | `USAGE_METERING.json` | Instant | ~50ms |
 
 ### Interactive Actions (API)
 
@@ -374,6 +416,14 @@ The dashboard enables direct control over team operations via authenticated REST
 - `POST /api/hitl/:id/reject` — Block task and notify agent
 - `POST /api/cron/:id/trigger` — Manually run a specific cron job
 - `POST /api/cron/:id/toggle` — Enable or disable a cron job
+- `POST /api/jobs` — Create a background job from high-level intent
+- `GET /api/jobs` / `GET /api/jobs/:id` — List and inspect jobs
+- `POST /api/jobs/:id/cancel` / `POST /api/jobs/:id/retry` — Control failed/running jobs
+- `GET /api/skills` + `POST /api/skills/:id/(enable|disable)` — Manage skill activation
+- `GET /api/memory/search?q=&tags=` — Search memory index
+- `GET /api/policies` — Retrieve active policy rules
+- `GET /api/approvals` + `POST /api/approvals/:id/(approve|reject)` — Human approval queue
+- `GET /api/usage` — Usage and cost aggregates for dashboard
 
 **Total push latency:** ~350ms from file change to browser update
 
@@ -506,6 +556,7 @@ This plugin is designed with defense-in-depth security:
 | **Rate limiting** | 120 req/min (read), 30 req/min (mutations) per IP |
 | **File locking** | Cron file writes use mutex to prevent concurrent corruption |
 | **Credential isolation** | Uses OpenClaw CLI — no API keys stored in plugin |
+| Supports encrypted secrets (`SECRETS/`, AES-256-GCM) | Expose secret values in API responses |
 
 **Your credentials stay in OpenClaw's configuration.**
 
