@@ -46,7 +46,7 @@
     "build:dashboard": "cd dashboard-react && npm run build",
     "build:all": "npm run build && npm run build:dashboard && rm -rf dashboard-dist && cp -r dashboard-react/dist dashboard-dist",
     "prepublishOnly": "npm run build:all",
-    "prebuild": "rm -rf dist",
+    "prebuild": "rm -rf dist tsconfig.tsbuildinfo",
     "build": "tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",

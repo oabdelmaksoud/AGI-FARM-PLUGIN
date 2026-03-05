@@ -34,6 +34,36 @@
       "bundlePath": {
         "type": "string",
         "description": "Path to AGI Farm bundle (defaults to <workspace>/agi-farm-bundle)"
+      },
+      "featureJobs": {
+        "type": "boolean",
+        "default": false,
+        "description": "Enable jobs runtime APIs and background worker"
+      },
+      "featureSkills": {
+        "type": "boolean",
+        "default": false,
+        "description": "Enable skills registry APIs"
+      },
+      "featureMemory": {
+        "type": "boolean",
+        "default": false,
+        "description": "Enable memory indexing and search APIs"
+      },
+      "featurePolicy": {
+        "type": "boolean",
+        "default": false,
+        "description": "Enable policy engine for runtime actions"
+      },
+      "featureMetering": {
+        "type": "boolean",
+        "default": false,
+        "description": "Enable usage metering APIs and dashboard data"
+      },
+      "featureApprovals": {
+        "type": "boolean",
+        "default": false,
+        "description": "Enable approval workflows for policy-gated actions"
       }
     },
     "required": []
@@ -58,6 +88,30 @@
     "bundlePath": {
       "label": "Bundle Path",
       "description": "Path to AGI Farm team bundle directory"
+    },
+    "featureJobs": {
+      "label": "Feature: Jobs",
+      "description": "Enable jobs runtime APIs and background worker"
+    },
+    "featureSkills": {
+      "label": "Feature: Skills",
+      "description": "Enable skills registry APIs"
+    },
+    "featureMemory": {
+      "label": "Feature: Memory",
+      "description": "Enable memory indexing and search APIs"
+    },
+    "featurePolicy": {
+      "label": "Feature: Policy",
+      "description": "Enable policy engine for runtime actions"
+    },
+    "featureMetering": {
+      "label": "Feature: Metering",
+      "description": "Enable usage metering APIs and dashboard data"
+    },
+    "featureApprovals": {
+      "label": "Feature: Approvals",
+      "description": "Enable approval workflows for policy-gated actions"
     }
   },
   "skills": [

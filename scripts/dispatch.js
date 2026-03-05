@@ -19,8 +19,20 @@ if (!fs.existsSync(DISPATCH_PY)) {
 
 const args = process.argv.slice(2);
 const execute = args.includes('--execute');
+const jobId = args.includes('--job-id') ? args[args.indexOf('--job-id') + 1] : null;
+const stepId = args.includes('--step-id') ? args[args.indexOf('--step-id') + 1] : null;
+
+if ((jobId && !stepId) || (!jobId && stepId)) {
+  console.error(chalk.red('Error: --job-id and --step-id must be provided together'));
+  process.exit(1);
+}
 
 console.log(chalk.cyan.bold('\n⚡ AGI Farm — Auto-Dispatcher\n'));
+
+if (jobId && stepId) {
+  console.log(chalk.blue(`Job step mode: job=${jobId} step=${stepId}`));
+  console.log(chalk.dim('Idempotent step execution path enabled\n'));
+}
 
 if (!execute) {
   console.log(chalk.yellow('Dry-run mode (preview only)'));

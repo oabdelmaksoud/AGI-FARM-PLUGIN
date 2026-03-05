@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useDashboard } from './hooks/useDashboard';
-import { ToastProvider, useToast } from './components/Toast';
 import Header from './components/Header';
 import Nav from './components/Nav';
 import Overview from './components/tabs/Overview';
@@ -17,18 +16,17 @@ import HITLTab from './components/tabs/HITL';
 import Knowledge from './components/tabs/Knowledge';
 import Comms from './components/tabs/Comms';
 import AlertsTab from './components/tabs/Alerts';
-import Processes from './components/tabs/Processes';
-import Failures from './components/tabs/Failures';
-import Decisions from './components/tabs/Decisions';
-import Memory from './components/tabs/Memory';
+import Jobs from './components/tabs/Jobs';
+import Approvals from './components/tabs/Approvals';
+import Usage from './components/tabs/Usage';
 
 const TABS = [
   'Overview', 'Agents', 'Tasks', 'Projects',
+  'Jobs', 'Approvals', 'Usage',
   'Crons', 'HITL', 'Alerts',
   'Velocity', 'Budget', 'OKRs',
   'Knowledge', 'Comms',
   'R&D', 'Broadcast',
-  'Processes', 'Failures', 'Decisions', 'Memory',
 ];
 
 function Connecting() {
@@ -44,18 +42,18 @@ function Connecting() {
   );
 }
 
-function AppContent() {
+export default function App() {
   const [activeTab, setActiveTab] = useState('Overview');
   const { data, connected, lastUpdated, updateCount } = useDashboard();
-  const toast = useToast();
 
-  const tabProps = { data, lastUpdated, toast };
+  const tabProps = { data, lastUpdated };
 
   // Badge counts for nav tabs
   const badges = data ? {
     'HITL': (data.hitl_tasks || []).length,
     'Alerts': (data.alerts || []).length,
     'Crons': (data.crons || []).filter(j => (j._consecutive_errors || 0) >= 3).length,
+    'Approvals': (data.approvals || []).filter(a => a.status === 'pending').length,
   } : {};
 
   const renderTab = () => {
@@ -65,6 +63,9 @@ function AppContent() {
       case 'Agents': return <Agents    {...tabProps} />;
       case 'Tasks': return <Tasks     {...tabProps} />;
       case 'Projects': return <Projects  {...tabProps} />;
+      case 'Jobs': return <Jobs {...tabProps} />;
+      case 'Approvals': return <Approvals {...tabProps} />;
+      case 'Usage': return <Usage {...tabProps} />;
       case 'Velocity': return <Velocity  {...tabProps} />;
       case 'Budget': return <Budget    {...tabProps} />;
       case 'OKRs': return <OKRs      {...tabProps} />;
@@ -75,10 +76,6 @@ function AppContent() {
       case 'Knowledge': return <Knowledge {...tabProps} />;
       case 'Comms': return <Comms     {...tabProps} />;
       case 'Alerts': return <AlertsTab {...tabProps} />;
-      case 'Processes': return <Processes {...tabProps} />;
-      case 'Failures': return <Failures  {...tabProps} />;
-      case 'Decisions': return <Decisions {...tabProps} />;
-      case 'Memory': return <Memory    {...tabProps} />;
       default: return <Overview  {...tabProps} />;
     }
   };
@@ -91,13 +88,5 @@ function AppContent() {
         {renderTab()}
       </main>
     </div>
-  );
-}
-
-export default function App() {
-  return (
-    <ToastProvider>
-      <AppContent />
-    </ToastProvider>
   );
 }

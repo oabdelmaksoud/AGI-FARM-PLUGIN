@@ -48,6 +48,13 @@ export interface AGIFarmConfig {
   workspacePath?: string;
   /** Path to AGI Farm bundle */
   bundlePath?: string;
+  /** Feature flags */
+  featureJobs?: boolean;
+  featureSkills?: boolean;
+  featureMemory?: boolean;
+  featurePolicy?: boolean;
+  featureMetering?: boolean;
+  featureApprovals?: boolean;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -56,6 +63,12 @@ const DEFAULT_CONFIG: AGIFarmConfig = {
   dashboardPort: 8080,
   dashboardHost: "127.0.0.1",
   autoStartDashboard: true,
+  featureJobs: false,
+  featureSkills: false,
+  featureMemory: false,
+  featurePolicy: false,
+  featureMetering: false,
+  featureApprovals: false,
 };
 
 // ── AGI Farm Extension ────────────────────────────────────────────────────────
@@ -122,6 +135,12 @@ class AGIFarmExtension implements OpenClawExtension {
         AGI_FARM_DASHBOARD_PORT: String(this.config.dashboardPort),
         AGI_FARM_DASHBOARD_HOST: this.config.dashboardHost,
         AGI_FARM_WORKSPACE: this.config.workspacePath || "",
+        AGI_FARM_FEATURE_JOBS: this.config.featureJobs ? "1" : "0",
+        AGI_FARM_FEATURE_SKILLS: this.config.featureSkills ? "1" : "0",
+        AGI_FARM_FEATURE_MEMORY: this.config.featureMemory ? "1" : "0",
+        AGI_FARM_FEATURE_POLICY: this.config.featurePolicy ? "1" : "0",
+        AGI_FARM_FEATURE_METERING: this.config.featureMetering ? "1" : "0",
+        AGI_FARM_FEATURE_APPROVALS: this.config.featureApprovals ? "1" : "0",
       },
       stdio: ["ignore", "pipe", "pipe"],
     });

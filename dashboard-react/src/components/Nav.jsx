@@ -1,4 +1,4 @@
-const BADGE_COLOR = { 'HITL': 'var(--red)', 'Alerts': 'var(--red)', 'Crons': 'var(--amber)' };
+const BADGE_COLOR = { 'HITL': 'var(--red)', 'Alerts': 'var(--red)', 'Crons': 'var(--amber)', 'Approvals': 'var(--purple)' };
 
 export default function Nav({ tabs, active, onChange, badges = {} }) {
   return (
