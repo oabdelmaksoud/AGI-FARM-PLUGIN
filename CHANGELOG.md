@@ -6,6 +6,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.1.5] - 2026-03-05
+
+### Changed
+- Removed hardcoded model IDs from agent roster. All agents now use `manifest/auto`, deferring model selection to the user's configured providers in the OpenClaw gateway.
+
 ## [1.1.4] - 2026-03-05
 
 ### Changed

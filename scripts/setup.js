@@ -50,23 +50,6 @@ const AGENT_ROSTERS = {
   ],
 };
 
-// ── Model Selection Guide ─────────────────────────────────────────────────────
-const MODEL_GUIDE = {
-  'Orchestrator': 'anthropic/claude-sonnet-4-6',
-  'Solution Architect': 'anthropic/claude-opus-4-6',
-  'Implementation Engineer': 'claude-cli-proxy/claude-3-5-sonnet-20241022',
-  'Debugger': 'anthropic/claude-opus-4-6',
-  'Business Analyst': 'google/gemini-3.1-pro-preview',
-  'Knowledge Curator': 'anthropic/claude-opus-4-6',
-  'QA Engineer': 'anthropic/claude-opus-4-6',
-  'Content Specialist': 'google/gemini-3.1-pro-preview',
-  'Multimodal Specialist': 'deepseek/deepseek-reasoner',
-  'Process Improvement Lead': 'google/gemini-3.1-pro-preview',
-  'R&D Lead': 'anthropic/claude-opus-4-6',
-  'Researcher': 'anthropic/claude-opus-4-6',
-  'Builder': 'claude-cli-proxy/claude-3-5-sonnet-20241022',
-};
-
 // ── Wizard Steps ───────────────────────────────────────────────────────────────
 async function runWizard() {
   console.log(chalk.cyan.bold('\n🚜 AGI Farm — Multi-Agent Team Builder\n'));
@@ -221,7 +204,7 @@ function generateTeamJson(config) {
   const agents = AGENT_ROSTERS[config.preset].map(agent => ({
     ...agent,
     name: agent.id === 'main' ? config.orchestratorName : agent.name,
-    model: MODEL_GUIDE[agent.role] || 'manifest/auto',
+    // No model set — OpenClaw will use the user's configured default
   }));
 
   return {
@@ -253,7 +236,6 @@ function createAgents(team) {
       const result = runCommand('openclaw', [
         'agents', 'add',
         '--workspace', wsPath,
-        '--model', agent.model,
         agent.name,
         '--non-interactive'
       ]);
