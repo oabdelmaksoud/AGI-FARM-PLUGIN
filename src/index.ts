@@ -29,6 +29,16 @@ export interface ExtensionContext {
   config: Record<string, unknown>;
 }
 
+export interface PluginContext {
+  logger: Logger;
+  pluginConfig?: Partial<AGIFarmConfig>;
+  registerService?: (service: {
+    id: string;
+    start: () => Promise<void> | void;
+    stop: () => Promise<void> | void;
+  }) => void;
+}
+
 export interface OpenClawExtension {
   id: string;
   name: string;
@@ -252,6 +262,39 @@ class AGIFarmExtension implements OpenClawExtension {
  */
 export default function createExtension(config: Partial<AGIFarmConfig>): OpenClawExtension {
   return new AGIFarmExtension(config);
+}
+
+/**
+ * OpenClaw plugin registration entrypoint for runtimes that expect `register`.
+ */
+export function register(context: PluginContext): void {
+  const extension = new AGIFarmExtension(context.pluginConfig ?? {});
+
+  const start = async () => {
+    await extension.onLoad({
+      logger: context.logger,
+      config: {},
+    });
+    context.logger.info(`[agi-farm] Dashboard URL: ${extension.getDashboardUrl()}`);
+  };
+
+  const stop = async () => {
+    await extension.onUnload();
+  };
+
+  if (typeof context.registerService === "function") {
+    context.registerService({
+      id: "agi-farm-dashboard",
+      start,
+      stop,
+    });
+    return;
+  }
+
+  start().catch((err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err);
+    context.logger.error(`[agi-farm] Failed to initialize: ${message}`);
+  });
 }
 
 // Export types
