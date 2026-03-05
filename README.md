@@ -29,21 +29,22 @@
 | 🔄 **Auto-Dispatcher** | Smart task delegation with HITL, backoff & dependencies |
 | 📦 **Portable Bundle** | Export your entire team to GitHub with one command |
 | 🏗️ **ESM Native** | Built for Node 20+ with full ES Module support |
-| 🛡️ **Production Hardened** | Security-audited with CSRF, Origin validation, and timing-safe auth |
-| 🧪 **28 Unit Tests** | Extension lifecycle, security, parsing, and CLI utilities verified with Jest/ESM |
+| 🛡️ **Production Hardened** | Security-audited with CSRF, Origin validation, CSP headers, and timing-safe auth |
+| 🧪 **39 Unit Tests** | Extension lifecycle, security (ID validation, note sanitization), parsing, and CLI utilities verified with Jest/ESM |
 
 ---
 
 ## 🆕 Recent Updates
 
-- 🔐 **Origin validation**: mutation endpoints now validate `Origin` header — only localhost origins accepted.
-- 🔒 **Timing-safe auth hardened**: CSRF token comparison no longer leaks token length via timing.
-- 🧪 **28 unit tests**: added extension lifecycle, security, and shared utility test suites (was 6).
-- 📦 **Removed unused `sse.js`**: dependency cleaned from `package.json`.
-- 🔄 **Dynamic versioning**: extension reads version from `package.json` instead of hardcoding.
-- 🛠️ **ESM `__dirname` fix**: `src/index.ts` now uses `import.meta.dirname` with proper fallback.
-- 🧰 **Shared utilities**: extracted `runCommand` to `scripts/lib/run-command.js` — eliminates duplication.
-- ✅ **Env var consistency**: `export.js` and `status.js` now respect `AGI_FARM_WORKSPACE` like all other scripts.
+- 🔐 **CSRF token endpoint hardened**: `/api/session` now requires same-origin validation — cross-origin token theft blocked.
+- 🛡️ **SSE & data endpoints authenticated**: `/api/stream` and `/api/data` now require CSRF token — prevents cross-origin data exfiltration.
+- 🔒 **Security headers**: added CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and XSS-Protection.
+- 🧹 **Path traversal fix**: agent IDs from `AGENT_STATUS.json` are validated through `isSafeId()` before filesystem use.
+- 🚫 **HITL note sanitization**: `sanitizeNote()` strips control characters and prevents CLI flag injection.
+- 🔄 **Cron file locking**: `toggleCronEnabled` uses a mutex to prevent concurrent read-modify-write races.
+- 🧪 **39 unit tests**: added `isSafeId` and `sanitizeNote` test suites (was 28).
+- ⚙️ **CI hardened**: added eslint lint step and `npm audit --audit-level=high` to CI pipeline.
+- 📦 **All commands exposed**: all 7 commands now available as global executables via `package.json` bin field.
 
 ---
 
@@ -138,15 +139,15 @@ Answer the setup prompts and your team will be live in ~2 minutes:
 
 ## 📦 Commands
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| 🎯 `agi-farm setup` | Full wizard — agents, workspace, crons | Sets up complete team |
-| 🗑️ `agi-farm teardown` | Full uninstall — removes agents, bundle, and AGI Farm-owned registries (`TASKS.json`, `AGENT_STATUS.json`) | Reverts system to clean state |
-| 📊 `agi-farm status` | Team health: agents, tasks, cron status | Shows real-time metrics |
-| 🔧 `agi-farm rebuild` | Regenerate workspace from bundle | After git pull |
-| 📤 `agi-farm export` | Push bundle to GitHub | Creates new release |
-| 🖥️ `agi-farm dashboard` | Launch live ops room (SSE, :8080) | Opens in browser |
-| ⚡ `agi-farm dispatch` | Run auto-dispatcher manually | Test task routing |
+| Command | CLI Shortcut | Description |
+|---------|-------------|-------------|
+| 🎯 `agi-farm setup` | `agi-farm` | Full wizard — agents, workspace, crons |
+| 🗑️ `agi-farm teardown` | `agi-farm-teardown` | Full uninstall — removes agents, bundle, and registries |
+| 📊 `agi-farm status` | `agi-farm-status` | Team health: agents, tasks, cron status |
+| 🔧 `agi-farm rebuild` | `agi-farm-rebuild` | Regenerate workspace from bundle |
+| 📤 `agi-farm export` | `agi-farm-export` | Push bundle to GitHub |
+| 🖥️ `agi-farm dashboard` | `agi-farm-dashboard` | Launch live ops room (SSE, :8080) |
+| ⚡ `agi-farm dispatch` | `agi-farm-dispatch` | Run auto-dispatcher manually |
 
 ---
 
@@ -367,7 +368,7 @@ All data updates in real-time from workspace files:
 
 ### Interactive Actions (API)
 
-The dashboard enables direct control over team operations via the following REST endpoints:
+The dashboard enables direct control over team operations via authenticated REST endpoints (all require CSRF token):
 
 - `POST /api/hitl/:id/approve` — Continue task with optional notes
 - `POST /api/hitl/:id/reject` — Block task and notify agent
@@ -491,15 +492,20 @@ npm run start-dashboard
 
 ## 🔒 Security
 
-This plugin is designed with security in mind:
+This plugin is designed with defense-in-depth security:
 
-| ✅ What It Does | ❌ What It Doesn't Do |
-|----------------|----------------------|
-| Binds dashboard to `127.0.0.1` only | Expose data to the network |
-| Validates `Origin` header on all mutations | Accept cross-origin requests |
-| Uses CSRF tokens with timing-safe comparison | Leak token length via timing |
-| Uses OpenClaw CLI (inherits credentials) | Store API keys or tokens |
-| Reads/writes local workspace files | Send data to external servers |
+| Layer | Protection |
+|-------|-----------|
+| **Network** | Dashboard binds to `127.0.0.1` only — not exposed to LAN or internet |
+| **Origin validation** | `/api/session` gated by Origin/Referer — cross-origin token theft blocked |
+| **CSRF tokens** | All mutation endpoints require timing-safe CSRF token comparison |
+| **SSE authentication** | `/api/stream` and `/api/data` require CSRF token — prevents cross-origin data exfiltration |
+| **Security headers** | CSP, X-Frame-Options (DENY), X-Content-Type-Options, Referrer-Policy |
+| **Input validation** | Agent IDs validated via `isSafeId()` regex — blocks path traversal |
+| **Note sanitization** | HITL notes stripped of control chars; CLI flag injection prevented |
+| **Rate limiting** | 120 req/min (read), 30 req/min (mutations) per IP |
+| **File locking** | Cron file writes use mutex to prevent concurrent corruption |
+| **Credential isolation** | Uses OpenClaw CLI — no API keys stored in plugin |
 
 **Your credentials stay in OpenClaw's configuration.**
 
