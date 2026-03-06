@@ -27,7 +27,7 @@ const DEFAULT_APPROVALS = { approvals: [] };
 
 function wildcardMatch(text, pattern) {
   if (pattern === '*' || !pattern) return true;
-  const rx = new RegExp(`^${String(pattern).replace(/[.+?^${}()|[\\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
+  const rx = new RegExp(`^${String(pattern).replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
   return rx.test(text);
 }
 

@@ -25,6 +25,7 @@ import { MemoryService } from './services/memory.js';
 import { PolicyService } from './services/policy.js';
 import { MeteringService } from './services/metering.js';
 import { WorkerService } from './services/worker.js';
+import { safeWriteJson } from './services/storage.js';
 import { UpdateChecker } from './updater.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -338,7 +339,7 @@ function toggleCronEnabled(id) {
   const next = !current;
   jobs[idx].enabled = next;
   const out = { ...asObject(raw), jobs };
-  fs.writeFileSync(CRON_FILE, JSON.stringify(out, null, 2), 'utf-8');
+  safeWriteJson(CRON_FILE, out);
   return { ok: true, enabled: next };
 }
 
@@ -508,6 +509,13 @@ function validateAction(req, res, next) {
     return;
   }
   next();
+}
+
+function sanitizeNote(note) {
+  if (typeof note !== 'string') return '';
+  let cleaned = note.slice(0, 1000).replace(/[\x00-\x1f\x7f]/g, '');
+  if (cleaned.startsWith('-')) cleaned = ' ' + cleaned;
+  return cleaned;
 }
 
 function requireFeature(name) {
@@ -1060,7 +1068,7 @@ async function main() {
 
   app.post('/api/hitl/:id/:action', actionLimiter, validateId, validateAction, requireCsrf, createPolicyGate(services, (req) => `hitl:${req.params.action}:${req.params.id}`), async (req, res) => {
     const { id, action } = req.params;
-    const note = typeof req.body.note === 'string' ? req.body.note.slice(0, 1000) : '';
+    const note = sanitizeNote(req.body.note);
     if (!['approve', 'reject'].includes(action)) {
       res.status(400).json({ ok: false, error: 'invalid_action' });
       return;
@@ -1227,7 +1235,7 @@ async function main() {
     }
   });
 
-  app.post('/api/update-install', requireCsrf, actionLimiter, async (req, res) => {
+  app.post('/api/update-install', actionLimiter, requireCsrf, async (req, res) => {
     try {
       const result = await updateChecker.performUpdate();
       res.json(result);
