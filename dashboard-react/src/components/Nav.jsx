@@ -1,32 +1,38 @@
-const BADGE_COLOR = { 'HITL': 'var(--red)', 'Alerts': 'var(--red)', 'Crons': 'var(--amber)', 'Approvals': 'var(--purple)' };
-
 export default function Nav({ tabs, active, onChange, badges = {} }) {
   return (
-    <nav className="glass-panel" style={{
-      height: 48, borderBottom: '1px solid var(--border)',
-      display: 'flex', alignItems: 'stretch', padding: '0 16px', gap: 4,
-      position: 'sticky', top: 52, zIndex: 99, overflowX: 'auto',
+    <nav style={{
+      height: '44px', borderBottom: '1px solid var(--border)', background: '#050505',
+      display: 'flex', alignItems: 'stretch', padding: '0 24px', gap: 4,
+      position: 'sticky', top: '52px', zIndex: 99, overflowX: 'auto',
     }}>
       {tabs.map(tab => {
         const badge = badges[tab];
+        const isActive = active === tab;
         return (
-          <button key={tab} onClick={() => onChange(tab)} style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: '0 16px',
-            fontSize: 12, fontFamily: 'inherit', fontWeight: active === tab ? 600 : 400,
-            color: active === tab ? 'var(--cyan)' : 'var(--muted)',
-            borderBottom: active === tab ? '2px solid var(--cyan)' : '2px solid transparent',
-            textShadow: active === tab ? '0 0 10px rgba(0,240,255,0.4)' : 'none',
-            transition: 'all .25s cubic-bezier(0.16, 1, 0.3, 1)', whiteSpace: 'nowrap',
-            position: 'relative', display: 'flex', alignItems: 'center', gap: 5,
-          }}>
-            {tab}
+          <button
+            key={tab}
+            onClick={() => onChange(tab)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: '0 16px',
+              fontSize: '11px', fontWeight: isActive ? 800 : 500,
+              color: isActive ? '#fff' : 'var(--muted)',
+              borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+              transition: 'all 0.15s', whiteSpace: 'nowrap',
+              position: 'relative', display: 'flex', alignItems: 'center', gap: 6,
+              fontFamily: 'var(--font-mono)', letterSpacing: '0.05em'
+            }}
+          >
+            {tab.toUpperCase()}
             {badge > 0 && (
               <span style={{
-                fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 8,
-                background: BADGE_COLOR[tab] || 'var(--cyan)',
-                color: '#fff', lineHeight: 1.4, minWidth: 16, textAlign: 'center',
-                animation: tab === 'HITL' ? 'pulse 2s infinite' : 'none',
-              }}>{badge}</span>
+                fontSize: '9px', fontWeight: 900, padding: '1px 5px', borderRadius: '2px',
+                background: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                color: isActive ? '#000' : 'var(--muted)',
+                lineHeight: 1, minWidth: '14px', textAlign: 'center',
+                border: isActive ? 'none' : '1px solid var(--border-light)'
+              }}>
+                {badge}
+              </span>
             )}
           </button>
         );

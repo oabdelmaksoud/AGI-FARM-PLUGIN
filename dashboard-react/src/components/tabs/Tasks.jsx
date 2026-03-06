@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { createTask } from '../../lib/api';
 import LastUpdated from '../LastUpdated';
 
-const FILTERS = ['all', 'pending', 'in-progress', 'complete', 'failed', 'blocked', '🚨 hitl'];
+const FILTERS = ['all', 'pending', 'in-progress', 'complete', 'failed', 'blocked', 'hitl'];
 const PAGE_SIZE = 25;
 
 function useTick(intervalMs = 10000) {
@@ -16,7 +16,7 @@ function useTick(intervalMs = 10000) {
 
 function DeadlineBadge({ deadline }) {
   useTick(10000);
-  if (!deadline) return <span style={{ color: 'var(--muted)', fontSize: 10 }}>[NO LIMIT]</span>;
+  if (!deadline) return <span style={{ color: 'var(--muted)', fontSize: '10px' }}>[NO_LIMIT]</span>;
   try {
     const d = new Date(deadline);
     const diff = Math.round((d - Date.now()) / 60000);
@@ -29,88 +29,96 @@ function DeadlineBadge({ deadline }) {
         ? `${over ? '-' : ''}${Math.round(abs / 60)}H`
         : d.toLocaleDateString();
     return (
-      <span title={d.toLocaleString()} style={{ color, fontSize: 10, fontWeight: over ? 800 : 600, fontFamily: 'JetBrains Mono, monospace' }}>
+      <span title={d.toLocaleString()} style={{ color, fontSize: '10px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
         {label}{over ? ' !!' : ''}
       </span>
     );
   } catch {
-    return <span style={{ color: 'var(--muted)', fontSize: 10 }}>{deadline}</span>;
+    return <span style={{ color: 'var(--muted)', fontSize: '10px' }}>{deadline}</span>;
   }
 }
 
 function TaskRow({ task: t, expanded, onToggle }) {
   const pri = (t.sla?.priority || t.priority || 'P3').toUpperCase();
-  const s = (t.status || '').toLowerCase().replace(/ /g, '-');
-  const cls = {
-    'complete': 'badge-complete', 'pending': 'badge-pending',
-    'in-progress': 'badge-in-progress', 'failed': 'badge-failed',
-    'needs_human_decision': 'badge-hitl', 'blocked': 'badge-blocked',
-  }[s] || 'badge-pending';
-  const isHitl = t.status === 'needs_human_decision';
+  const status = (t.status || '').toLowerCase();
+
+  const statusColor = {
+    'complete': 'var(--mint)',
+    'in-progress': 'var(--accent)',
+    'failed': 'var(--red)',
+    'needs_human_decision': 'var(--purple)',
+    'blocked': 'var(--red)',
+  }[status] || 'var(--muted)';
+
+  const isHitl = status === 'needs_human_decision';
 
   return (
     <>
       <tr
         onClick={onToggle}
         style={{
-          borderBottom: expanded ? 'none' : '1px solid rgba(255,255,255,.02)',
-          background: isHitl ? 'rgba(255,42,85,0.03)' : 'transparent',
+          borderBottom: '1px solid var(--border-light)',
+          background: isHitl ? 'rgba(181, 53, 255, 0.05)' : 'transparent',
           cursor: 'pointer',
           transition: 'background 0.2s'
         }}
-        className="task-row-hover"
       >
-        <td style={{ padding: '12px 14px', color: 'var(--cyan)', fontFamily: 'JetBrains Mono, monospace', fontSize: 10, opacity: 0.8 }}>{t.id || '—'}</td>
-        <td style={{ padding: '12px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {isHitl && <span style={{ textShadow: '0 0 8px var(--red)' }}>🚨</span>}
-            <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13, letterSpacing: '-0.01em' }}>{t.title || '—'}</span>
+        <td style={{ padding: '12px 16px', color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontSize: '10px' }}>
+          {t.id?.toUpperCase() || '--'}
+        </td>
+        <td style={{ padding: '12px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {isHitl && <span style={{ color: 'var(--purple)', fontWeight: 900 }}>[!]</span>}
+            <span style={{ fontWeight: 600, color: '#fff', fontSize: '13px' }}>{t.title?.toUpperCase() || '--'}</span>
           </div>
         </td>
-        <td style={{ padding: '12px 14px' }}>
-          <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{t.assigned_to || '--'}</span>
+        <td style={{ padding: '12px 16px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600 }}>{t.assigned_to?.toUpperCase() || '--'}</span>
         </td>
-        <td style={{ padding: '12px 14px' }}>
-          <span className={`pri-tag ${pri.toLowerCase()}`} style={{
-            fontSize: 9, fontWeight: 900, padding: '2px 6px', borderRadius: 4,
-            background: pri === 'P1' ? 'rgba(255,42,85,0.1)' : 'rgba(255,255,255,0.05)',
-            color: pri === 'P1' ? 'var(--red)' : 'var(--muted)',
-            border: `1px solid ${pri === 'P1' ? 'rgba(255,42,85,0.2)' : 'rgba(255,255,255,0.05)'}`
+        <td style={{ padding: '12px 16px' }}>
+          <span style={{
+            fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '2px',
+            background: 'rgba(255,255,255,0.03)', color: pri === 'P1' ? 'var(--red)' : 'var(--muted)',
+            border: `1px solid ${pri === 'P1' ? 'var(--red)' : 'var(--border)'}`,
+            fontFamily: 'var(--font-mono)'
           }}>{pri}</span>
         </td>
-        <td style={{ padding: '12px 14px' }}><span className={`badge ${cls}`} style={{ fontSize: 9 }}>{t.status?.toUpperCase() || '—'}</span></td>
-        <td style={{ padding: '12px 14px' }}><DeadlineBadge deadline={t.sla?.deadline || t.sla?.target} /></td>
-        <td style={{ padding: '12px 14px', color: 'var(--muted)', fontSize: 10, textAlign: 'center' }}>
-          {expanded ? '△' : '▽'}
+        <td style={{ padding: '12px 16px' }}>
+          <span style={{ fontSize: '9px', fontWeight: 800, color: statusColor, fontFamily: 'var(--font-mono)' }}>
+            {status.toUpperCase().replace(/_/g, ' ')}
+          </span>
+        </td>
+        <td style={{ padding: '12px 16px' }}><DeadlineBadge deadline={t.sla?.deadline || t.sla?.target} /></td>
+        <td style={{ padding: '12px 16px', color: 'var(--muted)', fontSize: '10px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+          {expanded ? '[-]' : '[+]'}
         </td>
       </tr>
 
       {expanded && (
-        <tr style={{ background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--border)' }}>
-          <td colSpan={7} style={{ padding: '20px 24px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 24 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <tr style={{ background: '#080808' }}>
+          <td colSpan={7} style={{ padding: '24px 32px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 40 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {t.hitl_reason && (
-                  <div className="card shadow-glow" style={{ border: '1px solid var(--red)', background: 'rgba(255,42,85,0.03)' }}>
-                    <div className="section-title" style={{ color: 'var(--red)', fontSize: 9 }}>NEURAL INTERVENTION REQUIRED</div>
-                    <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{t.hitl_reason}</div>
+                  <div className="card" style={{ borderColor: 'var(--purple)', background: 'rgba(181, 53, 255, 0.03)' }}>
+                    <div className="section-title" style={{ color: 'var(--purple)' }}>INTERVENTION_REQUIRED</div>
+                    <div style={{ fontSize: '13px', color: '#fff', fontWeight: 600 }}>{t.hitl_reason}</div>
                   </div>
                 )}
 
                 <div>
-                  <div className="section-title" style={{ fontSize: 9 }}>MISSION DESCRIPTION</div>
-                  <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, background: 'rgba(255,255,255,0.02)', padding: 14, borderRadius: 8 }}>
-                    {t.description || 'No detailed log provided for this node.'}
+                  <div className="section-title">MISSION_OBJECTIVE_DETAIL</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-dim)', lineHeight: 1.6, background: '#000', padding: '16px', border: '1px solid var(--border-light)' }}>
+                    {t.description || 'NO_DETAILED_LOG_AVAILABLE_FOR_NODE.'}
                   </div>
                 </div>
 
                 {t.output && (
                   <div>
-                    <div className="section-title" style={{ fontSize: 9, color: 'var(--green)' }}>MISSION OUTPUT</div>
+                    <div className="section-title" style={{ color: 'var(--mint)' }}>FINAL_RESOLUTION_OUTPUT</div>
                     <div style={{
-                      fontSize: 12, color: 'var(--green)', lineHeight: 1.6, padding: 14, borderRadius: 8,
-                      background: 'rgba(0,255,157,0.02)', border: '1px solid rgba(0,255,157,0.1)',
-                      fontFamily: 'JetBrains Mono, monospace'
+                      fontSize: '11px', color: 'var(--mint)', lineHeight: 1.6, padding: '16px', border: '1px solid var(--mint)',
+                      background: 'rgba(0,240,255,0.01)', fontFamily: 'var(--font-mono)'
                     }}>
                       {t.output}
                     </div>
@@ -118,22 +126,22 @@ function TaskRow({ task: t, expanded, onToggle }) {
                 )}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div className="card" style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)' }}>
-                  <div className="section-title" style={{ fontSize: 9 }}>METADATA MATRIX</div>
-                  <div style={{ display: 'grid', gap: 10, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div className="card">
+                  <div className="section-title">METADATA_ARRAY</div>
+                  <div style={{ display: 'grid', gap: 10, fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--muted)' }}>TYPE:</span><span style={{ color: 'var(--cyan)' }}>{t.type?.toUpperCase()}</span>
+                      <span style={{ color: 'var(--muted)' }}>MODE:</span><span>{t.type?.toUpperCase()}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--muted)' }}>PROC_ID:</span><span style={{ color: 'var(--cyan)' }}>{t.proc_id || 'LOCAL'}</span>
+                      <span style={{ color: 'var(--muted)' }}>PID:</span><span style={{ color: 'var(--accent)' }}>{t.proc_id || 'LOCAL'}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--muted)' }}>CREATED:</span><span>{new Date(t.created_at).toLocaleString()}</span>
+                      <span style={{ color: 'var(--muted)' }}>TX_START:</span><span>{new Date(t.created_at).toLocaleString()}</span>
                     </div>
                     {t.completed_at && (
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--muted)' }}>RESOLVED:</span><span style={{ color: 'var(--green)' }}>{new Date(t.completed_at).toLocaleString()}</span>
+                        <span style={{ color: 'var(--muted)' }}>TX_COMPL:</span><span style={{ color: 'var(--mint)' }}>{new Date(t.completed_at).toLocaleString()}</span>
                       </div>
                     )}
                   </div>
@@ -141,10 +149,10 @@ function TaskRow({ task: t, expanded, onToggle }) {
 
                 {t.depends_on?.length > 0 && (
                   <div className="card">
-                    <div className="section-title" style={{ fontSize: 9 }}>DEPENDENCIES</div>
+                    <div className="section-title">NODE_DEPENDENCIES</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {t.depends_on.map(id => (
-                        <span key={id} style={{ fontSize: 9, padding: '2px 8px', background: 'rgba(0,240,255,0.05)', color: 'var(--cyan)', border: '1px solid rgba(0,240,255,0.1)', borderRadius: 4 }}>{id}</span>
+                        <span key={id} style={{ fontSize: '9px', padding: '3px 8px', background: 'rgba(255,255,255,0.03)', color: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: '2px', fontFamily: 'var(--font-mono)' }}>{id.toUpperCase()}</span>
                       ))}
                     </div>
                   </div>
@@ -164,147 +172,115 @@ export default function Tasks({ data, lastUpdated, toast }) {
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState(null);
   const [search, setSearch] = useState('');
-  const [sortCol, setSortCol] = useState(null);
-  const [sortDir, setSortDir] = useState('asc');
   const [showNew, setShowNew] = useState(false);
   const [newTask, setNewTask] = useState({ id: '', title: '', description: '', priority: 'P2', assigned_to: '', type: 'dev' });
   const [saving, setSaving] = useState(false);
-
-  const handleSort = (col) => {
-    if (sortCol === col) { setSortDir(d => d === 'asc' ? 'desc' : 'asc'); }
-    else { setSortCol(col); setSortDir('asc'); }
-  };
 
   const handleCreate = async () => {
     if (!newTask.id || !newTask.title) return;
     setSaving(true);
     try {
       await createTask(newTask);
-      toast('Mission objective initialized', 'success');
+      toast('MISSION_OBJECTIVE_STAGED', 'success');
       setShowNew(false);
       setNewTask({ id: '', title: '', description: '', priority: 'P2', assigned_to: '', type: 'dev' });
     } catch (e) { toast(e.message, 'error'); }
-    setSaving(false);
+    finally { setSaving(false); }
   };
 
   const filtered = tasks.filter(t => {
-    if (filter === '🚨 hitl' ? t.status !== 'needs_human_decision' : (filter !== 'all' && t.status !== filter)) return false;
+    if (filter !== 'all' && t.status !== (filter === 'hitl' ? 'needs_human_decision' : filter)) return false;
     if (!search) return true;
     const q = search.toLowerCase();
-    return (t.id || '').toLowerCase().includes(q) || (t.title || '').toLowerCase().includes(q) || (t.assigned_to || '').toLowerCase().includes(q);
+    return (t.id || '').toLowerCase().includes(q) || (t.title || '').toLowerCase().includes(q);
   });
 
-  const sorted = sortCol ? [...filtered].sort((a, b) => {
-    const va = (a[sortCol] || '').toString().toLowerCase();
-    const vb = (b[sortCol] || '').toString().toLowerCase();
-    return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-  }) : filtered;
-
-  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
-  const paged = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-
-  const toggle = (id) => setExpanded(prev => prev === id ? null : id);
-  const setFilterAndReset = (f) => { setFilter(f); setPage(0); setExpanded(null); };
-
-  const filterCount = (f) => f === '🚨 hitl'
-    ? tasks.filter(t => t.status === 'needs_human_decision').length
-    : tasks.filter(t => t.status === f).length;
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
-    <div className="fade-in" style={{ display: 'grid', gap: 16 }}>
-      {/* Header bar */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input className="input-base" placeholder="QUERY MISSIONS..." value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} style={{ flex: '0 1 220px', background: 'rgba(0,0,0,0.2)' }} />
+    <div className="fade-in" style={{ display: 'grid', gap: 20 }}>
+      {/* Search & Filter bar */}
+      <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        <input
+          className="input-base"
+          placeholder="SEARCH_MISSION_ID..."
+          value={search}
+          onChange={e => { setSearch(e.target.value); setPage(0); }}
+          style={{ width: '240px', fontFamily: 'var(--font-mono)' }}
+        />
 
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 4 }}>
           {FILTERS.map(f => (
-            <button key={f} onClick={() => setFilterAndReset(f)} style={{
-              background: filter === f ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255,255,255,0.03)',
-              border: `1px solid ${filter === f ? 'rgba(0, 240, 255, 0.4)' : 'var(--border)'}`,
-              color: filter === f ? 'var(--cyan)' : 'var(--muted)',
-              padding: '6px 14px', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif',
-              fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', transition: 'all 0.2s',
-              boxShadow: filter === f ? '0 0 15px rgba(0, 240, 255, 0.1)' : 'none',
+            <button key={f} onClick={() => { setFilter(f); setPage(0); }} style={{
+              background: filter === f ? 'var(--accent)' : 'rgba(255,255,255,0.02)',
+              border: '1px solid var(--border)',
+              color: filter === f ? '#000' : 'var(--muted)',
+              padding: '6px 12px', borderRadius: '2px', fontSize: '10px', cursor: 'pointer',
+              fontWeight: 800, textTransform: 'uppercase', transition: 'all 0.15s',
+              fontFamily: 'var(--font-mono)'
             }}>
-              {f.replace('🚨 ', '')}{f !== 'all' && <span style={{ opacity: 0.6, marginLeft: 6 }}>{filterCount(f)}</span>}
+              {f}
             </button>
           ))}
         </div>
 
-        <button className="btn-primary" style={{ height: 36, marginLeft: 'auto' }} onClick={() => setShowNew(v => !v)}>+ NEW MISSION</button>
-        <div style={{ marginLeft: 10 }}><LastUpdated ts={lastUpdated} /></div>
+        <button className="btn-primary" style={{ padding: '8px 16px', marginLeft: 'auto' }} onClick={() => setShowNew(!showNew)}>+ NEW_MISSION</button>
       </div>
 
       {showNew && (
-        <div className="card shadow-glow" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, border: '1px solid var(--border-h)' }}>
-          <div className="section-title" style={{ gridColumn: 'span 3' }}>INITIALIZE MISSION PARAMETERS</div>
-          <input className="input-base" placeholder="TASK ID *" value={newTask.id} onChange={e => setNewTask(p => ({ ...p, id: e.target.value }))} />
-          <input className="input-base" placeholder="OBJECTIVE TITLE *" value={newTask.title} onChange={e => setNewTask(p => ({ ...p, title: e.target.value }))} style={{ gridColumn: 'span 2' }} />
-          <textarea className="input-base" placeholder="MISSION DESCRIPTION" value={newTask.description} onChange={e => setNewTask(p => ({ ...p, description: e.target.value }))} style={{ gridColumn: 'span 3', minHeight: 60 }} />
-          <select className="input-base" value={newTask.priority} onChange={e => setNewTask(p => ({ ...p, priority: e.target.value }))} style={{ cursor: 'pointer' }}>
-            <option value="P1">PRIORITY P1</option><option value="P2">PRIORITY P2</option><option value="P3">PRIORITY P3</option>
+        <div className="card" style={{
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12,
+          background: 'rgba(37, 175, 244, 0.03)', borderColor: 'var(--accent)'
+        }}>
+          <div className="section-title" style={{ gridColumn: 'span 3', color: 'var(--accent)' }}>INITIALIZE_MISSION_PARAMETERS</div>
+          <input className="input-base" placeholder="TASK_ID *" value={newTask.id} onChange={e => setNewTask({ ...newTask, id: e.target.value })} />
+          <input className="input-base" placeholder="OBJECTIVE_TITLE *" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} style={{ gridColumn: 'span 2' }} />
+          <textarea className="input-base" placeholder="MISSION_DESCRIPTION" value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} style={{ gridColumn: 'span 3', minHeight: '80px' }} />
+          <select className="input-base" value={newTask.priority} onChange={e => setNewTask({ ...newTask, priority: e.target.value })}>
+            <option value="P1">P1_CRITICAL</option><option value="P2">P2_NORMAL</option><option value="P3">P3_LOW</option>
           </select>
-          <select className="input-base" value={newTask.assigned_to} onChange={e => setNewTask(p => ({ ...p, assigned_to: e.target.value }))} style={{ cursor: 'pointer' }}>
-            <option value="">NODE ASSIGNMENT...</option>
+          <select className="input-base" value={newTask.assigned_to} onChange={e => setNewTask({ ...newTask, assigned_to: e.target.value })}>
+            <option value="">NODE_ASSIGNMENT...</option>
             {agents.map(a => <option key={a.id} value={a.id}>{a.emoji} {a.name.toUpperCase()}</option>)}
           </select>
-          <select className="input-base" value={newTask.type} onChange={e => setNewTask(p => ({ ...p, type: e.target.value }))} style={{ cursor: 'pointer' }}>
-            <option value="dev">DEV</option><option value="research">RESEARCH</option><option value="review">REVIEW</option><option value="ops">OPS</option>
-          </select>
-          <div style={{ gridColumn: 'span 3', display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
-            <button className="btn-primary" onClick={handleCreate} disabled={saving || !newTask.id || !newTask.title}>{saving ? 'PROCESSING...' : 'INITIALIZE MISSION'}</button>
-            <button className="input-base" style={{ cursor: 'pointer', border: 'none' }} onClick={() => setShowNew(false)}>ABORT</button>
-          </div>
+          <button className="btn-primary" onClick={handleCreate} disabled={saving || !newTask.id || !newTask.title} style={{ gridColumn: 'span 1' }}>{saving ? 'PROCESSING...' : 'INITIALIZE'}</button>
         </div>
       )}
 
-      {/* Table */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden', background: 'transparent' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+      {/* High-Density Table */}
+      <div style={{ border: '1px solid var(--border)', background: '#050505' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border)' }}>
-              {[['id', 'ID'], ['title', 'OBJECTIVE'], ['assigned_to', 'NODE'], ['priority', 'PRI'], ['status', 'STATUS'], [null, 'TTL'], [null, '']].map(([col, h]) => (
-                <th key={h} onClick={col ? () => handleSort(col) : undefined} style={{
-                  padding: '12px 14px', textAlign: 'left', fontSize: 9,
-                  color: sortCol === col ? 'var(--cyan)' : 'var(--muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em',
-                  cursor: col ? 'pointer' : 'default', userSelect: 'none',
-                }}>{h}{sortCol === col ? (sortDir === 'asc' ? ' △' : ' ▽') : ''}</th>
+              {['ID', 'MISSION_OBJECTIVE', 'NODE', 'PRI', 'STATUS', 'TTL', ''].map(h => (
+                <th key={h} style={{
+                  padding: '12px 16px', textAlign: 'left', fontSize: '9px', color: 'var(--muted)',
+                  fontWeight: 800, textTransform: 'uppercase', fontFamily: 'var(--font-mono)'
+                }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {paged.length === 0 && (
+            {paged.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '80px 12px', color: 'var(--muted)', textAlign: 'center' }}>
-                  <div style={{ fontSize: 32, marginBottom: 16, opacity: 0.5 }}>📋</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.05em' }}>MISSION INDEX NULL</div>
-                  <div style={{ fontSize: 10, marginTop: 8, opacity: 0.6, fontFamily: 'JetBrains Mono, monospace' }}>
-                    {filter === 'all' ? 'NO ACTIVE TASKS IN CURRENT CONTEXT.' : `QUERY RETURNED ZERO NODES FOR STATUS: ${filter.replace('🚨 ', '').toUpperCase()}.`}
-                  </div>
+                <td colSpan={7} style={{ padding: '80px', color: 'var(--muted)', textAlign: 'center', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
+                  SIGNAL_VOID // NO_MATCHING_MISSIONS_FOUND
                 </td>
               </tr>
+            ) : (
+              paged.map(t => <TaskRow key={t.id} task={t} expanded={expanded === t.id} onToggle={() => setExpanded(expanded === t.id ? null : t.id)} />)
             )}
-            {paged.map(t => (
-              <TaskRow key={t.id} task={t} expanded={expanded === t.id} onToggle={() => toggle(t.id)} />
-            ))}
           </tbody>
         </table>
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{ display: 'flex', gap: 12, marginTop: 8, alignItems: 'center', justifyContent: 'center' }}>
-          <button className="btn-primary" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-            style={{ padding: '6px 16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', fontSize: 10 }}>
-            PREV_PAGE
-          </button>
-          <div style={{ fontSize: 10, color: 'var(--muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
-            SEGMENT {page + 1} // {totalPages}
-          </div>
-          <button className="btn-primary" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1}
-            style={{ padding: '6px 16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', fontSize: 10 }}>
-            NEXT_PAGE
-          </button>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'center' }}>
+          <button className="btn-secondary" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} style={{ padding: '6px 16px', fontSize: '10px' }}>PREV</button>
+          <span style={{ fontSize: '10px', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>PAGE {page + 1} // {totalPages}</span>
+          <button className="btn-secondary" onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page === totalPages - 1} style={{ padding: '6px 16px', fontSize: '10px' }}>NEXT</button>
         </div>
       )}
     </div>

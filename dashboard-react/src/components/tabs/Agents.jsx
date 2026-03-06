@@ -2,127 +2,85 @@ import { useState } from 'react';
 import { apiPost } from '../../lib/api';
 import LastUpdated from '../LastUpdated';
 
-function HeartbeatBar({ minutes }) {
+/* ─── Components ────────────────────────────────────────────────── */
+
+function HeartbeatStatus({ minutes }) {
   const age = minutes ?? 999;
-  const color = age < 5 ? 'var(--green)' : age < 15 ? 'var(--amber)' : 'var(--red)';
-  const label = age < 999 ? `${age}m ago` : 'STALE';
+  const color = age < 5 ? 'var(--mint)' : age < 15 ? 'var(--amber)' : 'var(--red)';
   const pct = Math.max(0, Math.min(100, 100 - (age / 60) * 100));
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--muted)', marginBottom: 4, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>
+    <div style={{ width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--muted)', marginBottom: '4px', fontFamily: 'var(--font-mono)' }}>
         <span>PULSE_SIGNAL</span>
-        <span style={{ color }}>{label}</span>
+        <span style={{ color }}>{age < 999 ? `${age}M AGO` : 'OFFLINE'}</span>
       </div>
-      <div style={{ height: 4, background: 'rgba(255,255,255,0.04)', borderRadius: 2, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: color, boxShadow: `0 0 8px ${color}44`, borderRadius: 2, transition: 'width 1s ease' }} />
+      <div className="progress-track" style={{ height: '2px' }}>
+        <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
       </div>
     </div>
   );
 }
 
-function WorkloadRing({ active, total, size = 36 }) {
+function WorkloadMeter({ active, total }) {
   const pct = total > 0 ? (active / total) * 100 : 0;
-  const color = pct > 80 ? 'var(--red)' : pct > 40 ? 'var(--amber)' : 'var(--cyan)';
-  const r = (size - 6) / 2;
-  const circ = 2 * Math.PI * r;
-  const dash = circ * (pct / 100);
+  const color = pct > 80 ? 'var(--red)' : pct > 40 ? 'var(--amber)' : 'var(--accent)';
   return (
-    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', filter: `drop-shadow(0 0 4px ${color}33)` }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={5} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={5}
-          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-          style={{ transition: 'stroke-dasharray 0.8s ease' }} />
-      </svg>
-      <div style={{
-        position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 9, fontWeight: 900, color, fontFamily: 'JetBrains Mono, monospace'
-      }}>{active}</div>
+    <div style={{ width: '40px', flexShrink: 0 }}>
+      <div style={{ fontSize: '12px', fontWeight: 800, color, fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
+        {active}<span style={{ color: 'var(--muted)', fontSize: '9px', fontWeight: 400 }}>/{total}</span>
+      </div>
+      <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 800, textAlign: 'center', marginTop: '2px' }}>LOAD</div>
     </div>
   );
 }
 
-function ActiveTaskBadge({ task }) {
-  if (!task) {
-    return (
-      <div style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.01)', borderRadius: 8, border: '1px dashed rgba(255,255,255,0.05)', fontSize: 10, color: 'var(--muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>
-        STATUS: IDLE // AWAITING_DIRECTIVE
-      </div>
-    );
-  }
-  const pri = (task.sla?.priority || task.priority || '').toUpperCase();
-  const priColor = pri === 'P1' ? 'var(--red)' : pri === 'P2' ? 'var(--amber)' : 'var(--cyan)';
+function ActiveTaskSignifier({ task }) {
+  if (!task) return (
+    <div style={{ fontSize: '10px', color: 'var(--muted)', fontFamily: 'var(--font-mono)', padding: '8px', border: '1px solid var(--border-light)', borderRadius: '2px' }}>
+      // AWAITING_INSTRUCTIONS
+    </div>
+  );
   return (
-    <div style={{ padding: '8px 12px', background: 'rgba(0,240,255,0.03)', borderRadius: 8, border: '1px solid rgba(0,240,255,0.12)' }}>
-      <div style={{ fontSize: 8, color: 'var(--cyan)', fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', marginBottom: 4 }}>▶ ACTIVE_CYCLE</div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        {pri && <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 3, background: `${priColor}15`, color: priColor, border: `1px solid ${priColor}44`, fontWeight: 800 }}>{pri}</span>}
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</span>
+    <div style={{ borderLeft: '2px solid var(--accent)', paddingLeft: '10px', margin: '4px 0' }}>
+      <div style={{ fontSize: '8px', color: 'var(--accent)', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>ACTIVE_PROCESS</div>
+      <div style={{ fontSize: '11px', fontWeight: 600, color: '#fff', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {task.title.toUpperCase()}
       </div>
-      <div style={{ fontSize: 9, color: 'var(--muted)', marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>{task.id}</div>
     </div>
   );
 }
 
-function RecentCycles({ tasks }) {
-  const [open, setOpen] = useState(false);
-  if (!tasks.length) return null;
-  const CLSMAP = { complete: 'var(--green)', failed: 'var(--red)', blocked: 'var(--amber)' };
-  return (
-    <div>
-      <button onClick={() => setOpen(o => !o)} style={{
-        background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)',
-        fontSize: 9, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, padding: 0,
-        display: 'flex', alignItems: 'center', gap: 6
-      }}>
-        <span style={{ color: open ? 'var(--cyan)' : 'var(--muted)', transition: 'color 0.2s' }}>{open ? '▾' : '▸'}</span>
-        RECENT_CYCLES [{tasks.length}]
-      </button>
-      {open && (
-        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {tasks.map(t => {
-            const c = CLSMAP[t.status] || 'var(--muted)';
-            return (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'rgba(255,255,255,0.01)', borderRadius: 6, borderLeft: `2px solid ${c}` }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: c, boxShadow: `0 0 4px ${c}`, flexShrink: 0 }} />
-                <span style={{ flex: 1, fontSize: 10, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
-                <span style={{ fontSize: 9, color: c, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace' }}>{t.status.toUpperCase()}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
+/* ─── Main View ─────────────────────────────────────────────────── */
 
 export default function Agents({ data, lastUpdated, toast }) {
   const { agents = [], tasks = [], cache_age_seconds } = data || {};
-  const cacheAge = cache_age_seconds ?? null;
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
   const filtered = agents.filter(a => {
     const q = search.toLowerCase();
-    const matchQ = !search || (a.name || '').toLowerCase().includes(q) || (a.id || '').toLowerCase().includes(q) || (a.role || '').toLowerCase().includes(q);
+    const matchQ = !search || (a.name || '').toLowerCase().includes(q) || (a.id || '').toLowerCase().includes(q);
     const matchS = filterStatus === 'all' || a.status === filterStatus;
     return matchQ && matchS;
   });
 
-  const activeCount = agents.filter(a => a.status === 'active' || a.status === 'busy').length;
-  const errorCount = agents.filter(a => a.status === 'error').length;
-  const idleCount = agents.filter(a => a.status === 'available').length;
-
   return (
-    <div className="fade-in">
-      {/* Header Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
-        <input className="input-base" placeholder="FILTER NEURAL SIGNATURES..." value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: '0 1 220px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }} />
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{
-          background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 6,
-          padding: '5px 10px', fontSize: 10, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700
-        }}>
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Search & Filter Bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <input
+          className="input-base"
+          placeholder="SEARCH_FLEET_ID..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ width: '240px', fontFamily: 'var(--font-mono)' }}
+        />
+        <select
+          className="input-base"
+          value={filterStatus}
+          onChange={e => setFilterStatus(e.target.value)}
+          style={{ width: '140px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+        >
           <option value="all">ALL_STATUS</option>
           <option value="active">ACTIVE</option>
           <option value="available">AVAILABLE</option>
@@ -130,22 +88,15 @@ export default function Agents({ data, lastUpdated, toast }) {
           <option value="error">ERROR</option>
         </select>
 
-        {/* Fleet Summary */}
-        <div style={{ display: 'flex', gap: 10, fontSize: 9, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>
-          <span style={{ color: 'var(--cyan)' }}>◈ {activeCount} ACTIVE</span>
-          <span style={{ color: 'var(--muted)' }}>○ {idleCount} IDLE</span>
-          {errorCount > 0 && <span style={{ color: 'var(--red)', animation: 'pulse 1.5s infinite' }}>⚠ {errorCount} ERROR</span>}
+        <div style={{ display: 'flex', gap: 16, fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+          <span style={{ color: 'var(--accent)' }}>● {agents.filter(a => a.status === 'active').length} ACTIVE</span>
+          <span style={{ color: 'var(--muted)' }}>● {agents.filter(a => a.status === 'available').length} IDLE</span>
         </div>
 
-        {cacheAge != null && (
-          <span style={{ fontSize: 9, color: cacheAge > 25 ? 'var(--amber)' : 'var(--muted)', fontFamily: 'monospace' }}>
-            [CACHE: {cacheAge}s]
-          </span>
-        )}
         <div style={{ marginLeft: 'auto' }}><LastUpdated ts={lastUpdated} /></div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(330px,1fr))', gap: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
         {filtered.map((a, i) => <AgentCard key={a.id} agent={a} tasks={tasks} toast={toast} index={i} />)}
       </div>
     </div>
@@ -157,139 +108,103 @@ function AgentCard({ agent: a, tasks, toast, index }) {
   const [msg, setMsg] = useState('');
   const [sending, setSending] = useState(false);
 
-  const dotCls = { active: 'dot-active', available: 'dot-available', busy: 'dot-busy', error: 'dot-error' }[a.status] || 'dot-offline';
-  const badgeCls = { active: 'badge-active', available: 'badge-available', busy: 'badge-busy', error: 'badge-error' }[a.status] || 'badge-offline';
-  const cred = a.credibility ?? 1.0;
-
-  // Compute agent's tasks from global task list
   const agentTasks = tasks.filter(t => t.assigned_to === a.id);
   const activeTask = agentTasks.find(t => t.status === 'in-progress');
-  const recentDone = agentTasks.filter(t => ['complete', 'failed', 'blocked'].includes(t.status)).slice(-3).reverse();
   const workingCount = agentTasks.filter(t => ['in-progress', 'blocked', 'needs_human_decision'].includes(t.status)).length;
-  const totalAssigned = agentTasks.length;
-
-  const isError = a.status === 'error';
   const isHitl = agentTasks.some(t => t.status === 'needs_human_decision');
-  const borderColor = isError ? 'rgba(255,42,85,0.5)' : isHitl ? 'rgba(181,53,255,0.4)' : activeTask ? 'rgba(0,240,255,0.15)' : 'var(--border)';
+
+  const borderColor = a.status === 'error' ? 'var(--red)' : (isHitl ? 'var(--purple)' : 'var(--border)');
 
   const handleSend = async () => {
     if (!msg.trim()) return;
     setSending(true);
     try {
       await apiPost(`/api/comms/${a.id}/send`, { message: msg.trim() });
-      toast(`Transmission sent to ${a.name}`, 'success');
+      toast(`Signal transmitted to ${a.name}`, 'success');
       setMsg(''); setMsgOpen(false);
     } catch (e) { toast(e.message, 'error'); }
     setSending(false);
   };
 
   return (
-    <div className="card fade-in" style={{ animationDelay: `${index * 0.04}s`, display: 'flex', flexDirection: 'column', gap: 14, borderColor, padding: 20 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{
-          width: 48, height: 48, borderRadius: '50%', background: 'rgba(181,83,255,0.05)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
-          border: `1px solid ${borderColor}`, boxShadow: `inset 0 0 15px rgba(181,83,255,0.1)`, flexShrink: 0
-        }}>
-          {a.emoji || '🤖'}
-        </div>
+    <div className="card fade-in" style={{
+      animationDelay: `${index * 0.05}s`,
+      display: 'flex', flexDirection: 'column', gap: 16,
+      borderColor: a.status === 'error' || isHitl ? borderColor : 'var(--border)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ fontSize: '24px', flexShrink: 0 }}>{a.emoji || '🤖'}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 900, fontSize: 15, color: 'var(--text)', fontFamily: 'Rajdhani, sans-serif', letterSpacing: '0.02em' }}>{a.name.toUpperCase()}</div>
-          <div style={{ fontSize: 9, color: 'var(--muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, marginTop: 2 }}>{a.role} // {a.id}</div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className={`dot ${dotCls}`} style={{ width: 6, height: 6 }} />
-            <span className={`badge ${badgeCls}`}>{a.status}</span>
+          <div style={{ fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {a.name.toUpperCase()}
           </div>
-          {a.inbox_count > 0 && (
-            <div style={{ fontSize: 9, color: 'var(--purple)', fontWeight: 800, animation: 'pulse 2s infinite' }}>📬 {a.inbox_count}</div>
-          )}
+          <div style={{ fontSize: '9px', color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+            {a.role.toUpperCase()} // {a.id}
+          </div>
         </div>
-        <WorkloadRing active={workingCount} total={Math.max(totalAssigned, 1)} />
+        <WorkloadMeter active={workingCount} total={agentTasks.length} />
       </div>
 
-      {/* Active Task */}
-      <ActiveTaskBadge task={activeTask} />
+      <ActiveTaskSignifier task={activeTask} />
 
-      {/* HITL Alert */}
       {isHitl && (
-        <div style={{ padding: '6px 10px', background: 'rgba(181,53,255,0.08)', border: '1px solid rgba(181,53,255,0.3)', borderRadius: 6, fontSize: 9, fontWeight: 800, color: 'var(--purple)', fontFamily: 'JetBrains Mono, monospace' }}>
-          🚨 HITL_DECISION_REQUIRED // AWAITING_HUMAN_GATE
+        <div style={{ padding: '6px 10px', background: 'rgba(181, 53, 255, 0.05)', border: '1px solid var(--purple)', borderRadius: '2px', fontSize: '9px', fontWeight: 800, color: 'var(--purple)', fontFamily: 'var(--font-mono)' }}>
+          [!] ACTION_REQUIRED: HITL_GATE_OPEN
         </div>
       )}
 
-      {/* Stats row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-        <Stat label="SUCCESS" value={a.tasks_completed ?? 0} color="var(--green)" />
-        <Stat label="FAILURE" value={a.tasks_failed ?? 0} color="var(--red)" />
-        <Stat label="QUALITY" value={(a.quality_score || 0).toFixed(1)} color="var(--amber)" />
-      </div>
-
-      {/* Credibility Gauge */}
-      <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 700, color: 'var(--muted)', marginBottom: 6, fontFamily: 'JetBrains Mono, monospace' }}>
-          <span>NEURAL_CREDIBILITY</span>
-          <span style={{ color: 'var(--text)' }}>{(cred * 100).toFixed(0)}%</span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+        <div className="card" style={{ padding: '8px', textAlign: 'center', background: 'transparent' }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--mint)' }}>{a.tasks_completed ?? 0}</div>
+          <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 800 }}>SUCCESS</div>
         </div>
-        <div style={{ height: 6, display: 'flex', gap: 2 }}>
-          {[...Array(10)].map((_, i) => (
-            <div key={i} style={{
-              flex: 1, height: '100%', borderRadius: 1,
-              background: (i / 10) < cred ? 'var(--cyan)' : 'rgba(255,255,255,0.03)',
-              boxShadow: (i / 10) < cred ? '0 0 5px var(--cyan)' : 'none',
-            }} />
-          ))}
+        <div className="card" style={{ padding: '8px', textAlign: 'center', background: 'transparent' }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--red)' }}>{a.tasks_failed ?? 0}</div>
+          <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 800 }}>FAILURES</div>
+        </div>
+        <div className="card" style={{ padding: '8px', textAlign: 'center', background: 'transparent' }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{(a.credibility || 1).toFixed(1)}</div>
+          <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 800 }}>CREDENCE</div>
         </div>
       </div>
 
-      {/* Heartbeat */}
-      <HeartbeatBar minutes={a.heartbeat_age_minutes} />
+      <HeartbeatStatus minutes={a.heartbeat_age_minutes} />
 
-      {/* Model + Specs */}
-      <div style={{ fontSize: 10, color: 'var(--muted)', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.6 }}>
+      <div style={{ fontSize: '10px', color: 'var(--muted)', fontFamily: 'var(--font-mono)', display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>MODEL:</span><span style={{ color: 'var(--cyan)' }}>{a.model || '—'}</span>
+          <span>MODEL_ID:</span><span style={{ color: '#fff' }}>{a.model?.toUpperCase() || '--'}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>ASSIGNED:</span><span>{totalAssigned} CYCLES</span>
+          <span>MEMORY_TAG:</span><span style={{ color: '#fff' }}>{a.inbox_count > 0 ? `INBOX[${a.inbox_count}]` : 'NOMINAL'}</span>
         </div>
       </div>
 
-      {/* Specializations */}
-      {a.specializations?.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-          {a.specializations.map(s => (
-            <span key={s} style={{ fontSize: 8, fontWeight: 700, padding: '3px 7px', background: 'rgba(0,240,255,0.03)', color: 'var(--cyan)', border: '1px solid rgba(0,240,255,0.1)', borderRadius: 4, textTransform: 'uppercase' }}>{s}</span>
-          ))}
-        </div>
-      )}
-
-      {/* Recent cycles */}
-      <RecentCycles tasks={recentDone} />
-
-      {/* Comms */}
-      <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+      <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border-light)', paddingTop: 12 }}>
         {msgOpen ? (
           <div style={{ display: 'flex', gap: 8 }}>
-            <input className="input-base" style={{ flex: 1, background: 'rgba(0,0,0,0.3)' }} placeholder="SEND TRANSMISSION..." value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} maxLength={2000} />
-            <button className="btn-primary" onClick={handleSend} disabled={sending || !msg.trim()}>{sending ? '...' : 'SEND'}</button>
-            <button className="input-base" style={{ cursor: 'pointer', padding: '6px 12px', background: 'rgba(255,255,255,0.05)' }} onClick={() => setMsgOpen(false)}>✕</button>
+            <input
+              className="input-base"
+              style={{ flex: 1 }}
+              placeholder="ENCRYPTED_SIGNAL..."
+              value={msg}
+              onChange={e => setMsg(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+            />
+            <button className="btn-primary" onClick={handleSend} disabled={sending || !msg.trim()}>
+              {sending ? '...' : 'SEND'}
+            </button>
+            <button className="btn-secondary" style={{ padding: '8px 12px' }} onClick={() => setMsgOpen(false)}>✕</button>
           </div>
         ) : (
-          <button className="btn-primary" style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--muted)', letterSpacing: '0.05em', fontSize: 10 }} onClick={() => setMsgOpen(true)}>OPEN TRANSMISSION CHANNEL</button>
+          <button
+            className="btn-secondary"
+            style={{ width: '100%', fontSize: '10px', color: 'var(--muted)' }}
+            onClick={() => setMsgOpen(true)}
+          >
+            ESTABLISH COMMS CHANNEL
+          </button>
         )}
       </div>
-    </div>
-  );
-}
-
-function Stat({ label, value, color = 'var(--text)' }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '10px 8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: 10 }}>
-      <div className="section-title" style={{ fontSize: 8, marginBottom: 5, letterSpacing: '0.1em' }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 800, color, fontFamily: 'Rajdhani, sans-serif' }}>{value}</div>
     </div>
   );
 }

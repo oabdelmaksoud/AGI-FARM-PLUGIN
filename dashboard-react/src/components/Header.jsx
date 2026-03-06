@@ -4,25 +4,23 @@ import { apiPost } from '../lib/api';
 function Clock() {
   const [t, setT] = useState(new Date());
   useEffect(() => { const id = setInterval(() => setT(new Date()), 1000); return () => clearInterval(id); }, []);
-  return <span style={{ color: 'var(--muted)', fontSize: 11 }}>{t.toLocaleTimeString()}</span>;
+  return (
+    <span style={{ color: 'var(--muted)', fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+      {t.toLocaleTimeString([], { hour12: false })}
+    </span>
+  );
 }
 
 export default function Header({ data, connected, lastUpdated, updateCount, toast }) {
   const agents = data?.agents || [];
   const tc = data?.task_counts || {};
   const budget = data?.budget || {};
-  const limits = budget.limits || {};
-  const current = budget.current || {};
-  const spent = current.daily_usd ?? 0;
-  const limit = limits.daily_usd ?? 0;
-  const pct = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
-  const online = agents.filter(a => ['active', 'available', 'busy'].includes(a.status)).length;
+  const livedata = data || {};
 
-  // Gateway is truly live only if SSE is connected AND gateway_online flag from backend
-  const gatewayOnline = connected && (data?.gateway_online !== false);
-  const statusLabel = !connected ? 'OFFLINE' : data?.gateway_online === false ? 'NO GATEWAY' : 'LIVE';
-  const statusColor = !connected ? 'var(--red)' : data?.gateway_online === false ? 'var(--amber)' : 'var(--green)';
-  const dotClass = !connected ? 'dot-error' : data?.gateway_online === false ? 'dot-busy' : 'dot-active';
+  const gatewayOnline = connected && (livedata.gateway_online !== false);
+  const statusLabel = !connected ? 'OFFLINE' : !gatewayOnline ? 'GATEWAY_DISCONNECT' : 'SYSTEM_LIVE';
+  const statusColor = !connected ? 'var(--red)' : !gatewayOnline ? 'var(--amber)' : 'var(--mint)';
+  const dotColor = !connected ? 'var(--red)' : !gatewayOnline ? 'var(--amber)' : 'var(--mint)';
 
   const updateInfo = data?.update_info;
   const [dismissed, setDismissed] = useState(() => sessionStorage.getItem('update-dismissed') === 'true');
@@ -34,79 +32,69 @@ export default function Header({ data, connected, lastUpdated, updateCount, toas
     try {
       const result = await apiPost('/api/update-install');
       if (result.success) {
-        toast?.('Update installed! Restart the plugin to use the new version.', 'success');
+        toast?.('UPDATE_INSTALLED // RESTART_REQUIRED', 'success');
       } else {
-        toast?.(result.error || 'Update failed', 'error');
+        toast?.(result.error || 'UPDATE_FAILED', 'error');
       }
     } catch (e) { toast?.(e.message, 'error'); }
     setUpdating(false);
   };
 
-  const handleDismiss = () => {
-    setDismissed(true);
-    sessionStorage.setItem('update-dismissed', 'true');
-  };
-
   return (
     <>
-      <header className="glass-panel" style={{
-        height: 52, borderBottom: showBanner ? 'none' : '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', padding: '0 16px', gap: 20,
+      <header style={{
+        height: '52px', borderBottom: '1px solid var(--border)', background: '#050505',
+        display: 'flex', alignItems: 'center', padding: '0 24px', gap: 24,
         position: 'sticky', top: 0, zIndex: 100,
       }}>
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 160 }}>
-          <span style={{ fontSize: 18 }}>🦅</span>
-          <span style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 16, color: 'var(--cyan)', letterSpacing: 1 }}>
-            AGI Ops Room
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: '180px' }}>
+          <span style={{ fontSize: '18px' }}>🦅</span>
+          <span style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '0.05em', color: '#fff' }}>
+            AGI_FARM_OS <span style={{ color: 'var(--muted)', fontWeight: 400 }}>// v1.4.0</span>
           </span>
         </div>
 
-        {/* Status badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} title={data?.gateway_online === false ? 'OpenClaw gateway unreachable' : ''}>
-          <span className={`dot ${dotClass}`} />
-          <span style={{ fontSize: 10, fontWeight: 600, color: statusColor }}>{statusLabel}</span>
+        {/* Status Indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor }} />
+          <span style={{ fontSize: '9px', fontWeight: 800, color: statusColor, fontFamily: 'var(--font-mono)' }}>{statusLabel}</span>
         </div>
 
-        <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
+        <div style={{ width: '1px', height: '16px', background: 'var(--border-light)' }} />
 
-        <Stat label="Online" value={`${online}/${agents.length}`} color="var(--cyan)" />
-        <Stat label="Pending" value={tc.pending ?? 0} color="var(--amber)" />
-        <Stat label="HITL 🚨" value={tc.needs_human_decision ?? 0} color="var(--purple)" alert={(tc.needs_human_decision ?? 0) > 0} />
-        <Stat label="Budget" value={`$${spent.toFixed(2)}/$${limit}`}
-          color={pct > (budget.alerts?.daily_threshold_pct ?? 70) ? 'var(--red)' : 'var(--green)'} />
+        {/* Global Stats */}
+        <Stat label="FLEET" value={`${agents.filter(a => a.status === 'active').length}/${agents.length}`} color="var(--accent)" />
+        <Stat label="HITL" value={tc.needs_human_decision ?? 0} color={tc.needs_human_decision > 0 ? 'var(--purple)' : 'var(--muted)'} />
+        <Stat label="DAILY_SPEND" value={`$${(budget.current?.daily_usd ?? 0).toFixed(2)}`} color="var(--mint)" />
 
         <div style={{ flex: 1 }} />
 
-        {updateCount > 0 && (
-          <span style={{ fontSize: 9, color: 'var(--cyan)', opacity: 0.5 }}>#{updateCount}</span>
-        )}
-        {lastUpdated && (
-          <span style={{ fontSize: 10, color: 'var(--muted)' }}>↻ {lastUpdated.toLocaleTimeString()}</span>
-        )}
-        <Clock />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          {lastUpdated && (
+            <span style={{ fontSize: '9px', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
+              SYNC: {lastUpdated.toLocaleTimeString([], { hour12: false })}
+            </span>
+          )}
+          <Clock />
+        </div>
       </header>
 
-      {/* Update banner */}
       {showBanner && (
-        <div className="update-banner">
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>🔄</span>
-            <span>Update available: <strong>v{updateInfo.currentVersion}</strong> → <strong>v{updateInfo.latestVersion}</strong></span>
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {updateInfo.releaseUrl && (
-              <a href={updateInfo.releaseUrl} target="_blank" rel="noopener noreferrer"
-                style={{ color: 'var(--cyan)', fontSize: 11, textDecoration: 'underline' }}>Release Notes</a>
-            )}
-            <button className="btn-primary" onClick={handleUpdate} disabled={updating}
-              style={{ fontSize: 11, padding: '3px 10px' }}>
-              {updating ? 'Updating...' : 'Update Now'}
+        <div style={{
+          background: 'var(--accent)', color: '#000', padding: '8px 24px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 800
+        }}>
+          <span>UPDATE_AVAILABLE: v{updateInfo.currentVersion} → v{updateInfo.latestVersion}</span>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <button
+              onClick={handleUpdate}
+              disabled={updating}
+              style={{ background: '#000', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: '2px', cursor: 'pointer', fontSize: '10px', fontWeight: 900 }}
+            >
+              {updating ? 'INSTALLING...' : 'INSTALL_NOW'}
             </button>
-            <button onClick={handleDismiss} style={{
-              background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer',
-              fontSize: 14, padding: '0 4px', fontFamily: 'inherit',
-            }}>✕</button>
+            <button onClick={() => { setDismissed(true); sessionStorage.setItem('update-dismissed', 'true'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>✕</button>
           </div>
         </div>
       )}
@@ -114,11 +102,11 @@ export default function Header({ data, connected, lastUpdated, updateCount, toas
   );
 }
 
-function Stat({ label, value, color, alert }) {
+function Stat({ label, value, color }) {
   return (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: alert ? 'var(--red)' : color }}>{value}</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ fontSize: '8px', color: 'var(--muted)', fontWeight: 800 }}>{label}</div>
+      <div style={{ fontSize: '12px', fontWeight: 700, color, fontFamily: 'var(--font-mono)' }}>{value}</div>
     </div>
   );
 }
