@@ -200,7 +200,14 @@ function ensureOperationalFiles() {
   if (writeJsonIfMissing(path.join(WORKSPACE, 'IMPROVEMENT_BACKLOG.json'), { items: [] })) created.push('IMPROVEMENT_BACKLOG.json');
   if (writeJsonIfMissing(path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json'), [])) created.push('SHARED_KNOWLEDGE.json');
   if (writeJsonIfMissing(path.join(WORKSPACE, 'ALERTS.json'), [])) created.push('ALERTS.json');
-  if (writeJsonIfMissing(path.join(WORKSPACE, 'PROJECTS.json'), [])) created.push('PROJECTS.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'PROJECTS.json'), {
+    version: 1,
+    defaults: {
+      auto_project_channel: true,
+      execution_path: 'agi-farm-first',
+    },
+    projects: [],
+  })) created.push('PROJECTS.json');
   if (writeJsonIfMissing(path.join(WORKSPACE, 'PROJECT_EVENTS.json'), { events: [] })) created.push('PROJECT_EVENTS.json');
 
   if (created.length > 0) {
@@ -235,6 +242,31 @@ function countInbox(workspace, agentId) {
   } catch {
     return 0;
   }
+}
+
+function readProjectsStore() {
+  const raw = readJson(path.join(WORKSPACE, 'PROJECTS.json'));
+
+  if (Array.isArray(raw)) {
+    return {
+      defaults: {
+        auto_project_channel: true,
+        execution_path: 'agi-farm-first',
+      },
+      projects: raw,
+    };
+  }
+
+  const obj = asObject(raw);
+  return {
+    defaults: {
+      auto_project_channel: obj?.defaults?.auto_project_channel !== false,
+      execution_path: obj?.defaults?.execution_path || 'agi-farm-first',
+    },
+    projects: Array.isArray(obj.projects)
+      ? obj.projects
+      : (Array.isArray(obj.items) ? obj.items : []),
+  };
 }
 
 function loadCrons() {
@@ -358,7 +390,8 @@ function buildWorkspaceSnapshot(cache, services) {
   const sharedKnowledge = asArray(readJson(path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json')));
   const memory = readMd(path.join(WORKSPACE, 'MEMORY.md'));
   const alerts = asArray(readJson(path.join(WORKSPACE, 'ALERTS.json')));
-  const projectsRaw = asArray(readJson(path.join(WORKSPACE, 'PROJECTS.json')));
+  const projectsStore = readProjectsStore();
+  const projectsRaw = asArray(projectsStore.projects);
   const flags = getFeatureFlags();
 
   const crons = loadCrons();
@@ -436,6 +469,7 @@ function buildWorkspaceSnapshot(cache, services) {
     crons,
     alerts,
     projects,
+    project_defaults: projectsStore.defaults,
     project_events: projectEvents,
     comms,
     jobs,
@@ -708,7 +742,21 @@ async function main() {
       sort: req.query.sort ? String(req.query.sort) : undefined,
     };
     const projects = services.projects.list(filters, snapshot.tasks || [], asObject(readJson(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json'))));
-    res.json({ projects });
+    res.json({ projects, defaults: services.projects.getDefaults() });
+  });
+
+  app.patch('/api/projects/defaults', actionLimiter, requireCsrf, createPolicyGate(services, () => 'project:defaults:update'), (req, res) => {
+    try {
+      const body = asObject(req.body);
+      const defaults = services.projects.setDefaults({
+        auto_project_channel: body.auto_project_channel,
+        execution_path: body.execution_path,
+      });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, defaults });
+    } catch (err) {
+      res.status(400).json({ error: err.message || 'project_defaults_update_failed' });
+    }
   });
 
   app.get('/api/projects/:id', validateId, (req, res) => {
@@ -728,6 +776,7 @@ async function main() {
   app.post('/api/projects', actionLimiter, requireCsrf, createPolicyGate(services, () => 'project:create'), (req, res) => {
     try {
       const body = asObject(req.body);
+      const defaults = services.projects.getDefaults();
       const created = services.projects.create({
         name: asString(body.name || body.title, 'Untitled Project'),
         description: asString(body.description || ''),
@@ -741,6 +790,8 @@ async function main() {
         budget: asObject(body.budget),
         okr_refs: asObject(body.okr_refs),
         milestones: asArray(body.milestones),
+        auto_project_channel: body.auto_project_channel ?? defaults.auto_project_channel,
+        execution_path: body.execution_path || defaults.execution_path,
       });
       services.timeline.append({
         project_id: created.id,

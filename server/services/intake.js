@@ -84,6 +84,7 @@ export class IntakeService {
       project = this.projects.get(decision.matched_project_id) || this.projects.listRaw().find((p) => p.id === decision.matched_project_id);
     }
     if (!project) {
+      const defaults = this.projects.getDefaults();
       project = this.projects.create({
         name: payload.title,
         description: payload.description || payload.intent,
@@ -93,6 +94,8 @@ export class IntakeService {
         team: ['main', 'forge', 'sage'],
         target_completion: payload.constraints.deadline || null,
         tags: payload.tags,
+        auto_project_channel: defaults.auto_project_channel,
+        execution_path: defaults.execution_path,
         budget: {
           allocated_usd: Number(payload.constraints.budget_usd || 0),
           spent_usd: 0,

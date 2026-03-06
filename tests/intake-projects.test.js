@@ -95,8 +95,28 @@ describe('Intake + Projects APIs', () => {
 
       const projectsRes = await fetch(`${baseUrl}/api/projects`);
       const projectsBody = await projectsRes.json();
+      expect(projectsBody.defaults?.execution_path).toBe('agi-farm-first');
       const project = (projectsBody.projects || []).find((p) => p.id === intake.projectId);
       expect(project).toBeTruthy();
+      expect(project.execution_path).toBe('agi-farm-first');
+      expect(project.auto_project_channel).toBe(true);
+
+      const defaultsUpdateRes = await fetch(`${baseUrl}/api/projects/defaults`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', 'x-agi-farm-csrf': csrf },
+        body: JSON.stringify({ auto_project_channel: false, execution_path: 'direct-first' }),
+      });
+      expect(defaultsUpdateRes.status).toBe(200);
+
+      const createProjectRes = await fetch(`${baseUrl}/api/projects`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-agi-farm-csrf': csrf },
+        body: JSON.stringify({ name: 'Post-defaults project' }),
+      });
+      expect(createProjectRes.status).toBe(200);
+      const createProjectBody = await createProjectRes.json();
+      expect(createProjectBody.project.execution_path).toBe('direct-first');
+      expect(createProjectBody.project.auto_project_channel).toBe(false);
 
       const addTaskRes = await fetch(`${baseUrl}/api/projects/${intake.projectId}/tasks`, {
         method: 'POST',

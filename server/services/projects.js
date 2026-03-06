@@ -3,7 +3,14 @@ import path from 'path';
 import { ensureJsonFile, safeReadJson, safeWriteJson } from './storage.js';
 import { enrichProjects } from '../utils.js';
 
-const DEFAULT_STORE = { version: 1, projects: [] };
+const DEFAULT_STORE = {
+  version: 1,
+  defaults: {
+    auto_project_channel: true,
+    execution_path: 'agi-farm-first',
+  },
+  projects: [],
+};
 
 function nowIso() {
   return new Date().toISOString();
@@ -18,15 +25,31 @@ function toSlug(input) {
 }
 
 function normalizeStore(raw) {
-  if (Array.isArray(raw)) return { version: 1, projects: raw };
+  if (Array.isArray(raw)) {
+    return {
+      ...DEFAULT_STORE,
+      version: 1,
+      projects: raw,
+    };
+  }
+
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_STORE };
+
+  const hasLegacyItems = Array.isArray(raw.items);
+
   return {
     version: Number(raw.version) || 1,
-    projects: Array.isArray(raw.projects) ? raw.projects : [],
+    defaults: {
+      auto_project_channel: raw?.defaults?.auto_project_channel !== false,
+      execution_path: raw?.defaults?.execution_path || 'agi-farm-first',
+    },
+    projects: Array.isArray(raw.projects)
+      ? raw.projects
+      : (hasLegacyItems ? raw.items : []),
   };
 }
 
-function normalizeProject(project) {
+function normalizeProject(project, defaults = DEFAULT_STORE.defaults) {
   const created = project?.created_at || nowIso();
   const updated = project?.updated_at || created;
   return {
@@ -57,28 +80,51 @@ function normalizeProject(project) {
     milestones: Array.isArray(project?.milestones) ? project.milestones : [],
     risks: Array.isArray(project?.risks) ? project.risks : [],
     decisions: Array.isArray(project?.decisions) ? project.decisions : [],
+    auto_project_channel: project?.auto_project_channel ?? defaults.auto_project_channel ?? true,
+    execution_path: project?.execution_path || defaults.execution_path || 'agi-farm-first',
   };
 }
 
 export class ProjectService {
   constructor(workspace) {
     this.projectsPath = path.join(workspace, 'PROJECTS.json');
-    ensureJsonFile(this.projectsPath, []);
+    ensureJsonFile(this.projectsPath, DEFAULT_STORE);
   }
 
   _readStore() {
-    return normalizeStore(safeReadJson(this.projectsPath, []));
+    return normalizeStore(safeReadJson(this.projectsPath, DEFAULT_STORE));
   }
 
   _writeStore(store) {
+    const normalized = normalizeStore(store);
     safeWriteJson(this.projectsPath, {
-      version: Number(store.version) || 1,
-      projects: (Array.isArray(store.projects) ? store.projects : []).map((p) => normalizeProject(p)),
+      version: Number(normalized.version) || 1,
+      defaults: {
+        auto_project_channel: normalized.defaults?.auto_project_channel !== false,
+        execution_path: normalized.defaults?.execution_path || 'agi-farm-first',
+      },
+      projects: (Array.isArray(normalized.projects) ? normalized.projects : [])
+        .map((p) => normalizeProject(p, normalized.defaults)),
     });
   }
 
   listRaw() {
-    return this._readStore().projects.map((p) => normalizeProject(p));
+    const store = this._readStore();
+    return store.projects.map((p) => normalizeProject(p, store.defaults));
+  }
+
+  getDefaults() {
+    return this._readStore().defaults;
+  }
+
+  setDefaults(patch = {}) {
+    const store = this._readStore();
+    store.defaults = {
+      auto_project_channel: patch.auto_project_channel ?? store.defaults.auto_project_channel ?? true,
+      execution_path: patch.execution_path || store.defaults.execution_path || 'agi-farm-first',
+    };
+    this._writeStore(store);
+    return store.defaults;
   }
 
   list({ status, owner, search, sort = 'updated_desc', risk }, tasks = [], agentPerf = {}) {
@@ -119,6 +165,8 @@ export class ProjectService {
     const store = this._readStore();
     const project = normalizeProject({
       ...payload,
+      auto_project_channel: payload.auto_project_channel ?? store.defaults.auto_project_channel,
+      execution_path: payload.execution_path || store.defaults.execution_path,
       id: payload.id || `proj-${toSlug(payload.name || payload.title || 'project')}-${crypto.randomUUID().slice(0, 6)}`,
       created_at: nowIso(),
       updated_at: nowIso(),
@@ -127,7 +175,7 @@ export class ProjectService {
         { id: crypto.randomUUID(), title: 'Implementation', status: 'pending', due: null, task_ids: [] },
         { id: crypto.randomUUID(), title: 'Validation', status: 'pending', due: null, task_ids: [] },
       ],
-    });
+    }, store.defaults);
     store.projects.push(project);
     this._writeStore(store);
     return project;
@@ -137,14 +185,14 @@ export class ProjectService {
     const store = this._readStore();
     const idx = store.projects.findIndex((p) => p.id === id);
     if (idx < 0) return null;
-    const prev = normalizeProject(store.projects[idx]);
+    const prev = normalizeProject(store.projects[idx], store.defaults);
     const next = normalizeProject({
       ...prev,
       ...patch,
       budget: { ...prev.budget, ...(patch.budget || {}) },
       okr_refs: { ...prev.okr_refs, ...(patch.okr_refs || {}) },
       updated_at: nowIso(),
-    });
+    }, store.defaults);
     store.projects[idx] = next;
     this._writeStore(store);
     return next;
