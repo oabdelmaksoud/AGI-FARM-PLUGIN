@@ -64,7 +64,7 @@ export default function Header({ data, connected, lastUpdated, updateCount, toas
         <div style={{ width: '1px', height: '16px', background: 'var(--border-light)' }} />
 
         {/* Global Stats */}
-        <Stat label="FLEET" value={`${agents.filter(a => a.status === 'active').length}/${agents.length}`} color="var(--accent)" />
+        <Stat label="FLEET" value={`${agents.filter(a => a.status === 'available').length}/${agents.length}`} color="var(--accent)" />
         <Stat label="HITL" value={tc.needs_human_decision ?? 0} color={tc.needs_human_decision > 0 ? 'var(--purple)' : 'var(--muted)'} />
         <Stat label="DAILY_SPEND" value={`$${(budget.current?.daily_usd ?? 0).toFixed(2)}`} color="var(--mint)" />
 
