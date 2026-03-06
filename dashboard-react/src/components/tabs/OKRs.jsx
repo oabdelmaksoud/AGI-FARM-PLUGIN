@@ -7,14 +7,14 @@ export default function OKRs({ data, lastUpdated }) {
   return (
     <div className="fade-in" style={{ display: 'grid', gap: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
-        <span style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+        <span style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
           {okrs.quarter || 'OKRs'}
         </span>
         <LastUpdated ts={lastUpdated} />
       </div>
 
       {objectives.length === 0 && (
-        <div className="card" style={{ color: 'var(--muted)', fontSize: 13 }}>
+        <div className="empty-state">
           No OKRs defined yet. Add objectives to <code>OKRs.json</code> in your workspace.
         </div>
       )}
@@ -50,7 +50,7 @@ export default function OKRs({ data, lastUpdated }) {
                     background: pct >= 100 ? 'var(--green)' : pct >= 70 ? 'var(--cyan)' : pct >= 40 ? 'var(--amber)' : 'var(--red)',
                   }} />
                 </div>
-                <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 3 }}>{pct.toFixed(0)}%</div>
+                <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 3 }}>{pct.toFixed(0)}%</div>
               </div>
             );
           })}

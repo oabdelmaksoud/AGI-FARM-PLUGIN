@@ -53,21 +53,21 @@ const TAB_COMPONENTS = {
 
 function Connecting() {
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      height: 'calc(100vh - 100px)', gap: 16
-    }}>
-      <span style={{ fontSize: 32 }}>🦅</span>
-      <div style={{ color: 'var(--cyan)', fontSize: 14, fontWeight: 600 }}>Connecting to Ops Room…</div>
-      <div style={{ color: 'var(--muted)', fontSize: 11 }}>Waiting for SSE push from dashboard.js</div>
+    <div className="empty-state" style={{ height: 'calc(100vh - 120px)' }}>
+      <div className="empty-state-icon">&#x1F33E;</div>
+      <div className="empty-state-title">Connecting to AGI Farm...</div>
+      <div className="empty-state-desc">Waiting for real-time data stream from the server</div>
+      <div className="skeleton" style={{ width: 200, height: 4, marginTop: 8 }} />
     </div>
   );
 }
 
 function TabLoading() {
   return (
-    <div className="card" style={{ color: 'var(--muted)' }}>
-      Loading tab...
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 8 }}>
+      <div className="skeleton" style={{ height: 32, width: '40%' }} />
+      <div className="skeleton" style={{ height: 120 }} />
+      <div className="skeleton" style={{ height: 200 }} />
     </div>
   );
 }
@@ -79,7 +79,6 @@ export default function App() {
 
   const tabProps = { data, lastUpdated, toast };
 
-  // Badge counts for nav tabs
   const badges = data ? {
     'HITL': (data.hitl_tasks || []).length,
     'Alerts': (data.alerts || []).length,
@@ -90,16 +89,36 @@ export default function App() {
   const ActiveTab = useMemo(() => TAB_COMPONENTS[activeTab] || Overview, [activeTab]);
 
   return (
-    <div style={{ minHeight: '100vh' }}>
-      <Header data={data} connected={connected} lastUpdated={lastUpdated} updateCount={updateCount} toast={toast} />
-      <Nav tabs={TABS} active={activeTab} onChange={setActiveTab} badges={badges} />
-      <main style={{ padding: 16 }}>
-        {!data ? <Connecting /> : (
-          <Suspense fallback={<TabLoading />}>
-            <ActiveTab {...tabProps} />
-          </Suspense>
-        )}
-      </main>
+    <div className="app-layout">
+      {/* Sidebar */}
+      <aside className="app-sidebar">
+        <div className="sidebar-brand">
+          <span className="sidebar-brand-icon">&#x1F33E;</span>
+          <div>
+            <div className="sidebar-brand-text">AGI Farm</div>
+            <div className="sidebar-brand-sub">Command Center</div>
+          </div>
+        </div>
+        <Nav tabs={TABS} active={activeTab} onChange={setActiveTab} badges={badges} />
+        <div className="sidebar-footer">
+          <div style={{ fontSize: 10, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className={`dot ${connected ? 'dot-active' : 'dot-error'}`} style={{ width: 6, height: 6 }} />
+            <span>{connected ? 'Connected' : 'Offline'}</span>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="app-body">
+        <Header data={data} connected={connected} lastUpdated={lastUpdated} updateCount={updateCount} toast={toast} />
+        <main className="app-main">
+          {!data ? <Connecting /> : (
+            <Suspense fallback={<TabLoading />}>
+              <ActiveTab {...tabProps} />
+            </Suspense>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

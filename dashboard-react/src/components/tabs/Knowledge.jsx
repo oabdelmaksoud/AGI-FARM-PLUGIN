@@ -16,7 +16,7 @@ export default function Knowledge({ data, lastUpdated, toast }) {
     try {
       const payload = { ...newEntry, tags: newEntry.tags ? newEntry.tags.split(',').map(t => t.trim()).filter(Boolean) : [] };
       await apiPost('/api/knowledge', payload);
-      toast('Neural integration successful', 'success');
+      toast('Entry saved successfully', 'success');
       setShowNew(false);
       setNewEntry({ title: '', content: '', category: 'general', tags: '' });
     } catch (e) { toast(e.message, 'error'); }
@@ -24,10 +24,10 @@ export default function Knowledge({ data, lastUpdated, toast }) {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Purge this neural entry?')) return;
+    if (!confirm('Delete this knowledge entry?')) return;
     try {
       await apiDelete(`/api/knowledge/${id}`);
-      toast('Entry purged from archive', 'success');
+      toast('Entry deleted', 'success');
     } catch (e) { toast(e.message, 'error'); }
   };
 
@@ -52,43 +52,43 @@ export default function Knowledge({ data, lastUpdated, toast }) {
       {/* Header / Search */}
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <input className="input-base" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="QUERY NEURAL ARCHIVE..."
-          style={{ flex: 1, minWidth: 260, background: 'rgba(0,0,0,0.2)', height: 38 }} />
+          placeholder="Search knowledge base..."
+          style={{ flex: 1, minWidth: 260, height: 38 }} />
 
         <div style={{ display: 'flex', gap: 6 }}>
           {categories.map(c => (
             <button key={c} onClick={() => setCategory(c)} style={{
-              background: category === c ? 'rgba(0,240,255,0.1)' : 'rgba(255,255,255,0.03)',
+              background: category === c ? 'var(--cyan-dim)' : 'var(--bg3)',
               border: `1px solid ${category === c ? 'rgba(0,240,255,0.4)' : 'var(--border)'}`,
-              color: category === c ? 'var(--cyan)' : 'var(--muted)',
-              padding: '6px 14px', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif',
-              fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', transition: 'all 0.2s'
+              color: category === c ? 'var(--cyan)' : 'var(--text-secondary)',
+              padding: '6px 14px', borderRadius: 6, fontSize: 10, cursor: 'pointer',
+              fontWeight: 700, transition: 'all 0.2s'
             }}>{c}</button>
           ))}
         </div>
-        <button className="btn-primary" style={{ height: 38 }} onClick={() => setShowNew(v => !v)}>+ NEW ARCHIVE ENTRY</button>
+        <button className="btn-primary" style={{ height: 38 }} onClick={() => setShowNew(v => !v)}>+ New Entry</button>
         <div style={{ marginLeft: 'auto' }}><LastUpdated ts={lastUpdated} /></div>
       </div>
 
       {showNew && (
-        <div className="card shadow-glow" style={{ display: 'grid', gap: 10, border: '1px solid var(--border-h)' }}>
-          <div className="section-title">INTEGRATE NEW NEURAL NODE</div>
-          <input className="input-base" placeholder="ENTRY TITLE (OPTIONAL)" value={newEntry.title} onChange={e => setNewEntry(p => ({ ...p, title: e.target.value }))} />
-          <textarea className="input-base" placeholder="CORE CONTENT / INSIGHT *" value={newEntry.content} onChange={e => setNewEntry(p => ({ ...p, content: e.target.value }))} style={{ minHeight: 100, resize: 'vertical', fontFamily: 'JetBrains Mono, monospace' }} maxLength={5000} />
+        <div className="card" style={{ display: 'grid', gap: 10 }}>
+          <div className="section-title">New Knowledge Entry</div>
+          <input className="input-base" placeholder="Title (optional)" value={newEntry.title} onChange={e => setNewEntry(p => ({ ...p, title: e.target.value }))} />
+          <textarea className="input-base" placeholder="Content *" value={newEntry.content} onChange={e => setNewEntry(p => ({ ...p, content: e.target.value }))} style={{ minHeight: 100, resize: 'vertical' }} maxLength={5000} />
           <div style={{ display: 'flex', gap: 10 }}>
-            <input className="input-base" placeholder="CATEGORY" value={newEntry.category} onChange={e => setNewEntry(p => ({ ...p, category: e.target.value }))} style={{ flex: 1 }} />
-            <input className="input-base" placeholder="TAGS (SIGMA, DELTA...)" value={newEntry.tags} onChange={e => setNewEntry(p => ({ ...p, tags: e.target.value }))} style={{ flex: 2 }} />
+            <input className="input-base" placeholder="Category" value={newEntry.category} onChange={e => setNewEntry(p => ({ ...p, category: e.target.value }))} style={{ flex: 1 }} />
+            <input className="input-base" placeholder="Tags (comma-separated)" value={newEntry.tags} onChange={e => setNewEntry(p => ({ ...p, tags: e.target.value }))} style={{ flex: 2 }} />
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
-            <button className="btn-primary" onClick={handleCreate} disabled={saving || !newEntry.content.trim()}>{saving ? 'PROCESSING...' : 'INITIALIZE UPLOAD'}</button>
-            <button className="input-base" style={{ cursor: 'pointer', border: '1px solid transparent' }} onClick={() => setShowNew(false)}>ABORT</button>
+            <button className="btn-primary" onClick={handleCreate} disabled={saving || !newEntry.content.trim()}>{saving ? 'Saving...' : 'Save'}</button>
+            <button className="btn-ghost" onClick={() => setShowNew(false)}>Cancel</button>
           </div>
         </div>
       )}
 
-      <div style={{ fontSize: 9, color: 'var(--muted)', fontFamily: 'Rajdhani, sans-serif', letterSpacing: '0.1em' }}>
-        INDEXED: {filtered.length} / {knowledge.length} NODES
-        {knowledge.length === 0 && ' | SYSTEM SYMBOLIC SYNTHESIS PENDING'}
+      <div style={{ fontSize: 9, color: 'var(--text-secondary)' }}>
+        Showing {filtered.length} of {knowledge.length} entries
+        {knowledge.length === 0 && ' — no knowledge entries yet'}
       </div>
 
       {/* Entries */}
@@ -101,47 +101,45 @@ export default function Knowledge({ data, lastUpdated, toast }) {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span className="badge badge-active" style={{ fontSize: 8 }}>{entry.category || 'GENERAL'}</span>
-                    {entry.title && <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', letterSpacing: '-0.01em' }}>{entry.title}</div>}
+                    <span className="badge badge-active" style={{ fontSize: 8 }}>{entry.category || 'general'}</span>
+                    {entry.title && <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)' }}>{entry.title}</div>}
                   </div>
-                  <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, background: 'rgba(0,0,0,0.15)', padding: 12, borderRadius: 8, border: '1px solid rgba(255,255,255,0.02)' }}>
+                  <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, background: 'var(--bg3)', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
                     {entry.content || entry.summary || entry.insight || '—'}
                   </div>
                 </div>
-                {entry.id && <button className="btn-danger" style={{ opacity: 0.3 }} onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}>×</button>}
+                {entry.id && <button className="btn-danger" style={{ opacity: 0.3 }} onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}>x</button>}
               </div>
 
               {entry.tags?.length > 0 && (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
                   {entry.tags.map(t => (
                     <span key={t} style={{
-                      fontSize: 9, fontWeight: 700, padding: '2px 8px', background: 'rgba(181, 53, 255, 0.03)',
+                      fontSize: 9, fontWeight: 700, padding: '2px 8px', background: 'var(--purple-dim)',
                       color: 'var(--purple)', border: '1px solid rgba(181, 53, 255, 0.15)', borderRadius: 4,
-                      textTransform: 'uppercase'
                     }}>{t}</span>
                   ))}
                 </div>
               )}
 
               <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div style={{ fontSize: 10, color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 4, fontFamily: 'JetBrains Mono, monospace' }}>
+                <div className="mono" style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>AUTHOR:</span><span style={{ color: 'var(--cyan)' }}>{agent?.name.toUpperCase() || 'SYSTEM'}</span>
+                    <span>Author:</span><span style={{ color: 'var(--cyan)' }}>{agent?.name || 'system'}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>SIG:</span><span>{entry.source_task || '—'}</span>
+                    <span>Source:</span><span>{entry.source_task || '—'}</span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 700, color: 'var(--muted)' }}>
-                    <span>CONFIDENCE</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                    <span>Confidence</span>
                     <span style={{ color: confidence > 0.9 ? 'var(--green)' : 'var(--amber)' }}>{(confidence * 100).toFixed(0)}%</span>
                   </div>
                   <div className="progress-track" style={{ height: 4 }}>
                     <div className="progress-fill" style={{
                       width: `${confidence * 100}%`,
                       background: confidence > 0.9 ? 'var(--green)' : 'var(--amber)',
-                      boxShadow: confidence > 0.9 ? '0 0 8px var(--green)' : '0 0 6px var(--amber)'
                     }} />
                   </div>
                 </div>

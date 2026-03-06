@@ -42,10 +42,10 @@ export function ToastProvider({ children }) {
       }}>
         {toasts.map(t => (
           <div key={t.id} className="toast-enter" style={{
-            background: 'var(--bg2)', border: `1px solid ${COLOR[t.type] || COLOR.info}`,
-            borderRadius: 6, padding: '10px 14px', fontSize: 12, color: 'var(--text)',
-            display: 'flex', alignItems: 'center', gap: 8,
-            boxShadow: `0 4px 20px rgba(0,0,0,.5), 0 0 8px ${COLOR[t.type]}33`,
+            background: 'var(--surface)', border: `1px solid ${COLOR[t.type] || COLOR.info}`,
+            borderRadius: 'var(--radius-sm)', padding: '12px 16px', fontSize: 13, color: 'var(--text)',
+            display: 'flex', alignItems: 'center', gap: 10,
+            boxShadow: 'var(--shadow-lg)',
           }}>
             <span style={{ fontSize: 14, flexShrink: 0 }}>{ICON[t.type]}</span>
             <span style={{ flex: 1, lineHeight: 1.4 }}>{t.message}</span>

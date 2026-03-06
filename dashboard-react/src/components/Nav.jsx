@@ -1,36 +1,78 @@
-const BADGE_COLOR = { 'HITL': 'var(--red)', 'Alerts': 'var(--red)', 'Crons': 'var(--amber)', 'Approvals': 'var(--purple)' };
+const BADGE_COLOR = { 'HITL': 'red', 'Alerts': 'red', 'Crons': 'amber', 'Approvals': 'purple' };
+
+const NAV_SECTIONS = [
+  {
+    label: 'Dashboard',
+    items: [
+      { id: 'Overview', label: 'Overview' },
+      { id: 'Agents', label: 'Agents' },
+      { id: 'Tasks', label: 'Tasks' },
+      { id: 'Projects', label: 'Projects' },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { id: 'Jobs', label: 'Jobs' },
+      { id: 'Crons', label: 'Schedules' },
+      { id: 'Approvals', label: 'Approvals' },
+      { id: 'HITL', label: 'Human-in-Loop' },
+      { id: 'Alerts', label: 'Alerts' },
+    ],
+  },
+  {
+    label: 'Analytics',
+    items: [
+      { id: 'Velocity', label: 'Velocity' },
+      { id: 'Budget', label: 'Budget' },
+      { id: 'Usage', label: 'Usage' },
+      { id: 'OKRs', label: 'OKRs' },
+    ],
+  },
+  {
+    label: 'Intelligence',
+    items: [
+      { id: 'Knowledge', label: 'Knowledge' },
+      { id: 'Comms', label: 'Comms' },
+      { id: 'R&D', label: 'R&D' },
+      { id: 'Broadcast', label: 'Broadcast' },
+    ],
+  },
+];
+
+const ICON_MAP = {
+  'Overview': '\u25A6', 'Agents': '\u2318', 'Tasks': '\u2611', 'Projects': '\u25CB',
+  'Jobs': '\u25B6', 'Crons': '\u23F0', 'Approvals': '\u2714', 'HITL': '\u26A0', 'Alerts': '\u26A1',
+  'Velocity': '\u2197', 'Budget': '\u25C8', 'Usage': '\u2261', 'OKRs': '\u25CE',
+  'Knowledge': '\u2302', 'Comms': '\u2709', 'R&D': '\u2697', 'Broadcast': '\u25C9',
+};
 
 export default function Nav({ tabs, active, onChange, badges = {} }) {
   return (
-    <nav className="glass-panel" style={{
-      height: 48, borderBottom: '1px solid var(--border)',
-      display: 'flex', alignItems: 'stretch', padding: '0 16px', gap: 4,
-      position: 'sticky', top: 52, zIndex: 99, overflowX: 'auto',
-    }}>
-      {tabs.map(tab => {
-        const badge = badges[tab];
-        return (
-          <button key={tab} onClick={() => onChange(tab)} style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: '0 16px',
-            fontSize: 12, fontFamily: 'inherit', fontWeight: active === tab ? 600 : 400,
-            color: active === tab ? 'var(--cyan)' : 'var(--muted)',
-            borderBottom: active === tab ? '2px solid var(--cyan)' : '2px solid transparent',
-            textShadow: active === tab ? '0 0 10px rgba(0,240,255,0.4)' : 'none',
-            transition: 'all .25s cubic-bezier(0.16, 1, 0.3, 1)', whiteSpace: 'nowrap',
-            position: 'relative', display: 'flex', alignItems: 'center', gap: 5,
-          }}>
-            {tab}
-            {badge > 0 && (
-              <span style={{
-                fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 8,
-                background: BADGE_COLOR[tab] || 'var(--cyan)',
-                color: '#fff', lineHeight: 1.4, minWidth: 16, textAlign: 'center',
-                animation: tab === 'HITL' ? 'pulse 2s infinite' : 'none',
-              }}>{badge}</span>
-            )}
-          </button>
-        );
-      })}
+    <nav className="sidebar-nav">
+      {NAV_SECTIONS.map(section => (
+        <div key={section.label}>
+          <div className="nav-section-label">{section.label}</div>
+          {section.items.map(item => {
+            const isActive = active === item.id;
+            const badge = badges[item.id];
+            const badgeColor = BADGE_COLOR[item.id];
+            return (
+              <button
+                key={item.id}
+                className={`nav-item${isActive ? ' active' : ''}`}
+                onClick={() => onChange(item.id)}
+              >
+                <span className="nav-item-icon">{ICON_MAP[item.id] || '\u25A0'}</span>
+                <span>{item.label}</span>
+                {badge > 0 && (
+                  <span className={`nav-item-badge ${badgeColor || ''}`}>{badge}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 }

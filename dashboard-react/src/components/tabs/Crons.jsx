@@ -58,8 +58,8 @@ function CronRow({ job, agents, onTrigger, onToggle }) {
   return (
     <>
       <tr style={{
-        borderBottom: '1px solid rgba(255,255,255,.03)',
-        background: isError ? 'rgba(255,23,68,.03)' : 'transparent',
+        borderBottom: '1px solid var(--border)',
+        background: isError ? 'var(--red-dim)' : 'transparent',
         opacity: localEnabled ? 1 : 0.5,
       }}>
         <td style={{ padding: '8px 12px' }}>
@@ -70,52 +70,52 @@ function CronRow({ job, agents, onTrigger, onToggle }) {
                 fontSize: 12, fontWeight: errors >= 3 ? 700 : 400,
                 color: isError ? 'var(--red)' : 'var(--text)'
               }}>{job.name}</div>
-              {job.description && <div style={{ fontSize: 10, color: 'var(--muted)' }}>{job.description.slice(0, 60)}</div>}
+              {job.description && <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{job.description.slice(0, 60)}</div>}
             </div>
           </div>
         </td>
         <td style={{ padding: '8px 12px', fontSize: 11 }}>
-          {agent ? <span>{agent.emoji} {agent.name}</span> : <span style={{ color: 'var(--muted)' }}>{job.agentId}</span>}
+          {agent ? <span>{agent.emoji} {agent.name}</span> : <span style={{ color: 'var(--text-secondary)' }}>{job.agentId}</span>}
         </td>
-        <td style={{ padding: '8px 12px', fontSize: 10, color: 'var(--muted)', fontFamily: 'monospace' }}>
+        <td className="mono" style={{ padding: '8px 12px', fontSize: 10, color: 'var(--text-secondary)' }}>
           {job.schedule?.kind === 'every'
             ? `every ${Math.round((job.schedule.everyMs || 0) / 60000)}m`
             : (job.schedule?.cronExpression || job.schedule?.kind || '—')}
         </td>
-        <td style={{ padding: '8px 12px', fontSize: 11, color: fmtNext(job._next_run_sec) === 'overdue' ? 'var(--red)' : 'var(--muted)' }}>
+        <td style={{ padding: '8px 12px', fontSize: 11, color: fmtNext(job._next_run_sec) === 'overdue' ? 'var(--red)' : 'var(--text-secondary)' }}>
           {fmtNext(job._next_run_sec)}
         </td>
-        <td style={{ padding: '8px 12px', fontSize: 11, color: 'var(--muted)' }}>
+        <td style={{ padding: '8px 12px', fontSize: 11, color: 'var(--text-secondary)' }}>
           {fmtLast(job._last_run_sec)}
         </td>
-        <td style={{ padding: '8px 12px', fontSize: 11, color: 'var(--muted)' }}>
+        <td style={{ padding: '8px 12px', fontSize: 11, color: 'var(--text-secondary)' }}>
           {fmtDuration(job._duration_ms)}
         </td>
         <td style={{ padding: '8px 12px' }}>
           {isError && (
             <span style={{
               fontSize: 10, padding: '2px 6px', borderRadius: 3, fontWeight: 700,
-              background: 'rgba(255,23,68,.15)', color: 'var(--red)', border: '1px solid rgba(255,23,68,.3)'
+              background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid rgba(255,23,68,.3)'
             }}>
-              {errors}× err
+              {errors}x err
             </span>
           )}
           {!isError && job._status === 'ok' && (
             <span style={{
               fontSize: 10, padding: '2px 6px', borderRadius: 3,
-              background: 'rgba(0,230,118,.1)', color: 'var(--green)', border: '1px solid rgba(0,230,118,.25)'
+              background: 'var(--green-dim)', color: 'var(--green)', border: '1px solid rgba(0,230,118,.25)'
             }}>ok</span>
           )}
         </td>
         <td style={{ padding: '8px 12px' }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <button onClick={trigger} disabled={triggering} title="Trigger now" style={{
-              background: 'rgba(0,229,255,.1)', border: '1px solid rgba(0,229,255,.3)',
+              background: 'var(--cyan-dim)', border: '1px solid rgba(0,229,255,.3)',
               color: 'var(--cyan)', padding: '3px 8px', borderRadius: 4,
               cursor: triggering ? 'not-allowed' : 'pointer', fontSize: 10, fontFamily: 'inherit',
             }}>{triggering ? '...' : '▶ Run'}</button>
             <button onClick={toggle} disabled={toggling} title={localEnabled ? 'Disable' : 'Enable'} style={{
-              background: localEnabled ? 'rgba(255,214,0,.08)' : 'rgba(0,230,118,.08)',
+              background: localEnabled ? 'var(--amber-dim)' : 'var(--green-dim)',
               border: `1px solid ${localEnabled ? 'rgba(255,214,0,.3)' : 'rgba(0,230,118,.3)'}`,
               color: localEnabled ? 'var(--amber)' : 'var(--green)',
               padding: '3px 8px', borderRadius: 4, cursor: toggling ? 'not-allowed' : 'pointer',
@@ -125,8 +125,8 @@ function CronRow({ job, agents, onTrigger, onToggle }) {
         </td>
       </tr>
       {isError && job._last_error && (
-        <tr style={{ background: 'rgba(255,23,68,.04)' }}>
-          <td colSpan={8} style={{ padding: '4px 12px 8px 40px', fontSize: 10, color: 'var(--red)', fontFamily: 'monospace' }}>
+        <tr style={{ background: 'var(--red-dim)' }}>
+          <td colSpan={8} className="mono" style={{ padding: '4px 12px 8px 40px', fontSize: 10, color: 'var(--red)' }}>
             ↳ {job._last_error}
           </td>
         </tr>
@@ -163,12 +163,12 @@ export default function Crons({ data, lastUpdated }) {
       {/* Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
         {[
-          ['Total', crons.length, 'var(--muted)'],
-          ['Erroring', erroring.length, erroring.length ? 'var(--red)' : 'var(--muted)'],
-          ['Running', running.length, running.length ? 'var(--cyan)' : 'var(--muted)'],
-          ['Disabled', disabled.length, disabled.length ? 'var(--amber)' : 'var(--muted)'],
+          ['Total', crons.length, 'var(--text-secondary)'],
+          ['Erroring', erroring.length, erroring.length ? 'var(--red)' : 'var(--text-secondary)'],
+          ['Running', running.length, running.length ? 'var(--cyan)' : 'var(--text-secondary)'],
+          ['Disabled', disabled.length, disabled.length ? 'var(--amber)' : 'var(--text-secondary)'],
         ].map(([l, v, c]) => (
-          <div key={l} className="card" style={{ textAlign: 'center', cursor: 'pointer' }}
+          <div key={l} className="kpi-card" style={{ textAlign: 'center', cursor: 'pointer' }}
             onClick={() => setFilter(l.toLowerCase())}>
             <div className="section-title">{l}</div>
             <div style={{ fontSize: 22, fontWeight: 700, color: c }}>{v}</div>
@@ -180,9 +180,9 @@ export default function Crons({ data, lastUpdated }) {
       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
         {['all', 'error', 'running', 'disabled'].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
-            background: filter === f ? 'rgba(0,229,255,.15)' : 'var(--surface)',
+            background: filter === f ? 'var(--cyan-dim)' : 'var(--surface)',
             border: `1px solid ${filter === f ? 'rgba(0,229,255,.4)' : 'var(--border)'}`,
-            color: filter === f ? 'var(--cyan)' : 'var(--muted)',
+            color: filter === f ? 'var(--cyan)' : 'var(--text-secondary)',
             padding: '4px 12px', borderRadius: 4, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
           }}>{f}</button>
         ))}
@@ -197,14 +197,14 @@ export default function Crons({ data, lastUpdated }) {
               {['Job', 'Agent', 'Schedule', 'Next', 'Last Run', 'Duration', 'Status', 'Actions'].map(h => (
                 <th key={h} style={{
                   padding: '8px 12px', textAlign: 'left', fontSize: 10,
-                  color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em'
+                  color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em'
                 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={8} style={{ padding: '20px', color: 'var(--muted)', textAlign: 'center' }}>No cron jobs match filter</td></tr>
+              <tr><td colSpan={8} className="empty-state">No cron jobs match filter</td></tr>
             )}
             {filtered.map(j => (
               <CronRow key={j.id} job={j} agents={agents} />

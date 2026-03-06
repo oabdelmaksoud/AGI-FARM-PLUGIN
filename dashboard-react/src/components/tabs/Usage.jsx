@@ -5,12 +5,12 @@ function Breakdown({ title, map }) {
   return (
     <div className="card">
       <div className="section-title">{title}</div>
-      {entries.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 11 }}>No usage yet</div>}
+      {entries.length === 0 && <div style={{ color: 'var(--text-secondary)', fontSize: 11 }}>No usage yet</div>}
       {entries.map(([key, value]) => (
-        <div key={key} style={{ display: 'flex', gap: 10, fontSize: 11, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,.04)' }}>
+        <div key={key} style={{ display: 'flex', gap: 10, fontSize: 11, padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
           <span style={{ flex: 1 }}>{key}</span>
-          <span style={{ color: 'var(--cyan)' }}>${(value?.spent || 0).toFixed(4)}</span>
-          <span style={{ color: 'var(--muted)' }}>{value?.calls || 0} calls</span>
+          <span className="mono" style={{ color: 'var(--cyan)' }}>${(value?.spent || 0).toFixed(4)}</span>
+          <span style={{ color: 'var(--text-secondary)' }}>{value?.calls || 0} calls</span>
         </div>
       ))}
     </div>
@@ -29,9 +29,9 @@ export default function Usage({ data, lastUpdated }) {
     <div className="fade-in" style={{ display: 'grid', gap: 14 }}>
       <div className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
         <Stat label="Total Cost" value={`$${(totals.estimatedCostUsd || 0).toFixed(4)}`} color="var(--cyan)" />
-        <Stat label="Tokens In" value={totals.tokensIn || 0} color="var(--muted)" />
-        <Stat label="Tokens Out" value={totals.tokensOut || 0} color="var(--muted)" />
-        <Stat label="Duration" value={`${Math.round((totals.durationMs || 0) / 1000)}s`} color="var(--muted)" />
+        <Stat label="Tokens In" value={totals.tokensIn || 0} color="var(--text-secondary)" />
+        <Stat label="Tokens Out" value={totals.tokensOut || 0} color="var(--text-secondary)" />
+        <Stat label="Duration" value={`${Math.round((totals.durationMs || 0) / 1000)}s`} color="var(--text-secondary)" />
       </div>
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <div className="section-title" style={{ marginBottom: 0 }}>Metering</div>

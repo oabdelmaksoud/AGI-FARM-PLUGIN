@@ -11,8 +11,8 @@ function JobStep({ step }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, padding: '3px 0' }}>
       <span style={{ color }}>●</span>
       <span style={{ minWidth: 70 }}>{step.kind}</span>
-      <span style={{ color: 'var(--muted)' }}>{step.status}</span>
-      <span style={{ color: 'var(--muted)' }}>attempt {step.attempt || 0}/{step.maxAttempts || 2}</span>
+      <span style={{ color: 'var(--text-secondary)' }}>{step.status}</span>
+      <span style={{ color: 'var(--text-secondary)' }}>attempt {step.attempt || 0}/{step.maxAttempts || 2}</span>
     </div>
   );
 }
@@ -73,7 +73,7 @@ export default function Jobs({ data, lastUpdated }) {
           </select>
           <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tags (comma separated)"
             style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '8px 10px', fontFamily: 'inherit' }} />
-          <button type="submit" disabled={loading} style={{ background: 'rgba(0,229,255,.15)', border: '1px solid rgba(0,229,255,.4)', color: 'var(--cyan)', borderRadius: 6, padding: '8px 12px', cursor: 'pointer' }}>
+          <button type="submit" disabled={loading} className="btn-primary">
             {loading ? '...' : 'Create'}
           </button>
         </div>
@@ -85,27 +85,27 @@ export default function Jobs({ data, lastUpdated }) {
         <LastUpdated ts={lastUpdated} />
       </div>
 
-      {sorted.length === 0 && <div className="card" style={{ color: 'var(--muted)' }}>No jobs yet.</div>}
+      {sorted.length === 0 && <div className="empty-state">No jobs yet.</div>}
 
       {sorted.map((job) => (
         <div key={job.id} className="card" style={{ display: 'grid', gap: 8 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontWeight: 700 }}>{job.title}</span>
             <span className="badge badge-pending" style={{ textTransform: 'none' }}>{job.status}</span>
-            <span style={{ color: 'var(--muted)', fontSize: 10 }}>{job.id}</span>
-            <span style={{ marginLeft: 'auto', color: 'var(--muted)', fontSize: 11 }}>{new Date(job.createdAt).toLocaleString()}</span>
+            <span className="mono" style={{ color: 'var(--text-secondary)', fontSize: 10 }}>{job.id}</span>
+            <span style={{ marginLeft: 'auto', color: 'var(--text-secondary)', fontSize: 11 }}>{new Date(job.createdAt).toLocaleString()}</span>
           </div>
-          <div style={{ color: 'var(--muted)', fontSize: 12 }}>{job.intent}</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{job.intent}</div>
           <div style={{ display: 'grid', gap: 2 }}>
             {(job.steps || []).map((step) => <JobStep key={step.id} step={step} />)}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => onCancel(job.id)} disabled={['complete', 'failed', 'cancelled', 'blocked'].includes(job.status)}
-              style={{ background: 'rgba(255,23,68,.1)', border: '1px solid rgba(255,23,68,.35)', color: 'var(--red)', borderRadius: 5, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11 }}>
+              className="btn-danger" style={{ fontSize: 11, padding: '5px 10px' }}>
               Cancel
             </button>
             <button onClick={() => onRetry(job.id)} disabled={!['failed', 'blocked'].includes(job.status)}
-              style={{ background: 'rgba(0,230,118,.1)', border: '1px solid rgba(0,230,118,.35)', color: 'var(--green)', borderRadius: 5, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11 }}>
+              style={{ background: 'var(--green-dim)', border: '1px solid var(--green)', color: 'var(--green)', borderRadius: 5, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11 }}>
               Retry
             </button>
           </div>

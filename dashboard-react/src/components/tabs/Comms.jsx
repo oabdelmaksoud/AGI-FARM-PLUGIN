@@ -5,38 +5,34 @@ import LastUpdated from '../LastUpdated';
 function CommsPanel({ content, label, color }) {
   if (!content || content.trim() === '' || content.trim() === `# ${label}\n\n_No messages._`) {
     return (
-      <div style={{
-        color: 'var(--muted)', fontSize: 11, padding: '60px 0', textAlign: 'center',
-        border: '1px dashed var(--border)', borderRadius: 8, marginTop: 16
-      }}>
+      <div className="empty-state" style={{ padding: '60px 0' }}>
         <div style={{ fontSize: 24, marginBottom: 12, opacity: 0.3 }}>📡</div>
-        <div style={{ letterSpacing: '0.1em', fontWeight: 700 }}>FEED_SILENT // NO ACTIVE SIGNALS</div>
+        <div>No messages</div>
       </div>
     );
   }
 
   const lines = (content || '').split('\n');
   return (
-    <div style={{
-      fontFamily: 'JetBrains Mono, monospace', fontSize: 11, lineHeight: 1.8,
+    <div className="mono" style={{
+      fontSize: 11, lineHeight: 1.8,
       maxHeight: 500, overflowY: 'auto', padding: 20,
-      background: 'rgba(0,0,0,0.2)', borderRadius: 8, border: '1px solid var(--border)'
+      background: 'var(--bg3)', borderRadius: 8, border: '1px solid var(--border)'
     }}>
       {lines.map((line, i) => {
         let lineColor = 'rgba(255,255,255,0.7)';
         let weight = 400;
-        let glow = 'none';
 
         if (line.startsWith('# ') || line.startsWith('## ')) {
-          lineColor = color; weight = 800; glow = `0 0 10px ${color}44`;
+          lineColor = color; weight = 800;
         }
         else if (line.startsWith('---')) lineColor = 'rgba(255,255,255,0.05)';
-        else if (line.startsWith('- ')) lineColor = 'var(--muted)';
+        else if (line.startsWith('- ')) lineColor = 'var(--text-secondary)';
         else if (line.startsWith('**')) { lineColor = 'var(--text)'; weight = 600; }
 
         return (
           <div key={i} style={{
-            color: lineColor, fontWeight: weight, textShadow: glow, padding: '2px 0',
+            color: lineColor, fontWeight: weight, padding: '2px 0',
             borderBottom: line.startsWith('---') ? '1px solid rgba(255,255,255,0.05)' : 'none',
             display: 'flex', gap: 12
           }}>
@@ -61,7 +57,7 @@ export default function Comms({ data, lastUpdated, toast }) {
     setSending(true);
     try {
       await apiPost(`/api/comms/${selectedAgent}/send`, { message: composeMsg.trim() });
-      toast('Signal frequencies locked and transmitted', 'success');
+      toast('Message sent', 'success');
       setComposeMsg('');
     } catch (e) { toast(e.message, 'error'); }
     setSending(false);
@@ -76,7 +72,7 @@ export default function Comms({ data, lastUpdated, toast }) {
     <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20, minHeight: 600 }}>
       {/* Agent Selector side */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div className="section-title" style={{ fontSize: 9 }}>NEURAL FREQUENCIES</div>
+        <div className="section-title">Agents</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {agents.map(a => {
             const ac = comms[a.id] || {};
@@ -86,23 +82,21 @@ export default function Comms({ data, lastUpdated, toast }) {
 
             return (
               <button key={a.id} onClick={() => setSelectedAgent(a.id)} style={{
-                background: isActive ? 'rgba(0, 240, 255, 0.08)' : 'rgba(255,255,255,0.02)',
+                background: isActive ? 'var(--cyan-dim)' : 'var(--bg3)',
                 border: `1px solid ${isActive ? 'rgba(0, 240, 255, 0.3)' : 'var(--border)'}`,
                 borderRadius: 8, padding: '12px 14px', cursor: 'pointer', textAlign: 'left',
                 display: 'flex', alignItems: 'center', gap: 12, transition: 'all 0.2s',
-                boxShadow: isActive ? '0 0 15px rgba(0, 240, 255, 0.05)' : 'none'
               }} className="task-row-hover">
-                <span style={{ fontSize: 24, filter: isActive ? 'drop-shadow(0 0 5px var(--cyan))' : 'grayscale(0.5)' }}>{a.emoji}</span>
+                <span style={{ fontSize: 24, filter: isActive ? 'none' : 'grayscale(0.5)' }}>{a.emoji}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontSize: 13, fontWeight: 800, color: isActive ? 'var(--cyan)' : 'var(--text)',
-                    fontFamily: 'Rajdhani, sans-serif', letterSpacing: '0.02em'
-                  }}>{a.name.toUpperCase()}</div>
-                  <div style={{ fontSize: 9, color: 'var(--muted)', fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>
-                    IN:{inboxCount} // OUT:{outboxCount}
+                  }}>{a.name}</div>
+                  <div className="mono" style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 2 }}>
+                    In: {inboxCount} · Out: {outboxCount}
                   </div>
                 </div>
-                {isActive && <div className="status-dot" style={{ background: 'var(--cyan)', boxShadow: '0 0 8px var(--cyan)' }} />}
+                {isActive && <div className="status-dot" style={{ background: 'var(--cyan)' }} />}
               </button>
             );
           })}
@@ -114,34 +108,33 @@ export default function Comms({ data, lastUpdated, toast }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 12, padding: '8px 20px',
-            background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid var(--border)'
+            background: 'var(--bg3)', borderRadius: 10, border: '1px solid var(--border)'
           }}>
             <span style={{ fontSize: 24 }}>{agent?.emoji}</span>
-            <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--cyan)', fontFamily: 'Rajdhani, sans-serif', letterSpacing: '0.05em' }}>{agent?.name.toUpperCase()}</span>
+            <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--cyan)' }}>{agent?.name}</span>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, background: 'rgba(0,0,0,0.2)', padding: 4, borderRadius: 8, border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', gap: 8, background: 'var(--bg3)', padding: 4, borderRadius: 8, border: '1px solid var(--border)' }}>
             {['inbox', 'outbox'].map(v => (
               <button key={v} onClick={() => setView(v)} style={{
-                background: view === v ? 'rgba(0,240,255,0.1)' : 'transparent',
-                border: 'none', color: view === v ? 'var(--cyan)' : 'var(--muted)',
+                background: view === v ? 'var(--cyan-dim)' : 'transparent',
+                border: 'none', color: view === v ? 'var(--cyan)' : 'var(--text-secondary)',
                 padding: '6px 16px', borderRadius: 6, fontSize: 10, cursor: 'pointer',
-                fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em',
-                transition: 'all 0.2s', fontFamily: 'Rajdhani, sans-serif'
-              }}>{v === 'inbox' ? '📥 DOWNLINK' : '📤 UPLINK'}</button>
+                fontWeight: 800, transition: 'all 0.2s',
+              }}>{v === 'inbox' ? 'Inbox' : 'Outbox'}</button>
             ))}
           </div>
           <div style={{ marginLeft: 'auto' }}><LastUpdated ts={lastUpdated} /></div>
         </div>
 
-        <div className="card shadow-glow" style={{ flex: 1, padding: 0, overflow: 'hidden', minHeight: 400 }}>
+        <div className="card" style={{ flex: 1, padding: 0, overflow: 'hidden', minHeight: 400 }}>
           <div style={{
-            background: 'rgba(255,255,255,0.02)', padding: '8px 16px', borderBottom: '1px solid var(--border)',
+            background: 'var(--bg3)', padding: '8px 16px', borderBottom: '1px solid var(--border)',
             display: 'flex', alignItems: 'center', gap: 8
           }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: view === 'inbox' ? 'var(--cyan)' : 'var(--green)', boxShadow: `0 0 8px ${view === 'inbox' ? 'var(--cyan)' : 'var(--green)'}` }} />
-            <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--muted)', letterSpacing: '0.1em' }}>
-              DECODING_{view.toUpperCase()}_STREAM.EXE
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: view === 'inbox' ? 'var(--cyan)' : 'var(--green)' }} />
+            <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-secondary)' }}>
+              {view === 'inbox' ? 'Inbox' : 'Outbox'}
             </span>
           </div>
           <CommsPanel
@@ -153,15 +146,15 @@ export default function Comms({ data, lastUpdated, toast }) {
 
         {/* Compose Input */}
         {selectedAgent && (
-          <div className="card shadow-glow" style={{ display: 'flex', gap: 12, alignItems: 'flex-end', border: '1px solid var(--border-h)' }}>
+          <div className="card" style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
             <div style={{ flex: 1 }}>
-              <div className="section-title" style={{ fontSize: 9, marginBottom: 8 }}>ENCRYPT MESSAGE FOR {agent?.name.toUpperCase()}</div>
-              <textarea className="input-base" placeholder="AUTHORIZE SIGNAL TRANSMISSION..."
+              <div className="section-title" style={{ marginBottom: 8 }}>Send message to {agent?.name}</div>
+              <textarea className="input-base" placeholder="Type your message..."
                 value={composeMsg} onChange={e => setComposeMsg(e.target.value)}
-                style={{ width: '100%', minHeight: 80, resize: 'none', background: 'rgba(0,0,0,0.2)', fontSize: 12, padding: 12 }} maxLength={2000} />
+                style={{ width: '100%', minHeight: 80, resize: 'none', fontSize: 12, padding: 12, boxSizing: 'border-box' }} maxLength={2000} />
             </div>
             <button className="btn-primary" style={{ height: 80, width: 120, fontSize: 13 }} onClick={handleSend} disabled={sending || !composeMsg.trim()}>
-              {sending ? 'TX...' : 'TRANSMIT'}
+              {sending ? 'Sending...' : 'Send'}
             </button>
           </div>
         )}
