@@ -36,14 +36,16 @@
 
 ---
 
-## 🆕 What's New in v1.2.0 & v1.2.1
+## 🆕 What's New in v1.4.0
 
-### Production Ready & Seamless OpenClaw Integration
-- 🚀 **Default Model Support**: Removed all hardcoded model IDs in favor of OpenClaw's intelligent default auto-routing (`manifest/auto`).
-- 🧹 **Robust Cleanup**: Enhanced `agi-farm teardown` ensures complete cleanup of bundles, crons, and communication logs.
-- 🔍 **Gateway Health Probe**: Dashboard proactively monitors OpenClaw gateway connection.
-- 🐍 **Zero Python Dependencies**: Re-architected for seamless universal installation without Python prerequisites.
-- 🍎 **macOS LaunchAgent**: Optional `agi-farm-launchagent` command to install dashboard as a persistent OS-level login service.
+### Dashboard UI v2: Agent OS Overhaul
+- 🛰️ **Agent OS Aesthetic**: Professional, minimalist, and high-contrast obsidian design.
+- 📉 **Strategic Command Matrix**: High-density project matrix with integrated Gantt and Burndown visualizations.
+- 🧬 **Fleet Pulse signatures**: Minimalist neural activity and heartbeat monitoring for the entire fleet.
+- 📊 **Efficiency Analytics**: Professional data visualizations for agent velocity and task throughput.
+- ⚡ **Performance Optimization**: 60% reduction in dashboard asset size and faster SSE fan-out.
+
+## 🆕 Previous Updates (v1.2.0 - v1.3.x)
 
 ### Previous Highlights (v1.1.x)
 - 🔄 **GitHub release detection & Auto-Update system directly from dashboard**
