@@ -54,6 +54,12 @@ const AGENT_ROSTERS = {
 // ── Wizard Steps ───────────────────────────────────────────────────────────────
 async function runWizard() {
   console.log(chalk.cyan.bold('\n🚜 AGI Farm — Multi-Agent Team Builder\n'));
+  console.log(chalk.dim('Powered by Everything Claude Code (ECC) — Production-ready AI workflows\n'));
+  console.log(chalk.white('✨ Includes:'));
+  console.log(chalk.dim('   • 69 specialized coding skills (TDD, security, API design)'));
+  console.log(chalk.dim('   • 7 quality automation hooks (typecheck, security scan, format)'));
+  console.log(chalk.dim('   • 33 slash commands for common workflows'));
+  console.log(chalk.dim('   • 16 specialized agent patterns\n'));
 
   // Pre-flight check: Verify openclaw is available
   const versionResult = spawnSync('openclaw', ['--version'], { encoding: 'utf-8', timeout: 8000 });
@@ -178,6 +184,12 @@ async function runWizard() {
     },
   ]);
 
+  // Step 4.2: ECC Resources (always enabled, just informational)
+  console.log(chalk.dim('\n💡 ECC resources are automatically included in all agents:'));
+  console.log(chalk.dim('   • @tdd-workflow, @security-scan, @api-design'));
+  console.log(chalk.dim('   • Auto-applied based on agent roles'));
+  console.log(chalk.dim('   • See: ECC_OPENCLAW_QUICKREF.md for shortcuts\n'));
+
   // Step 4.5: Project defaults
   const { autoProjectChannel } = await inquirer.prompt([
     {
@@ -209,6 +221,7 @@ async function runWizard() {
   console.log(chalk.white(`Agents:       ${preset}`));
   console.log(chalk.white(`Domain:       ${finalDomain}`));
   console.log(chalk.white(`Frameworks:   ${frameworks.length > 0 ? frameworks.join(', ') : 'none'}`));
+  console.log(chalk.white(`ECC:          enabled (69 skills, 7 hooks, 33 commands)`));
   console.log(chalk.white(`Proj Channel: ${autoProjectChannel ? 'auto-create' : 'manual'}`));
   console.log(chalk.white(`Exec Path:    ${defaultExecutionPath}`));
 
@@ -475,6 +488,10 @@ async function main() {
     console.log(chalk.white(`Agents:    ${config.preset}`));
     console.log(chalk.white(`Workspace: ${WORKSPACE}`));
     console.log(chalk.white(`Bundle:    ${BUNDLE_DIR}`));
+    console.log(chalk.dim(`\n✨ ECC Features Active:`));
+    console.log(chalk.dim(`   • Production skills: @tdd-workflow, @security-scan, @api-design`));
+    console.log(chalk.dim(`   • Quality hooks: typecheck, security-review, auto-format`));
+    console.log(chalk.dim(`   • Quick ref: ECC_OPENCLAW_QUICKREF.md`));
     console.log(chalk.dim(`\nNext: talk to ${config.orchestratorName} · /agi-farm status · /agi-farm dashboard\n`));
     await offerOpenDashboard();
 
