@@ -6,6 +6,64 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-03-06
+
+### 🌍 Internationalization & Content Expansion
+- **ECC Resources Updated** — Synced to latest upstream (commit `03b3e0d0`)
+  - Added **316 new files** (Japanese, Chinese Simplified, Chinese Traditional translations)
+  - Removed **5 deprecated files** (migrated to i18n structure)
+  - **i18n Support**: Japanese (ja-JP), Chinese Simplified (zh-CN), Chinese Traditional (zh-TW)
+  - Complete translations of agents, skills, commands, rules, examples
+  - Business materials: metrics, sponsorship, social launch copy
+  - ECC v1.8.0 release documentation
+
+### 🔄 ECC Update Automation
+- **Update Script** — New `scripts/update-ecc-resources.js` (330 lines)
+  - Automated sync from upstream ECC repository
+  - Dry-run mode for safe preview (`--dry-run`)
+  - Version pinning support (`--version=<commit-sha>`)
+  - Detailed change reporting (added/modified/removed/unchanged)
+  - Smart content-based comparison (not timestamp-based)
+- **Version Tracking** — New `ecc-resources/ECC_VERSION` file
+  - Tracks current commit SHA and update history
+  - Supports rollback to previous versions
+  - Audit trail for ECC integration changes
+- **Documentation** — New `ECC_UPDATE_GUIDE.md` (450 lines)
+  - Complete maintainer workflow (8-step update process)
+  - Testing procedures and troubleshooting
+  - FAQ and integration notes
+  - Future automation roadmap (GitHub Actions)
+
+### ✨ Setup Wizard Enhancements
+- **ECC Awareness** — Wizard now highlights included ECC features
+  - Welcome banner mentions 69 skills, 7 hooks, 33 commands
+  - Informational display of @ shorthand system
+  - ECC status in configuration summary
+  - Active features shown in success message
+- **Better Onboarding** — Users immediately understand production-ready capabilities
+
+### 📝 Documentation
+- **README Updates** — Added "Acknowledgments" section
+  - Credits Everything Claude Code (@affaan-m)
+  - Lists integrated resources (194 → 510 files)
+  - Links to upstream repository
+- **CI Improvements** — Fixed validation script for CI environments
+  - Detects GitHub Actions/CI environment
+  - Treats missing OpenClaw as warning (not error) in CI
+  - Allows tests to run without OpenClaw installation
+
+### 📊 Statistics
+- **Total ECC Files**: 510 (was 194)
+- **ECC Resources Size**: 4.0 MB (was 1.5 MB)
+- **Supported Languages**: English, Japanese, Chinese (Simplified & Traditional)
+- **Integration Commit**: `03b3e0d0` (2026-03-05)
+
+### Changed
+- Bumped version to 1.5.0 (minor release for new features)
+- ECC resources now include comprehensive i18n support
+
+## [1.4.0] - 2026-03-06
+
 ### Added
 - **Project Defaults** — new setup wizard prompts for `auto_project_channel` and `execution_path` preferences.
 - **Settings Tab** — dashboard UI to view/edit project defaults in real time.
