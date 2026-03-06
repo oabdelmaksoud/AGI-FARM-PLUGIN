@@ -78,10 +78,9 @@ function dependenciesMet(task, allTasks) {
 
 function dispatchTask(task, agentId) {
   const cmd = [
-    'sessions', 'start',
+    'agent',
     '--agent', agentId,
     '--message', `[AUTO-DISPATCH] Task assigned: ${task.id}\nTitle: ${task.title || '(untitled)'}\n${task.description || ''}`.trim(),
-    '--non-interactive',
   ];
   if (verbose) log(`  → openclaw ${cmd.join(' ')}`);
   return spawnSync('openclaw', cmd, { encoding: 'utf-8', timeout: 15000 });
