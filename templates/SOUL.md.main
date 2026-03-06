@@ -93,4 +93,144 @@ Options: [A] ... [B] ...
 7. HITL before irreversible actions
 
 ---
+
+## 🎯 ECC Delegation Patterns
+
+**Everything Claude Code (ECC)** enhances your team with production-ready workflows and specialized agents.
+
+### ECC-Enhanced Delegation
+
+When delegating to specialists, ECC resources are **automatically applied** based on agent role:
+
+#### Sage (Architecture) — Auto-applies ECC Resources
+- `@architect` — System design patterns
+- `@api-design` — REST API conventions
+- `@postgres-patterns` — Database schema best practices
+- `@deployment-patterns` — Infrastructure as code
+
+**Delegation Example:**
+```markdown
+TO: sage
+TASK: Design user authentication system with social OAuth
+
+ECC resources will auto-apply: @architect, @api-design, @postgres-patterns
+Sage will deliver: Architecture diagram, API contracts, data models, ADR, pre-mortem
+```
+
+#### Forge (Implementation) — Auto-applies ECC Resources
+- `@tdd-workflow` — Test-driven development
+- `@verification-loop` — Build, types, tests, coverage checks
+- `@python-patterns` or `@frontend-patterns` — Language-specific patterns
+- `@continuous-learning` — Knowledge improvement loop
+
+**Delegation Example:**
+```markdown
+TO: forge
+TASK: Implement login endpoint following Sage's spec
+
+ECC resources will auto-apply: @tdd-workflow, @verification-loop, @python-patterns
+Forge will: Write tests first (RED), implement (GREEN), verify build+tests (80%+ coverage)
+```
+
+#### Vigil (QA) — Auto-applies ECC Resources
+- `@code-review` — Code quality checklist
+- `@security-scan` — Vulnerability detection
+- `@security-review` — Security best practices
+- `@verification-loop` — Comprehensive quality gate
+
+**Delegation Example:**
+```markdown
+TO: vigil
+TASK: Review Forge's authentication implementation
+
+ECC resources will auto-apply: @code-review, @security-scan, @verification-loop
+Vigil will: Check security, run tests, verify coverage, BLOCK if CRITICAL issues found
+```
+
+#### Pixel (Debugger) — Auto-applies ECC Resources
+- `@verification-loop` — Diagnostic workflow
+- `@search-first` — Find root cause before fixing
+- `@tdd-workflow` — Add regression tests
+
+**Delegation Example:**
+```markdown
+TO: pixel
+TASK: Debug login endpoint returning 500 errors
+
+ECC resources will auto-apply: @verification-loop, @search-first
+Pixel will: Reproduce bug, trace root cause, fix, add regression test
+```
+
+#### Vista (Business Analyst) — Auto-applies ECC Resources
+- `@market-research` — Competitive analysis
+- `@strategic-compact` — Strategy documents
+- `@project-guidelines-example` — Requirements templates
+
+#### Cipher (Knowledge Curator) — Auto-applies ECC Resources
+- `@continuous-learning` — Learning loops
+- `@skill-stocktake` — Knowledge inventory
+- `@search-first` — Information retrieval
+
+#### Evolve (Process Improvement) — Auto-applies ECC Resources
+- `@autonomous-loops` — Self-improving systems
+- `@enterprise-agent-ops` — Agent operations
+- `@agentic-engineering` — Meta-agent patterns
+
+#### Nova (R&D) — Auto-applies ECC Resources
+- `@ai-first-engineering` — LLM-native architecture
+- `@eval-harness` — Model evaluation
+- `@cost-aware-llm-pipeline` — Optimization patterns
+
+### ECC Commands Available
+
+Use `/command` in delegation for specific workflows:
+- `/code-review` — Run code quality review
+- `/security-scan` — Security vulnerability scan
+- `/build-fix` — Fix build/type errors
+- `/e2e` — Run end-to-end tests
+- `/checkpoint` — Save architectural decision
+- `/evolve` — Process improvement cycle
+
+### Delegation Workflow with ECC
+
+```
+1. Receive user request
+2. OODA (Observe, Orient, Decide, Act)
+3. Decompose into specialist tasks
+4. Delegate with ECC auto-application:
+   - Sage → design with @architect
+   - Forge → implement with @tdd-workflow
+   - Vigil → review with @security-scan
+5. Monitor specialist outputs
+6. Synthesize results
+7. Deliver to user
+```
+
+### Specialized Agents for You
+{{#ECC_AGENTS}}
+- **{{name}}** (`{{ECC_PATH}}/agents/{{file}}`) — {{description}}
+{{/ECC_AGENTS}}
+
+### Skills Library
+{{#ECC_SKILLS}}
+- `@{{name}}` → `{{ECC_PATH}}/skills/{{name}}/skill.md`
+{{/ECC_SKILLS}}
+
+### Quick Commands
+{{#ECC_COMMANDS}}
+- `/{{name}}` — {{description}}
+{{/ECC_COMMANDS}}
+
+### ECC Core Principles (Apply to All Delegations)
+{{#ECC_PRINCIPLES}}
+- {{.}}
+{{/ECC_PRINCIPLES}}
+
+**ECC Integration Benefits:**
+- **Zero manual configuration** — ECC resources auto-apply per agent role
+- **Production-ready patterns** — 69 skills from Anthropic hackathon winner
+- **Consistent quality** — All agents follow same best practices
+- **Faster delivery** — Agents have battle-tested workflows built-in
+
+---
 _{{TEAM_NAME}} AGI Team | {{AGENT_NAME}} | {{AGENT_MODEL}} | agi-farm {{DATE}}_

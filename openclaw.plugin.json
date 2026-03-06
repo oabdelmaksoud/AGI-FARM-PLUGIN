@@ -126,6 +126,15 @@
   "skills": [
     "skills/agi-farm"
   ],
+  "hooks": [
+    "hooks/quality-gate",
+    "hooks/typecheck",
+    "hooks/console-warn",
+    "hooks/auto-format",
+    "hooks/pr-logger",
+    "hooks/git-push-reminder",
+    "hooks/build-analyzer"
+  ],
   "commands": [
     {
       "name": "agi-farm setup",

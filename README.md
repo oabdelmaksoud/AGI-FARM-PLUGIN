@@ -36,9 +36,19 @@
 
 ---
 
-## 🆕 What's New in v1.4.0
+## 🆕 What's New in v1.5.0
 
-### Dashboard UI v2: Agent OS Overhaul
+### 🎯 ECC Integration: Production-Ready AI Coding Framework
+- **69 specialized skills** from Everything Claude Code (Anthropic hackathon winner)
+- **16 ECC agent templates** for domain-specific delegation
+- **33 slash commands** for common workflows
+- **Auto-applied resources** based on agent roles (Sage → @architect, Forge → @tdd-workflow, Vigil → @security-scan)
+- **Zero configuration** — ECC resources automatically injected into SOUL.md files
+- **Framework support** — Python, Django, Spring Boot, Go, Swift, PostgreSQL patterns included
+- **TDD & Security-First** — 80%+ test coverage enforced, comprehensive security scans
+- **See:** [ECC Integration Guide](docs/ECC_INTEGRATION_GUIDE.md)
+
+### Previous: Dashboard UI v2: Agent OS Overhaul (v1.4.0)
 - 🛰️ **Agent OS Aesthetic**: Professional, minimalist, and high-contrast obsidian design.
 - 📉 **Strategic Command Matrix**: High-density project matrix with integrated Gantt and Burndown visualizations.
 - 🧬 **Fleet Pulse signatures**: Minimalist neural activity and heartbeat monitoring for the entire fleet.
@@ -685,6 +695,28 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+---
+
+## 🙏 Acknowledgments
+
+This plugin integrates production-ready AI coding resources from the following projects:
+
+### Everything Claude Code (ECC)
+- **Repository**: https://github.com/affaan-m/everything-claude-code
+- **Author**: [@affaan-m](https://github.com/affaan-m)
+- **Achievement**: Winner of Anthropic's Claude Code hackathon
+- **Integration**: 194 resource files (16 agents, 69 skills, 33 commands, 7 guides)
+- **Impact**: Industry-standard TDD workflows, security scans, API design patterns, and framework templates for Python/Django/Spring Boot/Go/Swift/PostgreSQL
+
+The ECC framework provides the foundation for AGI Farm's production-ready coding capabilities, including:
+- Test-driven development workflows with 80%+ coverage enforcement
+- Comprehensive security scanning and vulnerability detection
+- API design patterns and best practices
+- Framework-specific templates and conventions
+- Auto-delegation based on agent roles
+
+**Special thanks to @affaan-m for creating and open-sourcing this exceptional framework.**
 
 ---
 

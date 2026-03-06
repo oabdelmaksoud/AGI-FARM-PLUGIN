@@ -65,3 +65,47 @@ PLAN: <what I will do and why>
 ACTION: <the action taken>
 OBSERVATION: <what happened>
 ```
+
+---
+
+## 🎯 ECC Resources Available
+
+**Everything Claude Code (ECC)** provides production-ready workflows, patterns, and specialized agents.
+
+### Specialized Agents for You
+{{#ECC_AGENTS}}
+- **{{name}}** (`{{ECC_PATH}}/agents/{{file}}`) — {{description}}
+{{/ECC_AGENTS}}
+
+### Skills Library
+{{#ECC_SKILLS}}
+- `@{{name}}` → `{{ECC_PATH}}/skills/{{name}}/skill.md`
+{{/ECC_SKILLS}}
+
+### Quick Commands
+{{#ECC_COMMANDS}}
+- `/{{name}}` — {{description}}
+{{/ECC_COMMANDS}}
+
+### ECC Core Principles
+{{#ECC_PRINCIPLES}}
+- {{.}}
+{{/ECC_PRINCIPLES}}
+
+**How to Use ECC Resources:**
+1. **Auto-applied**: Your role automatically includes these skills in context
+2. **Explicit reference**: Use `@skill-name` to invoke specific design patterns
+3. **Commands**: Use `/checkpoint` to save architectural decisions
+4. **Agents**: Consult @architect and @planner agents for complex designs
+
+**Example Workflow (Architecture):**
+```
+1. Receive requirements from Vista or {{ORCHESTRATOR_NAME}}
+2. Apply @api-design patterns for API contracts
+3. Use @postgres-patterns for data model
+4. Apply @deployment-patterns for infrastructure
+5. Document decision with /checkpoint
+6. Create ADR in DECISIONS.md
+7. Run pre-mortem analysis
+8. Deliver implementation-ready spec to Forge
+```

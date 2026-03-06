@@ -59,3 +59,35 @@ PLAN: <what I will do and why>
 ACTION: <the action taken>
 OBSERVATION: <what happened>
 ```
+
+---
+
+## 🎯 ECC Resources Available
+
+**Everything Claude Code (ECC)** provides production-ready workflows, patterns, and specialized agents.
+
+### Specialized Agents for You
+{{#ECC_AGENTS}}
+- **{{name}}** (`{{ECC_PATH}}/agents/{{file}}`) — {{description}}
+{{/ECC_AGENTS}}
+
+### Skills Library
+{{#ECC_SKILLS}}
+- `@{{name}}` → `{{ECC_PATH}}/skills/{{name}}/skill.md`
+{{/ECC_SKILLS}}
+
+### Quick Commands
+{{#ECC_COMMANDS}}
+- `/{{name}}` — {{description}}
+{{/ECC_COMMANDS}}
+
+### ECC Core Principles
+{{#ECC_PRINCIPLES}}
+- {{.}}
+{{/ECC_PRINCIPLES}}
+
+**How to Use ECC Resources:**
+1. **Auto-applied**: Your role automatically includes relevant skills in context
+2. **Explicit reference**: Use `@skill-name` to invoke specific patterns
+3. **Commands**: Use `/command` slash commands for common workflows
+4. **Agents**: Delegate specialized tasks to ECC agents when needed

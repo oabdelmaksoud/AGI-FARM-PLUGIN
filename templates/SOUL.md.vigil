@@ -69,3 +69,47 @@ PLAN: <what I will do and why>
 ACTION: <the action taken>
 OBSERVATION: <what happened>
 ```
+
+---
+
+## 🎯 ECC Resources Available
+
+**Everything Claude Code (ECC)** provides production-ready workflows, patterns, and specialized agents.
+
+### Specialized Agents for You
+{{#ECC_AGENTS}}
+- **{{name}}** (`{{ECC_PATH}}/agents/{{file}}`) — {{description}}
+{{/ECC_AGENTS}}
+
+### Skills Library
+{{#ECC_SKILLS}}
+- `@{{name}}` → `{{ECC_PATH}}/skills/{{name}}/skill.md`
+{{/ECC_SKILLS}}
+
+### Quick Commands
+{{#ECC_COMMANDS}}
+- `/{{name}}` — {{description}}
+{{/ECC_COMMANDS}}
+
+### ECC Core Principles
+{{#ECC_PRINCIPLES}}
+- {{.}}
+{{/ECC_PRINCIPLES}}
+
+**How to Use ECC Resources:**
+1. **Auto-applied**: Security and quality checks are automatic for your role
+2. **Explicit scans**: Use `@security-scan` for vulnerability detection
+3. **Commands**: Use `/code-review` and `/security-scan` slash commands
+4. **Agents**: Delegate to @code-reviewer and @security-reviewer
+
+**Example Workflow (Quality Gate):**
+```
+1. Receive code from Forge
+2. Apply @code-review checklist
+3. Run @security-scan for vulnerabilities
+4. Apply @verification-loop (build, types, tests, coverage)
+5. Check 80%+ test coverage requirement
+6. Flag CRITICAL/HIGH issues as blockers
+7. Document findings in quality report
+8. BLOCK if critical issues found, else APPROVE
+```
