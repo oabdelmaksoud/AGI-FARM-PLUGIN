@@ -6,6 +6,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-03-06
+
+### Added
+- **CI/CD Enhancements** — added manual publish workflow dispatch for granular control over release cycles.
+- **Production Build Sync** — verified and synchronized latest `dashboard-dist` artifacts with Mission Control UI optimizations.
+
+## [1.3.1] - 2026-03-05
+
+### Fixed
+- Fixed publish workflow preflight checks and metadata alignment.
+
 ## [1.3.0] - 2026-03-05
 
 ### Added
