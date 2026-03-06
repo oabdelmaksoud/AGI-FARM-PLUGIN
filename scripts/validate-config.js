@@ -17,10 +17,22 @@ const warnings = [];
 
 console.log(chalk.cyan.bold('\n🔍 AGI Farm — Validating Configuration\n'));
 
+// Detect CI environment
+const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+
+if (isCI) {
+  console.log(chalk.cyan('ℹ  Running in CI environment'));
+}
+
 // ── 1. Check OpenClaw Installation ────────────────────────────────────────────
 const openclawDir = path.join(os.homedir(), '.openclaw');
 if (!fs.existsSync(openclawDir)) {
-  errors.push('OpenClaw not installed. Install from: https://github.com/openclaw/openclaw');
+  // In CI, OpenClaw won't be installed — treat as warning, not error
+  if (isCI) {
+    warnings.push('OpenClaw not installed (expected in CI environment)');
+  } else {
+    errors.push('OpenClaw not installed. Install from: https://github.com/openclaw/openclaw');
+  }
 } else {
   console.log(chalk.green('✓ OpenClaw directory found'));
 }
