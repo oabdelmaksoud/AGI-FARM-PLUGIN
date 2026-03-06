@@ -6,6 +6,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-03-06
+
+### Added
+- **Enhanced Status CLI** — `agi-farm status` now shows the current plugin version and performs an automated remote check against the NPM registry to notify you of available updates.
+- **Version Sync** — synchronized `openclaw.plugin.json` and `package.json` metadata for better discovery in OpenClaw.
+
 ## [1.3.2] - 2026-03-06
 
 ### Added

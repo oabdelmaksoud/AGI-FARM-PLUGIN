@@ -8,10 +8,32 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8'));
+
+// ── Version Check ─────────────────────────────────────────────────────────────
+let versionStatus = chalk.dim(`(v${pkg.version})`);
+try {
+  const npmRes = spawnSync('npm', ['view', 'agi-farm', 'version'], { encoding: 'utf-8', timeout: 3000 });
+  if (npmRes.status === 0) {
+    const remote = npmRes.stdout.trim();
+    if (remote && remote !== pkg.version) {
+      const isAhead = pkg.version.localeCompare(remote, undefined, { numeric: true, sensitivity: 'base' }) > 0;
+      if (isAhead) {
+        versionStatus = `${chalk.dim(`(v${pkg.version})`)} ${chalk.yellow(`[AHEAD OF REGISTRY: v${remote}]`)}`;
+      } else {
+        versionStatus = `${chalk.red.bold(`(v${pkg.version})`)} ${chalk.bgRed.white.bold(` UPDATE AVAILABLE: v${remote} `)}`;
+      }
+    } else if (remote === pkg.version) {
+      versionStatus = `${chalk.green(`(v${pkg.version})`)} ${chalk.dim('[LATEST]')}`;
+    }
+  }
+} catch {
+  // Silent fail if offline
+}
 
 const WORKSPACE = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
 
-console.log(`\n${chalk.cyan.bold('🚜 AGI Farm — Team Status')}\n`);
+console.log(`\n${chalk.cyan.bold('🚜 AGI Farm — Team Status')} ${versionStatus}\n`);
 
 // ── Agents ────────────────────────────────────────────────────────────────────
 console.log(chalk.bold('Agents:'));
