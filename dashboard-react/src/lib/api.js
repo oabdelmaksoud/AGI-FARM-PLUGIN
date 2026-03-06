@@ -74,6 +74,20 @@ export async function apiPost(path, body = null) {
   return payload;
 }
 
+export async function apiPatch(path, body = null) {
+  const token = await getCsrfToken();
+  const opts = {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'x-agi-farm-csrf': token },
+  };
+  if (body !== null) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  let payload = {};
+  try { payload = await res.json(); } catch { payload = {}; }
+  if (!res.ok) throw new Error(payload?.error || `request_failed_${res.status}`);
+  return payload;
+}
+
 export async function apiGet(path) {
   const res = await fetch(path);
   let payload = {};
@@ -176,18 +190,4 @@ export async function updateProjectBudget(projectId, payload) {
 
 export async function updateProjectOkrLink(projectId, payload) {
   return apiPost(`/api/projects/${projectId}/okr-link`, payload);
-}
-
-export async function apiPatch(path, body = null) {
-  const token = await getCsrfToken();
-  const opts = {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', 'x-agi-farm-csrf': token },
-  };
-  if (body !== null) opts.body = JSON.stringify(body);
-  const res = await fetch(path, opts);
-  let payload = {};
-  try { payload = await res.json(); } catch { payload = {}; }
-  if (!res.ok) throw new Error(payload?.error || `request_failed_${res.status}`);
-  return payload;
 }

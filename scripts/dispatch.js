@@ -175,6 +175,7 @@ for (const task of pending) {
 
   if (dryRun) {
     console.log(chalk.blue(`  [DRY-RUN] Would dispatch task "${task.id}" → agent "${assignedAgent.id}"`));
+    agentQueue.splice(agentQueue.indexOf(assignedAgent), 1);
   } else {
     log(`Dispatching task "${task.id}" → agent "${assignedAgent.id}"`);
     const result = dispatchTask(task, assignedAgent.id);

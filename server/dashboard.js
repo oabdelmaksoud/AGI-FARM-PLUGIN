@@ -344,7 +344,16 @@ function toggleCronEnabled(id) {
 
 const updateChecker = new UpdateChecker();
 
+const SNAPSHOT_MIN_INTERVAL_MS = 200;
+let _lastSnapshot = null;
+let _lastSnapshotAt = 0;
+
 function buildWorkspaceSnapshot(cache, services) {
+  const now = Date.now();
+  if (_lastSnapshot && (now - _lastSnapshotAt) < SNAPSHOT_MIN_INTERVAL_MS) {
+    return _lastSnapshot;
+  }
+
   const tasks = asArray(readJson(path.join(WORKSPACE, 'TASKS.json')));
   const agentStatus = asObject(readJson(path.join(WORKSPACE, 'AGENT_STATUS.json')));
   const agentPerf = asObject(readJson(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json')));
@@ -414,7 +423,7 @@ function buildWorkspaceSnapshot(cache, services) {
   const projects = enrichProjects(projectsRaw, tasks, agentPerf);
   const projectEvents = services.timeline ? services.timeline.list(null, { limit: 120 }) : [];
 
-  return {
+  const snapshot = {
     timestamp: new Date().toISOString(),
     workspace: WORKSPACE,
     tasks,
@@ -445,6 +454,10 @@ function buildWorkspaceSnapshot(cache, services) {
     cache_age_seconds: Math.floor(cache.ageSeconds()),
     update_info: updateChecker.getStatus(),
   };
+
+  _lastSnapshot = snapshot;
+  _lastSnapshotAt = Date.now();
+  return snapshot;
 }
 
 class Broadcaster {
@@ -477,8 +490,13 @@ class Broadcaster {
 
 function createRateLimiter(windowMs, maxRequests) {
   const hits = new Map();
-  setInterval(() => hits.clear(), windowMs);
+  let lastReset = Date.now();
   return (req, res, next) => {
+    const now = Date.now();
+    if (now - lastReset >= windowMs) {
+      hits.clear();
+      lastReset = now;
+    }
     const key = req.ip;
     const count = (hits.get(key) || 0) + 1;
     hits.set(key, count);
@@ -671,7 +689,7 @@ async function main() {
     });
   });
 
-  app.get('/api/data', (req, res) => {
+  app.get('/api/data', requireCsrf, (req, res) => {
     res.json(buildWorkspaceSnapshot(cache, services));
   });
 

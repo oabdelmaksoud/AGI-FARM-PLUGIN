@@ -75,6 +75,7 @@ export class WorkerService {
     this.concurrency = concurrency;
     this.running = new Set();
     this.stopped = true;
+    this.ticking = false;
     this.timer = null;
   }
 
@@ -92,6 +93,16 @@ export class WorkerService {
 
   async tick() {
     if (this.stopped) return;
+    if (this.ticking) return;
+    this.ticking = true;
+    try {
+      await this._doTick();
+    } finally {
+      this.ticking = false;
+    }
+  }
+
+  async _doTick() {
     const flags = getFeatureFlags();
     if (!flags.jobs) return;
 

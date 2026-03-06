@@ -1,9 +1,10 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { appendJsonl, ensureJsonFile, safeReadJson } from './storage.js';
+import { appendJsonl, ensureJsonFile, safeReadJson, safeWriteJson } from './storage.js';
 
 const DEFAULT_TIMELINE = { events: [] };
+const MAX_JSONL_LINES = 10000;
 
 function nowIso() {
   return new Date().toISOString();
@@ -21,6 +22,7 @@ export class TimelineService {
   constructor(workspace) {
     this.eventsJsonPath = path.join(workspace, 'PROJECT_EVENTS.json');
     this.eventsJsonlPath = path.join(workspace, 'PROJECT_EVENTS.jsonl');
+    this.appendCount = 0;
     ensureJsonFile(this.eventsJsonPath, DEFAULT_TIMELINE);
   }
 
@@ -37,7 +39,28 @@ export class TimelineService {
       payload: event?.payload || {},
     };
     appendJsonl(this.eventsJsonlPath, row);
+    this.appendCount++;
+    if (this.appendCount % 500 === 0) {
+      this._tryRotate();
+    }
     return row;
+  }
+
+  _tryRotate() {
+    try {
+      if (!fs.existsSync(this.eventsJsonlPath)) return;
+      const stat = fs.statSync(this.eventsJsonlPath);
+      // Rotate when file exceeds ~2MB
+      if (stat.size < 2 * 1024 * 1024) return;
+      const text = fs.readFileSync(this.eventsJsonlPath, 'utf-8');
+      const lines = text.split('\n').filter((l) => l.trim());
+      if (lines.length <= MAX_JSONL_LINES) return;
+      // Keep only the most recent half
+      const kept = lines.slice(-Math.floor(MAX_JSONL_LINES / 2));
+      fs.writeFileSync(this.eventsJsonlPath, kept.join('\n') + '\n', 'utf-8');
+    } catch {
+      // rotation failure is non-fatal
+    }
   }
 
   list(projectId, { limit = 200 } = {}) {
