@@ -7,11 +7,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ## [Unreleased]
 
 ### Added
-- Added setup wizard prompts for project defaults: auto project-channel creation and default execution path.
-- Added `project_defaults` metadata to generated `team.json` and persisted defaults to `PROJECTS.json`.
+- **Project Defaults** — new setup wizard prompts for `auto_project_channel` and `execution_path` preferences.
+- **Settings Tab** — dashboard UI to view/edit project defaults in real time.
+- **API Endpoint** — `PATCH /api/projects/defaults` to update defaults programmatically.
+- **Snapshot Exposure** — `/api/data` and `/api/projects` responses now include `project_defaults`.
 
 ### Changed
 - Setup now defaults new projects to `agi-farm-first` execution path.
+- Project creation (API + intake) inherits defaults from `PROJECTS.json`.
+- `PROJECTS.json` upgraded to structured store with `defaults` + `projects` fields.
+- **SPA Route Fallback** — direct URLs like `/projects` no longer return 404.
 
 ## [1.3.3] - 2026-03-06
 

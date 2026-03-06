@@ -163,6 +163,17 @@ Setup now captures project defaults in `PROJECTS.json`, including:
 
 This makes AGI Farm the default execution path for newly created projects.
 
+### Project Defaults
+
+New projects inherit defaults from `PROJECTS.json`:
+- **Auto Project Channel**: when enabled, each new project gets a dedicated channel
+- **Execution Path**: choose `agi-farm-first` (multi-agent routing) or `direct-first` (immediate execution)
+
+View and edit defaults via:
+- Dashboard → Settings tab
+- `GET /api/projects` → `defaults` field
+- `PATCH /api/projects/defaults` API endpoint
+
 ---
 
 ## 📦 Commands

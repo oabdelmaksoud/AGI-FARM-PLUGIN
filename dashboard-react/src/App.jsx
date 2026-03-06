@@ -21,6 +21,7 @@ const Knowledge = lazy(() => import('./components/tabs/Knowledge'));
 const Comms = lazy(() => import('./components/tabs/Comms'));
 const RD = lazy(() => import('./components/tabs/RD'));
 const Broadcast = lazy(() => import('./components/tabs/Broadcast'));
+const Settings = lazy(() => import('./components/tabs/Settings'));
 
 const TABS = [
   'Overview', 'Agents', 'Tasks', 'Projects',
@@ -28,7 +29,7 @@ const TABS = [
   'Crons', 'HITL', 'Alerts',
   'Velocity', 'Budget', 'OKRs',
   'Knowledge', 'Comms',
-  'R&D', 'Broadcast',
+  'R&D', 'Broadcast', 'Settings',
 ];
 
 const TAB_COMPONENTS = {
@@ -49,6 +50,7 @@ const TAB_COMPONENTS = {
   'Comms': Comms,
   'R&D': RD,
   'Broadcast': Broadcast,
+  'Settings': Settings,
 };
 
 function Connecting() {

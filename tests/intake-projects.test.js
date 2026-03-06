@@ -137,6 +137,14 @@ describe('Intake + Projects APIs', () => {
       const timeline = await timelineRes.json();
       expect(Array.isArray(timeline.events)).toBe(true);
       expect(timeline.events.length).toBeGreaterThan(0);
+
+      // Verify snapshot includes project_defaults
+      const snapshotRes = await fetch(`${baseUrl}/api/data`);
+      expect(snapshotRes.status).toBe(200);
+      const snapshot = await snapshotRes.json();
+      expect(snapshot.project_defaults).toBeTruthy();
+      expect(snapshot.project_defaults.execution_path).toBe('direct-first');
+      expect(snapshot.project_defaults.auto_project_channel).toBe(false);
     } finally {
       proc.kill('SIGTERM');
       await new Promise((resolve) => proc.on('close', resolve));
