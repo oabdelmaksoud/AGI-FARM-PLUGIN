@@ -686,6 +686,45 @@ The embedded `skills/agi-farm/SKILL.md` provides documentation reference for age
 
 ---
 
+## 🔄 OpenClaw Compatibility
+
+AGI Farm ensures compatibility with OpenClaw through **automated testing** and **proactive monitoring**:
+
+### Automated Compatibility Testing
+- **Weekly testing** against multiple OpenClaw versions (latest, previous, oldest-supported, beta)
+- **Performance benchmarks** to detect regressions (load time, validation time thresholds)
+- **API deprecation scanning** with automated replacement suggestions
+- **Automated PR creation** for compatibility fixes when breaking changes detected
+
+### Supported Versions
+- **Minimum**: OpenClaw 1.0.0+
+- **Tested**: Latest stable + previous stable + beta (when available)
+- **Status**: All compatibility tests run weekly via GitHub Actions
+
+### For Users
+Check compatibility before upgrading OpenClaw:
+```bash
+# Check current OpenClaw version
+openclaw --version
+
+# Run validation
+npm run validate
+
+# View compatibility matrix
+cat OPENCLAW_COMPATIBILITY.md
+```
+
+### For Maintainers
+The enhanced compatibility system includes:
+- Multi-version testing matrix (4 versions tested)
+- Performance regression detection (<5s load time, <3s validation)
+- Automated issue creation when incompatibility detected
+- Optional automated PR generation with suggested fixes
+
+**See:** [OPENCLAW_COMPATIBILITY.md](OPENCLAW_COMPATIBILITY.md) for complete compatibility guide.
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

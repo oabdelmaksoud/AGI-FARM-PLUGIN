@@ -6,6 +6,71 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-03-06
+
+### 🔬 Enhanced OpenClaw Compatibility System
+
+#### Multi-Version Testing
+- **New Workflow** — `.github/workflows/openclaw-compatibility-enhanced.yml` (650 lines)
+  - Tests against **4 OpenClaw versions**: latest, previous, oldest-supported (1.0.0), beta
+  - Matrix strategy with fail-fast: false for comprehensive coverage
+  - Smart beta detection (skips if no beta release available)
+  - Critical version flagging (latest + oldest marked as critical)
+
+#### Performance Regression Testing
+- **Automated Benchmarking** — Monitors plugin performance over time
+  - Plugin load time threshold: <5000ms (warns if exceeded)
+  - Validation time threshold: <3000ms (warns if exceeded)
+  - Command execution threshold: <2000ms (warns if exceeded)
+  - Performance reports uploaded as GitHub Actions artifacts
+  - Regression detection with historical comparison
+
+#### API Deprecation Scanning
+- **Proactive API Monitoring** — Detects usage of deprecated OpenClaw APIs
+  - Scans `scripts/` and `dist/` directories
+  - Configurable deprecated API list with replacement suggestions
+  - Inline suggestions provided in workflow output
+  - Fails on critical deprecated APIs
+  - Warns on soft-deprecated APIs
+
+#### Automated Fix Generation
+- **Auto-PR Creation** — Generates pull requests with compatibility fixes
+  - Optional via `create_pr_on_failure` workflow input
+  - Includes suggested fixes from API deprecation scanner
+  - Links to compatibility report artifacts
+  - Requires manual review before merge
+  - Created only when tests fail and input is enabled
+
+#### Enhanced Documentation
+- **Updated** — `OPENCLAW_COMPATIBILITY.md`
+  - Multi-version testing procedures documented
+  - Performance benchmarking thresholds explained
+  - API deprecation scanning guide added
+  - Automated PR workflow documented
+  - Moved roadmap items from "Planned" to "Completed (v1.5.1)"
+- **Updated** — `README.md`
+  - Added "OpenClaw Compatibility" section
+  - User guide for checking compatibility
+  - Maintainer notes on enhanced testing system
+
+### 📊 Statistics
+- **Total Workflow Lines**: 650 (enhanced) + 250 (basic) = 900 lines
+- **Test Coverage**: 4 OpenClaw versions tested weekly
+- **Performance Thresholds**: 3 metrics monitored
+- **Automation Level**: Auto-detection, auto-reporting, auto-fix PRs
+
+### 🎯 Benefits
+- **Early Detection** — Breaking changes discovered before user impact
+- **Performance Monitoring** — Regressions caught automatically
+- **Migration Assistance** — Automated suggestions for deprecated APIs
+- **Reduced Manual Work** — Less time spent on compatibility testing
+- **Clear Upgrade Paths** — Documentation auto-generated from test results
+
+### 🔧 Workflow Inputs
+- `test_beta_versions` (boolean) - Include beta/RC releases in testing
+- `create_pr_on_failure` (boolean) - Auto-create fix PR when tests fail
+- `performance_threshold_ms` (number) - Custom performance threshold
+
 ## [1.5.0] - 2026-03-06
 
 ### 🌍 Internationalization & Content Expansion
