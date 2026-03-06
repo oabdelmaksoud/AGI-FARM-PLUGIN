@@ -24,7 +24,7 @@ if (isCI) {
   console.log(chalk.cyan('ℹ  Running in CI environment'));
 }
 
-// ── 1. Check OpenClaw Installation ────────────────────────────────────────────
+// ── 1. Check OpenClaw Installation & Version ──────────────────────────────────
 const openclawDir = path.join(os.homedir(), '.openclaw');
 if (!fs.existsSync(openclawDir)) {
   // In CI, OpenClaw won't be installed — treat as warning, not error
@@ -35,6 +35,43 @@ if (!fs.existsSync(openclawDir)) {
   }
 } else {
   console.log(chalk.green('✓ OpenClaw directory found'));
+
+  // Check OpenClaw version
+  try {
+    const openclawVersion = execSync('openclaw --version', { encoding: 'utf-8', stdio: 'pipe' }).trim();
+    console.log(chalk.green(`✓ OpenClaw version: ${openclawVersion}`));
+
+    // Extract version number (e.g., "openclaw/1.2.3" → "1.2.3")
+    const versionMatch = openclawVersion.match(/(\d+\.\d+\.\d+)/);
+    if (versionMatch) {
+      const version = versionMatch[1];
+      const [major, minor, patch] = version.split('.').map(Number);
+
+      // Define minimum compatible OpenClaw version
+      const MIN_OPENCLAW_VERSION = '1.0.0';
+      const [minMajor, minMinor, minPatch] = MIN_OPENCLAW_VERSION.split('.').map(Number);
+
+      // Check if version meets minimum requirement
+      if (major < minMajor || (major === minMajor && minor < minMinor) || (major === minMajor && minor === minMinor && patch < minPatch)) {
+        warnings.push(`OpenClaw ${version} is older than recommended ${MIN_OPENCLAW_VERSION}`);
+        warnings.push('Consider upgrading: npm install -g openclaw@latest');
+      }
+
+      // Check for known incompatible versions
+      const INCOMPATIBLE_VERSIONS = [
+        // Add known incompatible versions here if discovered
+        // e.g., '2.0.0-beta.1'
+      ];
+
+      if (INCOMPATIBLE_VERSIONS.includes(version)) {
+        errors.push(`OpenClaw ${version} has known incompatibilities with AGI Farm`);
+        errors.push('Please upgrade or downgrade OpenClaw');
+      }
+    }
+  } catch (err) {
+    warnings.push('Could not determine OpenClaw version');
+    warnings.push('Ensure openclaw CLI is in PATH');
+  }
 }
 
 // ── 2. Check Node.js Version ──────────────────────────────────────────────────

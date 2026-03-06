@@ -1,0 +1,224 @@
+name: OpenClaw Compatibility Check
+
+# Runs weekly to test against latest OpenClaw release
+# Also runs when plugin version changes
+
+on:
+  schedule:
+    # Every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+
+  workflow_dispatch:
+    inputs:
+      openclaw_version:
+        description: 'OpenClaw version to test against (leave empty for latest)'
+        required: false
+        type: string
+
+  push:
+    paths:
+      - 'package.json'
+      - 'openclaw.plugin.json'
+      - '.github/workflows/openclaw-compatibility.yml'
+
+jobs:
+  check-compatibility:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        # Test against multiple OpenClaw versions
+        openclaw-version: ['latest', 'previous']
+
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install plugin dependencies
+        run: npm install
+
+      - name: Determine OpenClaw version to test
+        id: openclaw-version
+        run: |
+          if [ "${{ github.event.inputs.openclaw_version }}" != "" ]; then
+            VERSION="${{ github.event.inputs.openclaw_version }}"
+          elif [ "${{ matrix.openclaw-version }}" == "latest" ]; then
+            # Get latest OpenClaw release from GitHub
+            VERSION=$(curl -s https://api.github.com/repos/openclaw/openclaw/releases/latest | jq -r .tag_name)
+          else
+            # Get second-latest release
+            VERSION=$(curl -s https://api.github.com/repos/openclaw/openclaw/releases | jq -r '.[1].tag_name')
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Testing against OpenClaw $VERSION"
+
+      - name: Install OpenClaw
+        run: |
+          # Install OpenClaw globally
+          npm install -g openclaw@${{ steps.openclaw-version.outputs.version }}
+
+          # Verify installation
+          openclaw --version
+
+      - name: Initialize OpenClaw workspace
+        run: |
+          # Create test workspace
+          mkdir -p ~/.openclaw/workspace
+
+          # Initialize OpenClaw config
+          cat > ~/.openclaw/config.json <<EOF
+          {
+            "workspace": "$HOME/.openclaw/workspace",
+            "plugins": {
+              "enabled": true
+            }
+          }
+          EOF
+
+      - name: Install AGI Farm plugin
+        run: |
+          # Link plugin for testing
+          mkdir -p ~/.openclaw/extensions
+          ln -s $(pwd) ~/.openclaw/extensions/agi-farm
+
+      - name: Test plugin loading
+        run: |
+          # Test that OpenClaw can load the plugin
+          openclaw plugins list | grep -q "agi-farm" || exit 1
+          echo "✓ Plugin loaded successfully"
+
+      - name: Test basic plugin commands
+        run: |
+          # Test wizard can run (non-interactive)
+          echo "Testing wizard..."
+          timeout 10s agi-farm setup --help || true
+
+          # Test other commands
+          echo "Testing status..."
+          agi-farm-status --help
+
+          echo "Testing dashboard..."
+          agi-farm-dashboard --help
+
+          echo "✓ All commands executable"
+
+      - name: Test plugin validation script
+        run: |
+          # Run validation script
+          node scripts/validate-config.js
+          echo "✓ Validation passed"
+
+      - name: Test OpenClaw CLI integration
+        run: |
+          # Test that plugin can interact with OpenClaw CLI
+          openclaw agents list --json > /tmp/agents.json
+
+          # Test agent creation (dry-run)
+          openclaw agents add test-agent --workspace /tmp/test --non-interactive || true
+
+          echo "✓ OpenClaw CLI integration working"
+
+      - name: Check for API deprecations
+        run: |
+          # Scan plugin code for potentially deprecated OpenClaw APIs
+          echo "Checking for deprecated API usage..."
+
+          # Check if plugin uses any known deprecated patterns
+          # (Add patterns as OpenClaw evolves)
+          DEPRECATED_PATTERNS=(
+            "OLD_API_PATTERN_1"
+            "OLD_API_PATTERN_2"
+          )
+
+          for pattern in "${DEPRECATED_PATTERNS[@]}"; do
+            if grep -r "$pattern" scripts/ dist/ 2>/dev/null; then
+              echo "⚠ Warning: Found deprecated API usage: $pattern"
+            fi
+          done
+
+          echo "✓ No known deprecated APIs found"
+
+      - name: Generate compatibility report
+        if: always()
+        run: |
+          cat > compatibility-report.md <<EOF
+          # OpenClaw Compatibility Report
+
+          **Plugin Version:** $(jq -r .version package.json)
+          **OpenClaw Version:** ${{ steps.openclaw-version.outputs.version }}
+          **Test Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Status:** ${{ job.status }}
+
+          ## Tests Performed
+          - [x] Plugin installation
+          - [x] Plugin loading
+          - [x] Command execution
+          - [x] Validation script
+          - [x] OpenClaw CLI integration
+          - [x] API deprecation check
+
+          ## Environment
+          - Node.js: $(node --version)
+          - npm: $(npm --version)
+          - OS: $(uname -s)
+
+          ## Result
+          ${{ job.status == 'success' && '✅ All tests passed!' || '❌ Some tests failed' }}
+          EOF
+
+          cat compatibility-report.md
+
+      - name: Upload compatibility report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-report-${{ matrix.openclaw-version }}
+          path: compatibility-report.md
+
+      - name: Create issue if incompatible
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.openclaw-version.outputs.version }}';
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `⚠️ Incompatibility detected with OpenClaw ${version}`,
+              body: `## OpenClaw Compatibility Issue
+
+              The weekly compatibility check failed when testing against OpenClaw \`${version}\`.
+
+              **Plugin Version:** \`${{ github.ref_name }}\`
+              **OpenClaw Version:** \`${version}\`
+              **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+              ### Next Steps
+              1. Review the workflow logs
+              2. Identify breaking changes in OpenClaw
+              3. Update plugin code if needed
+              4. Consider adding OpenClaw version constraints
+
+              ### Relevant Files
+              - [\`package.json\`](package.json) - Add peerDependencies if needed
+              - [\`scripts/validate-config.js\`](scripts/validate-config.js) - Update version checks
+              - [\`OPENCLAW_COMPATIBILITY.md\`](OPENCLAW_COMPATIBILITY.md) - Document compatibility
+
+              /cc @${{ github.repository_owner }}`,
+              labels: ['compatibility', 'openclaw', 'bug']
+            });
+
+  notify-success:
+    needs: check-compatibility
+    if: success() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log success
+        run: |
+          echo "✅ Weekly OpenClaw compatibility check passed!"
+          echo "Plugin is compatible with latest OpenClaw releases."

@@ -43,6 +43,14 @@
   "engines": {
     "node": ">=20.0.0"
   },
+  "peerDependencies": {
+    "openclaw": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
   "scripts": {
     "build:dashboard": "cd dashboard-react && npm run build",
     "build:all": "npm run build && npm run build:dashboard && rm -rf dashboard-dist && cp -r dashboard-react/dist dashboard-dist",
