@@ -138,10 +138,30 @@ async function main() {
         'BUDGET.json', 'VELOCITY.json', 'OKRs.json', 'EXPERIMENTS.json',
         'IMPROVEMENT_BACKLOG.json', 'SHARED_KNOWLEDGE.json', 'ALERTS.json',
         'PROJECTS.json', 'MEMORY.md',
+        'JOBS.json', 'JOB_RUNS.jsonl',
+        'POLICIES.json', 'APPROVALS.json',
+        'SKILLS_REGISTRY.json', 'MEMORY_INDEX.json',
+        'USAGE_METERING.json',
+        'AUDIT_LOG.jsonl',
+        'PROJECT_EVENTS.json', 'PROJECT_EVENTS.jsonl',
     ];
     for (const f of registryFiles) {
         try { fs.rmSync(path.join(WORKSPACE, f), { force: true }); } catch { /* ignore */ }
     }
+    // Remove SECRETS directory
+    try {
+        const secretsDir = path.join(WORKSPACE, 'SECRETS');
+        if (fs.existsSync(secretsDir)) {
+            fs.rmSync(secretsDir, { recursive: true, force: true });
+        }
+    } catch { /* ignore */ }
+    // Remove logs directory
+    try {
+        const logsDir = path.join(WORKSPACE, 'logs');
+        if (fs.existsSync(logsDir)) {
+            fs.rmSync(logsDir, { recursive: true, force: true });
+        }
+    } catch { /* ignore */ }
     spinner.succeed('Shared workspace registries removed');
 
     // Remove agents-workspaces (individual agent workspaces)

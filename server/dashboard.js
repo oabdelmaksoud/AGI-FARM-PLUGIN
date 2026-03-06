@@ -643,6 +643,11 @@ async function main() {
   }
 
   app.get('/api/stream', (req, res) => {
+    const token = req.query.token;
+    if (!token || !constantTimeEquals(token, CSRF_TOKEN)) {
+      res.status(403).json({ error: 'forbidden' });
+      return;
+    }
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');

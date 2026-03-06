@@ -3,6 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import { ensureDirPath, safeReadJson, safeWriteJson } from './storage.js';
 
+const SAFE_NAME_PATTERN = /^[a-zA-Z0-9_-]{1,128}$/;
+
+function validateSecretName(name) {
+  return typeof name === 'string' && SAFE_NAME_PATTERN.test(name);
+}
+
 function getMasterKey() {
   const b64 = process.env.AGI_FARM_MASTER_KEY || '';
   try {
@@ -25,6 +31,7 @@ export class SecretsService {
   }
 
   encryptAndStore(name, plaintext) {
+    if (!validateSecretName(name)) return { ok: false, error: 'invalid_secret_name' };
     const key = getMasterKey();
     if (!key) return { ok: false, error: 'missing_master_key' };
     const iv = crypto.randomBytes(12);
@@ -45,6 +52,7 @@ export class SecretsService {
   }
 
   loadAndDecrypt(name) {
+    if (!validateSecretName(name)) return { ok: false, error: 'invalid_secret_name' };
     const key = getMasterKey();
     if (!key) return { ok: false, error: 'missing_master_key' };
     const p = path.join(this.dir, `${name}.json`);
