@@ -178,6 +178,29 @@ async function runWizard() {
     },
   ]);
 
+  // Step 4.5: Project defaults
+  const { autoProjectChannel } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'autoProjectChannel',
+      message: 'Auto-create a dedicated project channel for each new project?',
+      default: true,
+    },
+  ]);
+
+  const { defaultExecutionPath } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'defaultExecutionPath',
+      message: 'Default execution path for new projects?',
+      choices: [
+        { name: 'AGI-Farm first (recommended)', value: 'agi-farm-first' },
+        { name: 'Direct execution first', value: 'direct-first' },
+      ],
+      default: 'agi-farm-first',
+    },
+  ]);
+
   // Step 5: Confirm
   const finalDomain = domain === 'custom' ? customDomain : domain;
   console.log(chalk.dim('\n── Summary ──'));
@@ -186,6 +209,8 @@ async function runWizard() {
   console.log(chalk.white(`Agents:       ${preset}`));
   console.log(chalk.white(`Domain:       ${finalDomain}`));
   console.log(chalk.white(`Frameworks:   ${frameworks.length > 0 ? frameworks.join(', ') : 'none'}`));
+  console.log(chalk.white(`Proj Channel: ${autoProjectChannel ? 'auto-create' : 'manual'}`));
+  console.log(chalk.white(`Exec Path:    ${defaultExecutionPath}`));
 
   const { proceed } = await inquirer.prompt([
     {
@@ -207,6 +232,8 @@ async function runWizard() {
     preset,
     domain: finalDomain,
     frameworks,
+    autoProjectChannel,
+    defaultExecutionPath,
   };
 }
 
@@ -224,6 +251,10 @@ function generateTeamJson(config) {
     preset: String(config.preset),
     domain: config.domain,
     frameworks: config.frameworks,
+    project_defaults: {
+      auto_project_channel: config.autoProjectChannel ?? true,
+      execution_path: config.defaultExecutionPath || 'agi-farm-first',
+    },
     created_at: new Date().toISOString(),
     agents,
   };
@@ -296,6 +327,15 @@ function initializeRegistries(team) {
   // TASKS.json
   fs.writeFileSync(path.join(WORKSPACE, 'TASKS.json'), '[]');
 
+  // PROJECTS.json
+  fs.writeFileSync(path.join(WORKSPACE, 'PROJECTS.json'), JSON.stringify({
+    defaults: {
+      auto_project_channel: team.project_defaults?.auto_project_channel ?? true,
+      execution_path: team.project_defaults?.execution_path || 'agi-farm-first',
+    },
+    items: [],
+  }, null, 2));
+
   // AGENT_STATUS.json
   const status = {};
   for (const a of team.agents) {
@@ -361,6 +401,13 @@ function healthCheck(team) {
     console.log(chalk.green('✅ TASKS.json OK'));
   } else {
     console.log(chalk.red('❌ TASKS.json missing'));
+  }
+
+  // Check PROJECTS.json
+  if (fs.existsSync(path.join(WORKSPACE, 'PROJECTS.json'))) {
+    console.log(chalk.green('✅ PROJECTS.json OK'));
+  } else {
+    console.log(chalk.red('❌ PROJECTS.json missing'));
   }
 
   // Count agents

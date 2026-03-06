@@ -6,6 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+- Added setup wizard prompts for project defaults: auto project-channel creation and default execution path.
+- Added `project_defaults` metadata to generated `team.json` and persisted defaults to `PROJECTS.json`.
+
+### Changed
+- Setup now defaults new projects to `agi-farm-first` execution path.
+
 ## [1.3.3] - 2026-03-06
 
 ### Added
@@ -86,7 +93,6 @@ First public production release.
 - Fixed `agi-farm setup` failure by correcting `openclaw agents add` command flags.
 - Fixed health check failure by properly initializing the `comms` directory and agent inboxes/outboxes.
 - Improved agent creation logic with better error handling and name-to-ID normalization awareness.
-
 ## [1.0.3] - 2026-03-05
 
 ### Added

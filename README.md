@@ -146,6 +146,8 @@ Answer the setup prompts and your team will be live in ~2 minutes:
 ? Team size: 11 agents (Full Stack)
 ? Domain: general
 ? Collaboration frameworks: langgraph
+? Auto-create project channel per project: Yes
+? Default execution path: AGI-Farm first
 ? Confirm setup? Yes
 
 ✅ Creating 11 agents...
@@ -154,6 +156,12 @@ Answer the setup prompts and your team will be live in ~2 minutes:
 
 🎉 Your AI team is ready!
 ```
+
+Setup now captures project defaults in `PROJECTS.json`, including:
+- `auto_project_channel` (default: `true`)
+- `execution_path` (default: `agi-farm-first`)
+
+This makes AGI Farm the default execution path for newly created projects.
 
 ---
 
