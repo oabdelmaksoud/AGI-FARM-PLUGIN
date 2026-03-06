@@ -445,7 +445,33 @@ function buildWorkspaceSnapshot(cache, services) {
   const jobs = flags.jobs ? services.jobs.list({}).slice(0, 100) : [];
   const approvals = flags.approvals ? services.policy.listApprovals() : [];
   const usage = flags.metering ? services.metering.getUsage() : { records: [], perAgent: {}, perModel: {}, totals: {} };
-  const projects = enrichProjects(projectsRaw, tasks, agentPerf);
+
+  // Auto-derive projects from jobs that have projectId
+  const jobProjects = {};
+  for (const job of jobs) {
+    if (job.projectId && !jobProjects[job.projectId]) {
+      jobProjects[job.projectId] = {
+        id: job.projectId,
+        name: job.title || job.projectId,
+        description: job.intent || '',
+        status: job.status === 'complete' ? 'complete' : 'active',
+        owner: job.requestedBy || 'system',
+        created_at: job.createdAt,
+        updated_at: job.updatedAt,
+        task_ids: job.rootTaskId ? [job.rootTaskId] : [],
+        job_ids: [job.id],
+      };
+    } else if (job.projectId && jobProjects[job.projectId]) {
+      jobProjects[job.projectId].job_ids.push(job.id);
+      if (job.rootTaskId && !jobProjects[job.projectId].task_ids.includes(job.rootTaskId)) {
+        jobProjects[job.projectId].task_ids.push(job.rootTaskId);
+      }
+    }
+  }
+
+  // Merge: explicit projects from PROJECTS.json + auto-derived from jobs
+  const allProjectsRaw = [...projectsRaw, ...Object.values(jobProjects)];
+  const projects = enrichProjects(allProjectsRaw, tasks, agentPerf);
   const projectEvents = services.timeline ? services.timeline.list(null, { limit: 120 }) : [];
 
   return {
