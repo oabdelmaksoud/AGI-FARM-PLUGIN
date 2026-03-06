@@ -674,10 +674,13 @@ async function main() {
   const reactDist = path.join(__dirname, '..', 'dashboard-react', 'dist');
   const fallbackDist = path.join(__dirname, '..', 'dashboard-dist');
 
+  let staticRoot = null;
   if (fs.existsSync(reactDist)) {
+    staticRoot = reactDist;
     app.use(express.static(reactDist));
     console.log(`[dashboard] Serving React build from ${reactDist}`);
   } else if (fs.existsSync(fallbackDist)) {
+    staticRoot = fallbackDist;
     app.use(express.static(fallbackDist));
     console.log(`[dashboard] Serving React build from ${fallbackDist}`);
   } else {
@@ -1294,6 +1297,13 @@ async function main() {
       res.status(500).json({ success: false, error: err.message });
     }
   });
+
+  // SPA route fallback (supports direct links like /projects, /tasks, etc.)
+  if (staticRoot) {
+    app.get(/^\/(?!api\/).*/, (req, res) => {
+      res.sendFile(path.join(staticRoot, 'index.html'));
+    });
+  }
 
   // ── File Watcher ───────────────────────────────────────────────────────────
   let debounceTimer = null;
