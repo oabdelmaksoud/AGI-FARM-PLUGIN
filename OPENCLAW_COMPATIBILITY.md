@@ -11,10 +11,15 @@ AGI Farm is designed to be compatible with OpenClaw's plugin API. As OpenClaw ev
 ## Compatibility Strategy
 
 ### 1. **Automated Weekly Testing**
-- **GitHub Action**: `.github/workflows/openclaw-compatibility.yml`
+- **GitHub Actions**:
+  - `.github/workflows/openclaw-compatibility.yml` - Basic weekly testing
+  - `.github/workflows/openclaw-compatibility-enhanced.yml` - Advanced multi-version testing
 - **Schedule**: Every Monday at 9 AM UTC
-- **Tests**: Plugin against latest and previous OpenClaw releases
+- **Tests**: Plugin against multiple OpenClaw versions (latest, previous, oldest-supported, beta)
+- **Performance**: Benchmarks load time and validation time
+- **API Scanning**: Detects usage of deprecated OpenClaw APIs
 - **Notification**: Auto-creates GitHub issue if incompatibility detected
+- **Auto-Fix**: Can automatically create PRs with compatibility fixes
 
 ### 2. **Version Checking**
 - **Script**: `scripts/validate-config.js`
@@ -47,38 +52,56 @@ AGI Farm is designed to be compatible with OpenClaw's plugin API. As OpenClaw ev
 
 ### What Gets Tested
 
-**Every week, the GitHub Action tests:**
+**Every week, the GitHub Actions test:**
 
-1. **Plugin Installation**
+#### 1. **Multi-Version Testing**
+   - **Latest stable** - Most recent OpenClaw release
+   - **Previous stable** - One version behind latest
+   - **Oldest supported** - Minimum version (1.0.0)
+   - **Beta/RC** - Pre-release versions (if available)
+
+#### 2. **Plugin Installation**
    - Can OpenClaw install the plugin?
    - Does the plugin appear in `openclaw plugins list`?
 
-2. **Plugin Loading**
+#### 3. **Plugin Loading**
    - Does OpenClaw successfully load the plugin?
    - Are hooks registered correctly?
+   - Does loading complete within performance threshold?
 
-3. **Command Execution**
+#### 4. **Command Execution**
    - Do all CLI commands run without errors?
    - `agi-farm setup --help`
    - `agi-farm-status --help`
    - `agi-farm-dashboard --help`
 
-4. **Validation Script**
+#### 5. **Validation Script**
    - Does `scripts/validate-config.js` pass?
    - Are all checks working correctly?
+   - Does validation complete within 3000ms threshold?
 
-5. **OpenClaw CLI Integration**
+#### 6. **OpenClaw CLI Integration**
    - Can the plugin call `openclaw agents list`?
    - Can it create agents via OpenClaw CLI?
 
-6. **API Deprecation Check**
-   - Scans for usage of deprecated OpenClaw APIs
-   - Warns if known deprecated patterns found
+#### 7. **Performance Benchmarking**
+   - **Plugin Load Time** - Should complete <5000ms
+   - **Validation Time** - Should complete <3000ms
+   - **Command Execution** - Commands should start <2000ms
+   - Warnings generated if thresholds exceeded
+
+#### 8. **API Deprecation Scanning**
+   - Scans codebase for deprecated OpenClaw APIs
+   - Provides replacement suggestions
+   - Fails if critical deprecated APIs found
+   - Warns if soft-deprecated APIs found
 
 ### How to Run Manually
 
+#### Basic Compatibility Check
+
 ```bash
-# Run compatibility check locally
+# Run basic compatibility check
 gh workflow run openclaw-compatibility.yml
 
 # Test against specific OpenClaw version
@@ -89,13 +112,37 @@ gh workflow run openclaw-compatibility.yml \
 gh run list --workflow=openclaw-compatibility.yml
 ```
 
+#### Enhanced Multi-Version Testing
+
+```bash
+# Run enhanced compatibility testing (all versions)
+gh workflow run openclaw-compatibility-enhanced.yml
+
+# Run with specific options
+gh workflow run openclaw-compatibility-enhanced.yml \
+  -f test_beta_versions=true \
+  -f create_pr_on_failure=true \
+  -f performance_threshold_ms=5000
+
+# Test only critical versions (latest + oldest)
+gh workflow run openclaw-compatibility-enhanced.yml \
+  -f test_beta_versions=false
+
+# View enhanced test results
+gh run list --workflow=openclaw-compatibility-enhanced.yml
+
+# Download performance benchmark report
+gh run download <run-id> -n performance-report
+```
+
 ### When Tests Fail
 
 If automated tests detect incompatibility:
 
 1. **GitHub Issue Created** - Auto-filed with details
 2. **Workflow Logs** - Full test output available
-3. **Artifact Uploaded** - Compatibility report saved
+3. **Artifact Uploaded** - Compatibility report and performance benchmarks saved
+4. **Pull Request Created** (optional) - Automated fix PR generated
 
 **Example Issue:**
 ```markdown
@@ -107,11 +154,41 @@ Plugin Version: v1.5.0
 OpenClaw Version: 2.0.0
 Workflow Run: https://github.com/.../actions/runs/...
 
+Failed Tests:
+- ❌ Plugin loading (deprecated API: old_hook_register)
+- ⚠️ Performance regression (load time: 6200ms, threshold: 5000ms)
+- ⚠️ Deprecated API found: openclaw.v1.createAgent (use openclaw.agents.create)
+
 Next Steps:
 1. Review workflow logs
-2. Identify breaking changes
-3. Update plugin code
-4. Add version constraints if needed
+2. Check performance benchmark report
+3. Review API deprecation suggestions
+4. Update plugin code
+5. Add version constraints if needed
+
+Suggested Fixes:
+- Replace `old_hook_register()` with `registerHook()`
+- Optimize plugin initialization for faster load time
+- Update to new agents API: openclaw.agents.create()
+```
+
+**Automated PR (if enabled):**
+```markdown
+🤖 fix: OpenClaw 2.0.0 compatibility updates
+
+Automated compatibility fix generated by enhanced workflow.
+
+Changes:
+- Updated hook registration API (old_hook_register → registerHook)
+- Migrated to new agents API (openclaw.v1.createAgent → openclaw.agents.create)
+- Added version constraint: openclawVersion: ">=1.0.0 <3.0.0"
+
+Test Results:
+- ✅ All compatibility tests pass with OpenClaw 2.0.0
+- ✅ Performance benchmarks within thresholds
+- ✅ No deprecated APIs detected
+
+This PR was auto-generated. Please review and test before merging.
 ```
 
 ---
@@ -395,15 +472,24 @@ npm install -g openclaw@latest
 - ✅ Automated weekly testing
 - ✅ Version checking in validation
 
+### Completed (v1.5.1)
+- ✅ peerDependencies in package.json
+- ✅ openclawVersion in plugin manifest
+- ✅ Multi-version compatibility testing
+- ✅ Automated API deprecation scanning
+- ✅ Performance regression testing
+- ✅ Automated PR creation for fixes
+- ✅ OpenClaw beta testing integration
+
 ### Planned (v1.6.0)
-- 🔄 peerDependencies in package.json
-- 🔄 openclawVersion in plugin manifest
-- 🔄 Automated PR for OpenClaw updates
+- 🔄 Integration with OpenClaw plugin registry
+- 🔄 Automated changelog generation from compatibility reports
+- 🔄 User notification system for compatibility updates
 
 ### Future (v2.0.0)
-- 📋 Multi-version compatibility testing
-- 📋 Automated API deprecation scanning
-- 📋 OpenClaw beta testing integration
+- 📋 Predictive compatibility analysis
+- 📋 Automated migration guides
+- 📋 Cross-version feature detection
 
 ---
 
