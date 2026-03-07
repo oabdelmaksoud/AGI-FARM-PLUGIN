@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import path from 'path';
-import { ensureJsonFile, safeReadJson, safeWriteJson } from './storage.js';
+import { ensureJsonFile, safeReadJson, safeWriteJson, withFileLockSync } from './storage.js';
 import { enrichProjects } from '../utils.js';
 
 const DEFAULT_STORE = {
@@ -118,13 +118,15 @@ export class ProjectService {
   }
 
   setDefaults(patch = {}) {
-    const store = this._readStore();
-    store.defaults = {
-      auto_project_channel: patch.auto_project_channel ?? store.defaults.auto_project_channel ?? true,
-      execution_path: patch.execution_path || store.defaults.execution_path || 'agi-farm-first',
-    };
-    this._writeStore(store);
-    return store.defaults;
+    return withFileLockSync(this.projectsPath, () => {
+      const store = this._readStore();
+      store.defaults = {
+        auto_project_channel: patch.auto_project_channel ?? store.defaults.auto_project_channel ?? true,
+        execution_path: patch.execution_path || store.defaults.execution_path || 'agi-farm-first',
+      };
+      this._writeStore(store);
+      return store.defaults;
+    });
   }
 
   list({ status, owner, search, sort = 'updated_desc', risk }, tasks = [], agentPerf = {}) {
@@ -162,40 +164,44 @@ export class ProjectService {
   }
 
   create(payload = {}) {
-    const store = this._readStore();
-    const project = normalizeProject({
-      ...payload,
-      auto_project_channel: payload.auto_project_channel ?? store.defaults.auto_project_channel,
-      execution_path: payload.execution_path || store.defaults.execution_path,
-      id: payload.id || `proj-${toSlug(payload.name || payload.title || 'project')}-${crypto.randomUUID().slice(0, 6)}`,
-      created_at: nowIso(),
-      updated_at: nowIso(),
-      milestones: Array.isArray(payload.milestones) ? payload.milestones : [
-        { id: crypto.randomUUID(), title: 'Discovery', status: 'pending', due: null, task_ids: [] },
-        { id: crypto.randomUUID(), title: 'Implementation', status: 'pending', due: null, task_ids: [] },
-        { id: crypto.randomUUID(), title: 'Validation', status: 'pending', due: null, task_ids: [] },
-      ],
-    }, store.defaults);
-    store.projects.push(project);
-    this._writeStore(store);
-    return project;
+    return withFileLockSync(this.projectsPath, () => {
+      const store = this._readStore();
+      const project = normalizeProject({
+        ...payload,
+        auto_project_channel: payload.auto_project_channel ?? store.defaults.auto_project_channel,
+        execution_path: payload.execution_path || store.defaults.execution_path,
+        id: payload.id || `proj-${toSlug(payload.name || payload.title || 'project')}-${crypto.randomUUID().slice(0, 6)}`,
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        milestones: Array.isArray(payload.milestones) ? payload.milestones : [
+          { id: crypto.randomUUID(), title: 'Discovery', status: 'pending', due: null, task_ids: [] },
+          { id: crypto.randomUUID(), title: 'Implementation', status: 'pending', due: null, task_ids: [] },
+          { id: crypto.randomUUID(), title: 'Validation', status: 'pending', due: null, task_ids: [] },
+        ],
+      }, store.defaults);
+      store.projects.push(project);
+      this._writeStore(store);
+      return project;
+    });
   }
 
   update(id, patch = {}) {
-    const store = this._readStore();
-    const idx = store.projects.findIndex((p) => p.id === id);
-    if (idx < 0) return null;
-    const prev = normalizeProject(store.projects[idx], store.defaults);
-    const next = normalizeProject({
-      ...prev,
-      ...patch,
-      budget: { ...prev.budget, ...(patch.budget || {}) },
-      okr_refs: { ...prev.okr_refs, ...(patch.okr_refs || {}) },
-      updated_at: nowIso(),
-    }, store.defaults);
-    store.projects[idx] = next;
-    this._writeStore(store);
-    return next;
+    return withFileLockSync(this.projectsPath, () => {
+      const store = this._readStore();
+      const idx = store.projects.findIndex((p) => p.id === id);
+      if (idx < 0) return null;
+      const prev = normalizeProject(store.projects[idx], store.defaults);
+      const next = normalizeProject({
+        ...prev,
+        ...patch,
+        budget: { ...prev.budget, ...(patch.budget || {}) },
+        okr_refs: { ...prev.okr_refs, ...(patch.okr_refs || {}) },
+        updated_at: nowIso(),
+      }, store.defaults);
+      store.projects[idx] = next;
+      this._writeStore(store);
+      return next;
+    });
   }
 
   linkTask(projectId, taskId) {

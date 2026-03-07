@@ -25,7 +25,7 @@ import { MemoryService } from './services/memory.js';
 import { PolicyService } from './services/policy.js';
 import { MeteringService } from './services/metering.js';
 import { WorkerService } from './services/worker.js';
-import { safeWriteJson } from './services/storage.js';
+import { safeWriteJson, withFileLockSync } from './services/storage.js';
 import { SecurityService } from './services/security.js';
 import { UpdateChecker } from './updater.js';
 
@@ -69,7 +69,36 @@ function probeGateway() {
   }
   return _gatewayCache.result;
 }
-const CSRF_TOKEN = process.env.AGI_FARM_DASHBOARD_TOKEN || crypto.randomBytes(24).toString('hex');
+// ── CSRF Token with periodic rotation ────────────────────────────────────
+const CSRF_ROTATE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const _csrfState = {
+  current: process.env.AGI_FARM_DASHBOARD_TOKEN || crypto.randomBytes(24).toString('hex'),
+  previous: null,
+  rotatedAt: Date.now(),
+};
+
+function getCsrfToken() {
+  return _csrfState.current;
+}
+
+function rotateCsrfToken() {
+  if (process.env.AGI_FARM_DASHBOARD_TOKEN) return; // static token from env — don't rotate
+  _csrfState.previous = _csrfState.current;
+  _csrfState.current = crypto.randomBytes(24).toString('hex');
+  _csrfState.rotatedAt = Date.now();
+}
+
+function isValidCsrfToken(token) {
+  if (constantTimeEquals(token, _csrfState.current)) return true;
+  // Accept the previous token for a 5-minute grace period after rotation
+  if (_csrfState.previous && (Date.now() - _csrfState.rotatedAt) < 5 * 60 * 1000) {
+    return constantTimeEquals(token, _csrfState.previous);
+  }
+  return false;
+}
+
+// Rotate token periodically
+setInterval(rotateCsrfToken, CSRF_ROTATE_MS);
 const CRON_FILE = path.join(os.homedir(), '.openclaw', 'cron', 'jobs.json');
 
 class SlowDataCache {
@@ -319,7 +348,7 @@ function requireCsrf(req, res, next) {
   }
 
   const token = req.header('x-agi-farm-csrf');
-  if (!token || !constantTimeEquals(token, CSRF_TOKEN)) {
+  if (!token || !isValidCsrfToken(token)) {
     res.status(403).json({ error: 'forbidden' });
     return;
   }
@@ -364,18 +393,20 @@ function runOpenclaw(args, timeoutMs = 15000) {
 }
 
 function toggleCronEnabled(id) {
-  const raw = readJson(CRON_FILE);
-  const jobs = asArray(raw.jobs);
-  const idx = jobs.findIndex((j) => j && j.id === id);
-  if (idx === -1) {
-    return { ok: false, status: 404, error: 'cron_not_found' };
-  }
-  const current = jobs[idx].enabled !== false;
-  const next = !current;
-  jobs[idx].enabled = next;
-  const out = { ...asObject(raw), jobs };
-  safeWriteJson(CRON_FILE, out);
-  return { ok: true, enabled: next };
+  return withFileLockSync(CRON_FILE, () => {
+    const raw = readJson(CRON_FILE);
+    const jobs = asArray(raw.jobs);
+    const idx = jobs.findIndex((j) => j && j.id === id);
+    if (idx === -1) {
+      return { ok: false, status: 404, error: 'cron_not_found' };
+    }
+    const current = jobs[idx].enabled !== false;
+    const next = !current;
+    jobs[idx].enabled = next;
+    const out = { ...asObject(raw), jobs };
+    safeWriteJson(CRON_FILE, out);
+    return { ok: true, enabled: next };
+  });
 }
 
 const updateChecker = new UpdateChecker();
@@ -672,6 +703,7 @@ async function main() {
 
   const apiLimiter = createRateLimiter(60000, 120);
   const actionLimiter = createRateLimiter(60000, 30);
+  const sessionLimiter = createRateLimiter(60000, 20); // stricter limit for token endpoint
   app.use('/api', apiLimiter);
 
   const cache = new SlowDataCache();
@@ -741,8 +773,8 @@ async function main() {
   });
   services.worker.start();
 
-  app.get('/api/session', (req, res) => {
-    res.json({ csrfToken: CSRF_TOKEN });
+  app.get('/api/session', sessionLimiter, (req, res) => {
+    res.json({ csrfToken: getCsrfToken() });
   });
 
   const reactDist = path.join(__dirname, '..', 'dashboard-react', 'dist');
@@ -764,7 +796,7 @@ async function main() {
   app.get('/api/stream', (req, res) => {
     // CSRF check — EventSource can't send headers, so accept query param
     const token = req.query.token || req.header('x-agi-farm-csrf');
-    if (!token || !constantTimeEquals(token, CSRF_TOKEN)) {
+    if (!token || !isValidCsrfToken(token)) {
       res.status(403).json({ error: 'forbidden' });
       return;
     }
@@ -1389,19 +1421,22 @@ async function main() {
     }
     try {
       const knowledgePath = path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json');
-      const existing = asArray(readJson(knowledgePath));
-      const entry = {
-        id: `kn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        title: sanitizeText(title, 200),
-        content: sanitizeText(content, 5000),
-        category: sanitizeText(category, 50) || 'general',
-        tags: Array.isArray(tags) ? tags.map(t => sanitizeText(String(t), 30)).slice(0, 10) : [],
-        added_by: 'human',
-        confidence: 0.95,
-        created_at: new Date().toISOString(),
-      };
-      existing.push(entry);
-      safeWriteJson(knowledgePath, existing);
+      const entry = withFileLockSync(knowledgePath, () => {
+        const existing = asArray(readJson(knowledgePath));
+        const e = {
+          id: `kn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          title: sanitizeText(title, 200),
+          content: sanitizeText(content, 5000),
+          category: sanitizeText(category, 50) || 'general',
+          tags: Array.isArray(tags) ? tags.map(t => sanitizeText(String(t), 30)).slice(0, 10) : [],
+          added_by: 'human',
+          confidence: 0.95,
+          created_at: new Date().toISOString(),
+        };
+        existing.push(e);
+        safeWriteJson(knowledgePath, existing);
+        return e;
+      });
       services.audit.log('knowledge_created', { id: entry.id });
       broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
       res.json({ ok: true, entry });
@@ -1413,14 +1448,18 @@ async function main() {
   app.delete('/api/knowledge/:id', actionLimiter, validateId, requireCsrf, (req, res) => {
     try {
       const knowledgePath = path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json');
-      const existing = asArray(readJson(knowledgePath));
-      const idx = existing.findIndex(e => e.id === req.params.id);
-      if (idx === -1) {
+      const result = withFileLockSync(knowledgePath, () => {
+        const existing = asArray(readJson(knowledgePath));
+        const idx = existing.findIndex(e => e.id === req.params.id);
+        if (idx === -1) return { found: false };
+        existing.splice(idx, 1);
+        safeWriteJson(knowledgePath, existing);
+        return { found: true };
+      });
+      if (!result.found) {
         res.status(404).json({ error: 'not_found' });
         return;
       }
-      existing.splice(idx, 1);
-      safeWriteJson(knowledgePath, existing);
       services.audit.log('knowledge_deleted', { id: req.params.id });
       broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
       res.json({ ok: true });
@@ -1454,17 +1493,35 @@ async function main() {
   // ── Audit Log Endpoint ─────────────────────────────────────────────────
   app.get('/api/audit', requireCsrf, (req, res) => {
     const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
+    const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
     try {
       const auditPath = path.join(WORKSPACE, 'AUDIT_LOG.jsonl');
       let lines = [];
+      let total = 0;
+      let dropped = 0;
       try {
+        // Stream the file line-by-line to avoid loading entire file into memory
         const raw = fs.readFileSync(auditPath, 'utf-8');
-        lines = raw.split('\n').filter(l => l.trim()).map(l => {
-          try { return JSON.parse(l); } catch { return null; }
-        }).filter(Boolean);
+        const allLines = raw.split('\n');
+        for (const l of allLines) {
+          if (!l.trim()) continue;
+          total++;
+          try {
+            lines.push(JSON.parse(l));
+          } catch {
+            dropped++;
+          }
+          // Keep only the last (limit + offset) entries in memory
+          if (lines.length > limit + offset) {
+            lines.shift();
+          }
+        }
       } catch { /* file doesn't exist yet */ }
-      const entries = lines.slice(-limit).reverse();
-      res.json({ entries, total: lines.length });
+      if (dropped > 0) console.warn(`[dashboard] audit log: ${dropped} malformed lines dropped`);
+      // Paginate: take the last entries, skip offset from the end
+      const sliced = offset > 0 ? lines.slice(-(limit + offset), -offset) : lines.slice(-limit);
+      const entries = sliced.reverse();
+      res.json({ entries, total, offset, limit });
     } catch (err) {
       res.status(500).json({ error: 'audit_read_failed', message: err.message });
     }
