@@ -44,7 +44,7 @@ jobs:
         # Test against multiple OpenClaw versions and OS
         openclaw-version: ['latest', 'previous', 'oldest-supported']
         os: ['ubuntu-latest']
-        node-version: ['20']
+        node-version: ['22']
 
         include:
           # Latest stable
