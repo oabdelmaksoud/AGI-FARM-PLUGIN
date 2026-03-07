@@ -17,6 +17,9 @@
 
 ---
 
+> [!WARNING]
+> **Notice: AGI Farm is currently under active development and still has known bugs.** Please use with caution in production environments.
+
 ## 🎯 What It Does
 
 **AGI Farm** is an [OpenClaw](https://docs.openclaw.ai) plugin that bootstraps a fully operational multi-agent AI system with everything you need:
@@ -57,6 +60,35 @@ To stay aligned with upstream updates, this repo now includes:
 - Parity plan: `docs/LOBSTERBOARD_PARITY.md`
 
 This keeps upstream diffs visible in PRs so feature ports can be done continuously.
+
+---
+
+## 🧙 What's New in v1.9.0
+
+### 🚀 Advanced Wizard 2.0 — Industry-Driven Automation
+
+The setup wizard has been completely overhauled from a basic 4-template system to a sophisticated, 6-phase onboarding experience that activates the full depth of the AGI Farm plugin.
+
+#### 🏗️ 15 Industry-Specific Blueprints
+Choose from professional team compositions across 5 major verticals:
+- **Software Engineering**: Startup MVP, Full-Stack Product, Mobile-First App, AI/ML System.
+- **Marketing & Growth**: Marketing Campaign, Brand Launch, Performance Marketing.
+- **Enterprise & Regulated**: Enterprise Feature, Security-Critical, Compliance & Audit.
+- **Research & Development**: Quality-First, Research & Discovery.
+- **Creative & Content**: Content Studio, Product Design Sprint.
+
+#### ⚙️ Deep Plugin Integration
+The wizard now automates what used to be manual post-setup tasks:
+- **Budget & OKRs**: Set monthly spend limits and seed your team with industry-specific OKRs immediately.
+- **Operational Automation**: Select and activate pre-built cron jobs (daily security scans, weekly velocity reports, auto-dispatcher heartbeats).
+- **HITL Security Policy**: Choose your "Human-in-the-Loop" sensitivity level (Low/Medium/High) during setup.
+- **Project Seeding**: Start with a pre-populated project and task backlog tailored to your chosen blueprint.
+- **AgentShield Integration**: One-click initial security scan to baseline your new workspace.
+
+#### 🧹 Consolidated Architecture
+- Legacy `setup-enhanced.js` has been consolidated into the main `setup.js`.
+- Performance improvements in agent creation and SOUL.md template generation.
+- Expanded `WORKFLOW_TEMPLATES.md` documentation covering all 15 new blueprints.
 
 ---
 
@@ -664,6 +696,11 @@ The dashboard enables direct control over team operations via authenticated REST
 - `POST /api/secrets/:scope` / `DELETE /api/secrets/:scope/:key` — Store/delete scoped secrets
 - `GET /api/templates` / `GET /api/templates/:id` — List and inspect dashboard templates
 - `POST /api/templates/export` / `POST /api/templates/import` — Export/import template settings
+
+**Integrated LobsterBoard Runtime (same host/process):**
+- Full LobsterBoard runtime is mounted internally at `GET /lobsterboard/`
+- Dashboard tab `LobsterBoard` loads this internal route (no separate user-facing port required)
+- API/static calls from LobsterBoard are proxied through AGI Farm server under the same origin
 
 **Auto-Update:**
 - `GET /api/update-check` — Force a fresh GitHub release check
