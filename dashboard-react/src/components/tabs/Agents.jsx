@@ -1,104 +1,37 @@
 import { useState } from 'react';
 import { apiPost } from '../../lib/api';
-import LastUpdated from '../LastUpdated';
+import { MessageSquare, X, Send, CheckCircle2, XCircle, Inbox, Star } from 'lucide-react';
 
-/* ─── Components ────────────────────────────────────────────────── */
+const STATUS_CONFIG = {
+  active: { bg: '#EEF2FF', color: 'var(--accent)', label: 'Active' },
+  available: { bg: '#ECFDF5', color: 'var(--mint)', label: 'Available' },
+  busy: { bg: '#FFFBEB', color: 'var(--amber)', label: 'Busy' },
+  error: { bg: '#FEF2F2', color: 'var(--red)', label: 'Error' },
+  running: { bg: '#EEF2FF', color: 'var(--accent)', label: 'Running' },
+};
 
-function HeartbeatStatus({ minutes }) {
+function HeartbeatBar({ minutes }) {
   const age = minutes ?? 999;
   const color = age < 5 ? 'var(--mint)' : age < 15 ? 'var(--amber)' : 'var(--red)';
   const pct = Math.max(0, Math.min(100, 100 - (age / 60) * 100));
   return (
-    <div style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--muted)', marginBottom: '4px', fontFamily: 'var(--font-mono)' }}>
-        <span>PULSE_SIGNAL</span>
-        <span style={{ color }}>{age < 999 ? `${age}M AGO` : 'OFFLINE'}</span>
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
+        <span>Heartbeat</span>
+        <span style={{ color, fontWeight: 600 }}>{age < 999 ? `${age}m ago` : 'Offline'}</span>
       </div>
-      <div className="progress-track" style={{ height: '2px' }}>
+      <div className="progress-track">
         <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
       </div>
     </div>
   );
 }
 
-function WorkloadMeter({ active, total }) {
-  const pct = total > 0 ? (active / total) * 100 : 0;
-  const color = pct > 80 ? 'var(--red)' : pct > 40 ? 'var(--amber)' : 'var(--accent)';
+function StatChip({ label, value, color }) {
   return (
-    <div style={{ width: '40px', flexShrink: 0 }}>
-      <div style={{ fontSize: '12px', fontWeight: 800, color, fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
-        {active}<span style={{ color: 'var(--muted)', fontSize: '9px', fontWeight: 400 }}>/{total}</span>
-      </div>
-      <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 800, textAlign: 'center', marginTop: '2px' }}>LOAD</div>
-    </div>
-  );
-}
-
-function ActiveTaskSignifier({ task }) {
-  if (!task) return (
-    <div style={{ fontSize: '10px', color: 'var(--muted)', fontFamily: 'var(--font-mono)', padding: '8px', border: '1px solid var(--border-light)', borderRadius: '2px' }}>
-      // AWAITING_INSTRUCTIONS
-    </div>
-  );
-  return (
-    <div style={{ borderLeft: '2px solid var(--accent)', paddingLeft: '10px', margin: '4px 0' }}>
-      <div style={{ fontSize: '8px', color: 'var(--accent)', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>ACTIVE_PROCESS</div>
-      <div style={{ fontSize: '11px', fontWeight: 600, color: '#fff', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {(task.title || '').toUpperCase()}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Main View ─────────────────────────────────────────────────── */
-
-export default function Agents({ data, lastUpdated, toast }) {
-  const { agents = [], tasks = [], cache_age_seconds } = data || {};
-  const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-
-  const filtered = agents.filter(a => {
-    const q = search.toLowerCase();
-    const matchQ = !search || (a.name || '').toLowerCase().includes(q) || (a.id || '').toLowerCase().includes(q);
-    const matchS = filterStatus === 'all' || a.status === filterStatus;
-    return matchQ && matchS;
-  });
-
-  return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Search & Filter Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <input
-          className="input-base"
-          placeholder="SEARCH_FLEET_ID..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ width: '240px', fontFamily: 'var(--font-mono)' }}
-        />
-        <select
-          className="input-base"
-          value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
-          style={{ width: '140px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
-        >
-          <option value="all">ALL_STATUS</option>
-          <option value="active">ACTIVE</option>
-          <option value="available">AVAILABLE</option>
-          <option value="busy">BUSY</option>
-          <option value="error">ERROR</option>
-        </select>
-
-        <div style={{ display: 'flex', gap: 16, fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
-          <span style={{ color: 'var(--accent)' }}>● {agents.filter(a => a.status === 'active').length} ACTIVE</span>
-          <span style={{ color: 'var(--muted)' }}>● {agents.filter(a => a.status === 'available').length} IDLE</span>
-        </div>
-
-        <div style={{ marginLeft: 'auto' }}><LastUpdated ts={lastUpdated} /></div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
-        {filtered.map((a, i) => <AgentCard key={a.id} agent={a} tasks={tasks} toast={toast} index={i} />)}
-      </div>
+    <div style={{ textAlign: 'center', padding: '10px 8px', background: '#F8FAFC', borderRadius: 10, border: '1px solid var(--border)' }}>
+      <div style={{ fontSize: 18, fontWeight: 700, color: color || 'var(--text)' }}>{value}</div>
+      <div style={{ fontSize: 9, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', marginTop: 2 }}>{label}</div>
     </div>
   );
 }
@@ -110,17 +43,17 @@ function AgentCard({ agent: a, tasks, toast, index }) {
 
   const agentTasks = tasks.filter(t => t.assigned_to === a.id);
   const activeTask = agentTasks.find(t => t.status === 'in-progress');
-  const workingCount = agentTasks.filter(t => ['in-progress', 'blocked', 'needs_human_decision'].includes(t.status)).length;
-  const isHitl = agentTasks.some(t => t.status === 'needs_human_decision');
+  const hitlTask = agentTasks.find(t => t.status === 'needs_human_decision');
+  const isHitl = !!hitlTask;
 
-  const borderColor = a.status === 'error' ? 'var(--red)' : (isHitl ? 'var(--purple)' : 'var(--border)');
+  const cfg = STATUS_CONFIG[a.status] || STATUS_CONFIG.available;
 
   const handleSend = async () => {
     if (!msg.trim()) return;
     setSending(true);
     try {
       await apiPost(`/api/comms/${a.id}/send`, { message: msg.trim() });
-      toast?.(`Signal transmitted to ${a.name}`, 'success');
+      toast?.(`Message sent to ${a.name}`, 'success');
       setMsg(''); setMsgOpen(false);
     } catch (e) { toast?.(e.message, 'error'); }
     setSending(false);
@@ -130,79 +63,165 @@ function AgentCard({ agent: a, tasks, toast, index }) {
     <div className="card fade-in" style={{
       animationDelay: `${index * 0.05}s`,
       display: 'flex', flexDirection: 'column', gap: 16,
-      borderColor: a.status === 'error' || isHitl ? borderColor : 'var(--border)'
+      borderColor: isHitl ? '#EDE9FE' : a.status === 'error' ? '#FEE2E2' : 'var(--border)',
+      borderWidth: isHitl || a.status === 'error' ? 2 : 1,
     }}>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <div style={{ fontSize: '24px', flexShrink: 0 }}>{a.emoji || '🤖'}</div>
+        <span style={{ fontSize: 28, flexShrink: 0 }}>{a.emoji || '🤖'}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {(a.name || '').toUpperCase()}
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {a.name || a.id}
           </div>
-          <div style={{ fontSize: '9px', color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
-            {(a.role || '').toUpperCase()} // {a.id}
-          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 6 }}>{a.role || 'Agent'}</div>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            background: cfg.bg, color: cfg.color, borderRadius: 999,
+            padding: '2px 10px', fontSize: 11, fontWeight: 600,
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color, display: 'inline-block' }} />
+            {cfg.label}
+          </span>
         </div>
-        <WorkloadMeter active={workingCount} total={agentTasks.length} />
       </div>
 
-      <ActiveTaskSignifier task={activeTask} />
-
-      {isHitl && (
-        <div style={{ padding: '6px 10px', background: 'rgba(181, 53, 255, 0.05)', border: '1px solid var(--purple)', borderRadius: '2px', fontSize: '9px', fontWeight: 800, color: 'var(--purple)', fontFamily: 'var(--font-mono)' }}>
-          [!] ACTION_REQUIRED: HITL_GATE_OPEN
+      {/* Current Task */}
+      {isHitl ? (
+        <div style={{ padding: '10px 14px', background: '#F5F3FF', border: '1px solid #EDE9FE', borderRadius: 10 }}>
+          <div style={{ fontSize: 10, color: 'var(--purple)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 3 }}>⚡ HITL Required</div>
+          <div style={{ fontSize: 12, color: 'var(--text)', fontWeight: 500 }}>{hitlTask?.hitl_reason || hitlTask?.title}</div>
+        </div>
+      ) : activeTask ? (
+        <div style={{ padding: '10px 14px', background: '#EEF2FF', border: '1px solid #E0E7FF', borderRadius: 10 }}>
+          <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 3 }}>▶ Working On</div>
+          <div style={{ fontSize: 12, color: 'var(--text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeTask.title}</div>
+        </div>
+      ) : (
+        <div style={{ padding: '10px 14px', background: '#F8FAFC', borderRadius: 10, textAlign: 'center' }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>Idle — awaiting task</span>
         </div>
       )}
 
+      {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-        <div className="card" style={{ padding: '8px', textAlign: 'center', background: 'transparent' }}>
-          <div style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--mint)' }}>{a.tasks_completed ?? 0}</div>
-          <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 800 }}>SUCCESS</div>
+        <StatChip label="Done" value={a.tasks_completed ?? 0} color="var(--mint)" />
+        <StatChip label="Failed" value={a.tasks_failed ?? 0} color="var(--red)" />
+        <StatChip label="Cred." value={(a.credibility || 1).toFixed(1)} color="var(--accent)" />
+      </div>
+
+      <HeartbeatBar minutes={a.heartbeat_age_minutes} />
+
+      {/* Meta */}
+      <div style={{ fontSize: 11, color: 'var(--text-dim)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span style={{ color: 'var(--muted)' }}>Model</span>
+          <span style={{ fontWeight: 600 }}>{a.model || '--'}</span>
         </div>
-        <div className="card" style={{ padding: '8px', textAlign: 'center', background: 'transparent' }}>
-          <div style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--red)' }}>{a.tasks_failed ?? 0}</div>
-          <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 800 }}>FAILURES</div>
-        </div>
-        <div className="card" style={{ padding: '8px', textAlign: 'center', background: 'transparent' }}>
-          <div style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{(a.credibility || 1).toFixed(1)}</div>
-          <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 800 }}>CREDENCE</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Inbox size={11} color="var(--muted)" /><span style={{ color: 'var(--muted)' }}>Inbox</span>
+          </div>
+          <span style={{ fontWeight: 600, color: a.inbox_count > 0 ? 'var(--amber)' : 'var(--text-dim)' }}>
+            {a.inbox_count > 0 ? `${a.inbox_count} messages` : 'Empty'}
+          </span>
         </div>
       </div>
 
-      <HeartbeatStatus minutes={a.heartbeat_age_minutes} />
-
-      <div style={{ fontSize: '10px', color: 'var(--muted)', fontFamily: 'var(--font-mono)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>MODEL_ID:</span><span style={{ color: '#fff' }}>{a.model?.toUpperCase() || '--'}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>MEMORY_TAG:</span><span style={{ color: '#fff' }}>{a.inbox_count > 0 ? `INBOX[${a.inbox_count}]` : 'NOMINAL'}</span>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border-light)', paddingTop: 12 }}>
+      {/* Message */}
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
         {msgOpen ? (
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               className="input-base"
-              style={{ flex: 1 }}
-              placeholder="ENCRYPTED_SIGNAL..."
+              style={{ flex: 1, fontSize: 12 }}
+              placeholder="Send a message…"
               value={msg}
               onChange={e => setMsg(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
+              autoFocus
             />
-            <button className="btn-primary" onClick={handleSend} disabled={sending || !msg.trim()}>
-              {sending ? '...' : 'SEND'}
+            <button onClick={handleSend} disabled={sending || !msg.trim()}
+              style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
+              <Send size={13} /> {sending ? '…' : 'Send'}
             </button>
-            <button className="btn-secondary" style={{ padding: '8px 12px' }} onClick={() => setMsgOpen(false)}>✕</button>
+            <button onClick={() => setMsgOpen(false)}
+              style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 10px', cursor: 'pointer' }}>
+              <X size={13} color="var(--muted)" />
+            </button>
           </div>
         ) : (
-          <button
-            className="btn-secondary"
-            style={{ width: '100%', fontSize: '10px', color: 'var(--muted)' }}
-            onClick={() => setMsgOpen(true)}
-          >
-            ESTABLISH COMMS CHANNEL
+          <button onClick={() => setMsgOpen(true)} style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: 10,
+            padding: '10px', cursor: 'pointer', fontSize: 12, color: 'var(--text-dim)', fontWeight: 500,
+            transition: 'all 0.15s',
+          }}>
+            <MessageSquare size={13} /> Message Agent
           </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function Agents({ data, toast }) {
+  const { agents = [], tasks = [] } = data || {};
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+
+  const filtered = agents.filter(a => {
+    const q = search.toLowerCase();
+    const matchQ = !search || (a.name || '').toLowerCase().includes(q) || (a.id || '').toLowerCase().includes(q);
+    const matchS = filterStatus === 'all' || a.status === filterStatus;
+    return matchQ && matchS;
+  });
+
+  const activeCount = agents.filter(a => a.status !== 'available').length;
+  const availableCount = agents.filter(a => a.status === 'available').length;
+  const errorCount = agents.filter(a => a.status === 'error').length;
+
+  return (
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div>
+        <h1 style={{ marginBottom: 4 }}>Agent Directory</h1>
+        <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>Monitor and message your autonomous agent fleet</p>
+      </div>
+
+      {/* Summary chips */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        {[
+          { label: `${activeCount} Active`, color: 'var(--accent)', bg: '#EEF2FF', status: 'active' },
+          { label: `${availableCount} Idle`, color: 'var(--mint)', bg: '#ECFDF5', status: 'available' },
+          { label: `${errorCount} Error`, color: 'var(--red)', bg: '#FEF2F2', status: 'error' },
+        ].map(c => (
+          <button key={c.status} onClick={() => setFilterStatus(filterStatus === c.status ? 'all' : c.status)}
+            style={{
+              background: filterStatus === c.status ? c.bg : '#F8FAFC',
+              color: filterStatus === c.status ? c.color : 'var(--muted)',
+              border: `1px solid ${filterStatus === c.status ? c.color + '44' : 'var(--border)'}`,
+              borderRadius: 999, padding: '5px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}>
+            {c.label}
+          </button>
+        ))}
+        <input
+          className="input-base"
+          placeholder="Search agents…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ marginLeft: 'auto', width: 220, fontSize: 13 }}
+        />
+      </div>
+
+      {/* Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+        {filtered.length > 0 ? filtered.map((a, i) => (
+          <AgentCard key={a.id} agent={a} tasks={tasks} toast={toast} index={i} />
+        )) : (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 64, color: 'var(--muted)', fontSize: 13 }}>
+            No agents match your filter
+          </div>
         )}
       </div>
     </div>

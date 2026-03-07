@@ -1,120 +1,50 @@
-import { useState, useEffect } from 'react';
-import { apiGet, apiPost } from '../../lib/api';
-import LastUpdated from '../LastUpdated';
+import { Package } from 'lucide-react';
 
-const SAFETY_COLOR = { low: 'var(--green)', medium: 'var(--amber)', high: 'var(--red)' };
-
-export default function Skills({ data, lastUpdated, toast }) {
-  const [skills, setSkills] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [toggling, setToggling] = useState(null);
-
-  const loadSkills = async () => {
-    try {
-      const result = await apiGet('/api/skills');
-      setSkills(result.skills || []);
-    } catch (e) {
-      toast?.(e.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { loadSkills(); }, []);
-
-  const handleToggle = async (skill) => {
-    setToggling(skill.id);
-    try {
-      const endpoint = skill.enabled ? `/api/skills/${skill.id}/disable` : `/api/skills/${skill.id}/enable`;
-      await apiPost(endpoint);
-      await loadSkills();
-      toast?.(`${skill.name} ${skill.enabled ? 'disabled' : 'enabled'}`, 'success');
-    } catch (e) {
-      toast?.(e.message, 'error');
-    } finally {
-      setToggling(null);
-    }
-  };
-
-  if (loading) {
-    return <div className="fade-in" style={{ textAlign: 'center', padding: 60, color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>LOADING_SKILLS_REGISTRY...</div>;
-  }
+export default function Skills({ data }) {
+  const { skills = [] } = data || {};
 
   return (
-    <div className="fade-in" style={{ display: 'grid', gap: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>SKILLS REGISTRY</h2>
-          <div style={{ fontSize: 10, color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>
-            {skills.filter(s => s.enabled).length}/{skills.length} ACTIVE
-          </div>
-        </div>
-        <LastUpdated ts={lastUpdated} />
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <h1 style={{ marginBottom: 4 }}>Skills & Integrations</h1>
+        <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>{skills.length} agent skills registered</p>
       </div>
-
       {skills.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', color: 'var(--muted)', padding: 60 }}>
-          <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.5 }}>&#9881;</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>No skills registered</div>
-          <div style={{ fontSize: 11, marginTop: 4 }}>SKILLS_REGISTRY.json is empty.</div>
+        <div className="card" style={{ textAlign: 'center', padding: 64 }}>
+          <Package size={32} style={{ marginBottom: 12, opacity: 0.4 }} />
+          <div style={{ fontSize: 14, fontWeight: 600 }}>No skills registered</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Install OpenClaw Skill packages and configure them in your workspace</div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
-          {skills.map(s => {
-            const safetyColor = SAFETY_COLOR[s.safetyProfile] || 'var(--muted)';
-            return (
-              <div key={s.id} className="card" style={{
-                opacity: s.enabled ? 1 : 0.5,
-                borderLeft: `3px solid ${s.enabled ? 'var(--cyan)' : 'var(--border)'}`,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{s.name}</div>
-                    <div style={{ fontSize: 9, color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>{s.id} // v{s.version}</div>
-                  </div>
-                  <button
-                    className={s.enabled ? 'btn-secondary' : 'btn-primary'}
-                    onClick={() => handleToggle(s)}
-                    disabled={toggling === s.id}
-                    style={{ padding: '6px 14px', fontSize: 10 }}
-                  >
-                    {toggling === s.id ? '...' : s.enabled ? 'DISABLE' : 'ENABLE'}
-                  </button>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+          {skills.map((skill, i) => (
+            <div key={skill.id || i} className="card">
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 12 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                  {skill.icon || '🔧'}
                 </div>
-
-                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 2, fontWeight: 700, color: safetyColor, background: `${safetyColor}18`, border: `1px solid ${safetyColor}44`, fontFamily: 'var(--font-mono)' }}>
-                    SAFETY: {(s.safetyProfile || 'unknown').toUpperCase()}
-                  </span>
-                  <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 2, fontWeight: 700, color: 'var(--muted)', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)' }}>
-                    {s.entrypoint}
-                  </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{skill.name || skill.id}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>v{skill.version || '1.0.0'}</div>
                 </div>
-
-                {s.intentMatchers?.length > 0 && (
-                  <div style={{ marginBottom: 8 }}>
-                    <div style={{ fontSize: 8, color: 'var(--muted)', fontWeight: 700, marginBottom: 4 }}>INTENT MATCHERS</div>
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {s.intentMatchers.map(m => (
-                        <span key={m} style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(0,240,255,0.05)', color: 'var(--cyan)', border: '1px solid rgba(0,240,255,0.15)', borderRadius: 2 }}>{m}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {s.stepKinds?.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 8, color: 'var(--muted)', fontWeight: 700, marginBottom: 4 }}>STEP KINDS</div>
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {s.stepKinds.map(k => (
-                        <span key={k} style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(181,53,255,0.05)', color: 'var(--purple)', border: '1px solid rgba(181,53,255,0.15)', borderRadius: 2 }}>{k}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <span style={{
+                  background: skill.enabled !== false ? '#ECFDF5' : '#F8FAFC',
+                  color: skill.enabled !== false ? 'var(--mint)' : 'var(--muted)',
+                  borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 600, flexShrink: 0,
+                }}>
+                  {skill.enabled !== false ? 'Active' : 'Inactive'}
+                </span>
               </div>
-            );
-          })}
+              {skill.description && <div style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6 }}>{skill.description}</div>}
+              {skill.tools?.length > 0 && (
+                <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {skill.tools.map(t => (
+                    <span key={t} style={{ background: '#F1F5F9', color: 'var(--muted)', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontFamily: 'var(--font-mono)' }}>{t}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -1,55 +1,59 @@
-import LastUpdated from '../LastUpdated';
+import { BarChart2 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-function Breakdown({ title, map }) {
-  const entries = Object.entries(map || {}).sort(([, a], [, b]) => (b?.spent || 0) - (a?.spent || 0));
+export default function Usage({ data }) {
+  const { usage = {}, model_usage = {} } = data || {};
+  const byModel = usage.by_model || model_usage || {};
+
+  const chartData = Object.entries(byModel).map(([name, v]) => ({
+    name,
+    tokens: typeof v === 'object' ? (v.tokens ?? v.total_tokens ?? 0) : v,
+  })).sort((a, b) => b.tokens - a.tokens);
+
   return (
-    <div className="card">
-      <div className="section-title">{title}</div>
-      {entries.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 11 }}>No usage yet</div>}
-      {entries.map(([key, value]) => (
-        <div key={key} style={{ display: 'flex', gap: 10, fontSize: 11, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,.04)' }}>
-          <span style={{ flex: 1 }}>{key}</span>
-          <span style={{ color: 'var(--cyan)' }}>${(value?.spent || 0).toFixed(4)}</span>
-          <span style={{ color: 'var(--muted)' }}>{value?.calls || 0} calls</span>
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <h1 style={{ marginBottom: 4 }}>Model Usage</h1>
+        <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>Token consumption across models</p>
+      </div>
+      {chartData.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 64 }}>
+          <BarChart2 size={32} style={{ marginBottom: 12, opacity: 0.4 }} />
+          <div style={{ fontSize: 14, fontWeight: 600 }}>No usage data yet</div>
         </div>
-      ))}
-    </div>
-  );
-}
+      ) : (
+        <>
+          <div className="card">
+            <h2 style={{ fontSize: 15, marginBottom: 16 }}>Token Usage by Model</h2>
+            <div style={{ height: Math.max(200, chartData.length * 44) }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} layout="vertical" margin={{ left: 140, right: 30, top: 0, bottom: 0 }}>
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" axisLine={false} tickLine={false}
+                    tick={{ fontSize: 12, fill: 'var(--text-dim)', fontWeight: 500 }} width={130} />
+                  <Tooltip contentStyle={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12 }}
+                    formatter={v => [v.toLocaleString(), 'Tokens']} />
+                  <Bar dataKey="tokens" radius={[0, 6, 6, 0]} barSize={16}>
+                    {chartData.map((_, i) => <Cell key={i} fill={`hsl(${220 + i * 30}, 65%, 55%)`} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
 
-export default function Usage({ data, lastUpdated }) {
-  const { usage = {}, featureFlags = {} } = data || {};
-  const totals = usage.totals || {};
-
-  if (!featureFlags.metering) {
-    return <div className="card">Usage feature is disabled. Enable `featureMetering` in plugin config.</div>;
-  }
-
-  return (
-    <div className="fade-in" style={{ display: 'grid', gap: 14 }}>
-      <div className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
-        <Stat label="Total Cost" value={`$${(totals.estimatedCostUsd || 0).toFixed(4)}`} color="var(--cyan)" />
-        <Stat label="Tokens In" value={totals.tokensIn || 0} color="var(--muted)" />
-        <Stat label="Tokens Out" value={totals.tokensOut || 0} color="var(--muted)" />
-        <Stat label="Duration" value={`${Math.round((totals.durationMs || 0) / 1000)}s`} color="var(--muted)" />
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <div className="section-title" style={{ marginBottom: 0 }}>Metering</div>
-        <LastUpdated ts={lastUpdated} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-        <Breakdown title="By Agent" map={usage.perAgent || {}} />
-        <Breakdown title="By Model" map={usage.perModel || {}} />
-      </div>
-    </div>
-  );
-}
-
-function Stat({ label, value, color }) {
-  return (
-    <div style={{ textAlign: 'center' }}>
-      <div className="section-title">{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+            {chartData.map((d, i) => (
+              <div key={d.name} style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6, fontWeight: 600 }}>{d.name}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: `hsl(${220 + i * 30}, 65%, 45%)` }}>
+                  {d.tokens > 1_000_000 ? `${(d.tokens / 1_000_000).toFixed(1)}M` : d.tokens > 1000 ? `${(d.tokens / 1000).toFixed(1)}K` : d.tokens}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>tokens</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -1,91 +1,56 @@
-import { useState } from 'react';
-import LastUpdated from '../LastUpdated';
+import { Activity, Cpu, HardDrive, Zap } from 'lucide-react';
 
-const MATURITY_COLOR = { L1: 'var(--red)', L2: 'var(--amber)', L3: 'var(--cyan)', L4: 'var(--green)' };
+function ProcessCard({ proc }) {
+  const statusColor = proc.status === 'running' ? 'var(--mint)' : proc.status === 'error' ? 'var(--red)' : 'var(--muted)';
+  const statusBg = proc.status === 'running' ? '#ECFDF5' : proc.status === 'error' ? '#FEF2F2' : '#F8FAFC';
+  return (
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>{proc.name || proc.id}</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>PID: {proc.pid || '—'}</div>
+        </div>
+        <span style={{ background: statusBg, color: statusColor, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 600 }}>
+          {proc.status || 'unknown'}
+        </span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {proc.cpu_pct !== undefined && (
+          <div style={{ background: '#F8FAFC', borderRadius: 8, padding: '8px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--muted)', marginBottom: 3 }}><Cpu size={10} /> CPU</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{proc.cpu_pct?.toFixed(1)}%</div>
+          </div>
+        )}
+        {proc.mem_mb !== undefined && (
+          <div style={{ background: '#F8FAFC', borderRadius: 8, padding: '8px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--muted)', marginBottom: 3 }}><HardDrive size={10} /> Memory</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{proc.mem_mb?.toFixed(0)}MB</div>
+          </div>
+        )}
+      </div>
+      {proc.description && <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{proc.description}</div>}
+    </div>
+  );
+}
 
-export default function Processes({ data, lastUpdated }) {
-  const { processes = [], agents = [] } = data || {};
-  const [search, setSearch] = useState('');
-  const [expanded, setExpanded] = useState(null);
-
-  const filtered = processes.filter(p => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (p.id || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q) || (p.owner || '').toLowerCase().includes(q);
-  });
+export default function Processes({ data }) {
+  const { processes = [] } = data || {};
+  const running = processes.filter(p => p.status === 'running').length;
 
   return (
-    <div className="fade-in">
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center' }}>
-        <input className="input-base" placeholder="Search processes..." value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: '0 1 200px' }} />
-        <span style={{ fontSize: 10, color: 'var(--muted)', marginLeft: 'auto' }}>{filtered.length} process{filtered.length !== 1 ? 'es' : ''}</span>
-        <LastUpdated ts={lastUpdated} />
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <h1 style={{ marginBottom: 4 }}>System Processes</h1>
+        <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>{running} of {processes.length} processes running</p>
       </div>
-
-      {filtered.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>
-          <div style={{ fontSize: 24, marginBottom: 12 }}>&#9881;&#65039;</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>No processes found</div>
-          <div style={{ fontSize: 11, marginTop: 4 }}>Processes are defined in PROCESSES.json</div>
+      {processes.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 64 }}>
+          <Activity size={32} style={{ marginBottom: 12, opacity: 0.4 }} />
+          <div style={{ fontSize: 14, fontWeight: 600 }}>No processes tracked</div>
         </div>
       ) : (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <thead>
-              <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
-                {['ID', 'Name', 'Owner', 'Maturity', 'Steps', 'Use Count', ''].map(h => (
-                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(p => {
-                const agent = agents.find(a => a.id === p.owner);
-                const mat = p.maturity || 'L1';
-                const isExp = expanded === p.id;
-                return (
-                  <>
-                    <tr key={p.id} onClick={() => setExpanded(isExp ? null : p.id)}
-                      style={{ borderBottom: isExp ? 'none' : '1px solid rgba(255,255,255,.03)', cursor: 'pointer' }}>
-                      <td style={{ padding: '8px 12px', color: 'var(--cyan)', fontFamily: 'monospace', fontSize: 11 }}>{p.id || '\u2014'}</td>
-                      <td style={{ padding: '8px 12px' }}>{p.name || '\u2014'}</td>
-                      <td style={{ padding: '8px 12px', fontSize: 11 }}>{agent ? `${agent.emoji} ${agent.name}` : p.owner || '\u2014'}</td>
-                      <td style={{ padding: '8px 12px' }}>
-                        <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 3, fontWeight: 600, color: MATURITY_COLOR[mat] || 'var(--muted)', background: `${MATURITY_COLOR[mat] || 'var(--muted)'}18`, border: `1px solid ${MATURITY_COLOR[mat] || 'var(--muted)'}44` }}>{mat}</span>
-                      </td>
-                      <td style={{ padding: '8px 12px', color: 'var(--muted)' }}>{(p.steps || []).length}</td>
-                      <td style={{ padding: '8px 12px', color: 'var(--muted)' }}>{p.use_count ?? 0}</td>
-                      <td style={{ padding: '8px 12px', color: 'var(--muted)', fontSize: 11, textAlign: 'center' }}>{isExp ? '\u25B2' : '\u25BC'}</td>
-                    </tr>
-                    {isExp && (
-                      <tr key={`${p.id}-detail`} style={{ background: 'rgba(0,229,255,.03)', borderBottom: '1px solid rgba(0,229,255,.08)' }}>
-                        <td colSpan={7} style={{ padding: '10px 14px 14px 14px' }}>
-                          {p.description && <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.6, marginBottom: 10 }}>{p.description}</div>}
-                          {(p.steps || []).length > 0 && (
-                            <div>
-                              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6 }}>Steps</div>
-                              {p.steps.map((s, i) => (
-                                <div key={i} style={{ display: 'flex', gap: 8, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,.03)', fontSize: 11 }}>
-                                  <span style={{ color: 'var(--cyan)', fontWeight: 600, minWidth: 20 }}>{i + 1}.</span>
-                                  <span style={{ flex: 1 }}>{typeof s === 'string' ? s : s.description || s.name || JSON.stringify(s)}</span>
-                                  {s.owner && <span style={{ color: 'var(--muted)', fontSize: 10 }}>{s.owner}</span>}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <div style={{ display: 'flex', gap: 16, fontSize: 10, color: 'var(--muted)', marginTop: 8 }}>
-                            {p.last_used && <span>Last used: {new Date(p.last_used).toLocaleString()}</span>}
-                            {p.created_at && <span>Created: {new Date(p.created_at).toLocaleDateString()}</span>}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                );
-              })}
-            </tbody>
-          </table>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+          {processes.map((p, i) => <ProcessCard key={p.id || i} proc={p} />)}
         </div>
       )}
     </div>

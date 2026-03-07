@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import LastUpdated from '../LastUpdated';
 import { apiPost } from '../../lib/api';
+import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 function relTime(iso) {
   if (!iso) return '—';
@@ -17,7 +17,6 @@ function HITLCard({ task, agents, onAction, toast }) {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(null);
   const agent = agents.find(a => a.id === task.assigned_to);
-  const waitTime = relTime(task.created_at);
   const pri = (task.sla?.priority || task.priority || '').toUpperCase();
 
   async function act(action) {
@@ -31,108 +30,119 @@ function HITLCard({ task, agents, onAction, toast }) {
 
   return (
     <div style={{
-      background: 'var(--bg2)', border: '1px solid rgba(224,64,251,.35)',
-      borderRadius: 10, padding: 18, display: 'grid', gap: 14,
-      boxShadow: '0 0 20px rgba(224,64,251,.08)',
+      background: '#FDFCFF', border: '2px solid #EDE9FE', borderRadius: 16,
+      padding: 24, display: 'flex', flexDirection: 'column', gap: 16,
+      boxShadow: '0 4px 24px rgba(139,92,246,0.08)',
     }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <span style={{ fontSize: 28 }}>🚨</span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+        <span style={{ fontSize: 28, flexShrink: 0 }}>🔔</span>
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 700, fontSize: 15 }}>{task.title}</span>
-            <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--muted)' }}>{task.id}</span>
-            {pri && <span className={pri === 'P1' ? 'p1' : pri === 'P2' ? 'p2' : 'p3'}>{pri}</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{task.title}</span>
+            <span style={{ fontSize: 10, color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{task.id}</span>
+            {pri && (
+              <span style={{
+                background: pri === 'P1' ? '#FEF2F2' : '#F1F5F9',
+                color: pri === 'P1' ? 'var(--red)' : 'var(--muted)',
+                borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 700,
+              }}>{pri}</span>
+            )}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-            {agent && <span>{agent.emoji} {agent.name} · </span>}
-            Waiting <span style={{ color: 'var(--amber)', fontWeight: 600 }}>{waitTime}</span>
-            {task.sla?.deadline && <span> · Due {new Date(task.sla.deadline).toLocaleString()}</span>}
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {agent && <span>{agent.emoji} {agent.name} ·</span>}
+            <Clock size={11} style={{ flexShrink: 0 }} />
+            <span>Waiting <span style={{ color: 'var(--amber)', fontWeight: 600 }}>{relTime(task.created_at)}</span></span>
+            {task.sla?.deadline && <span>· Due {new Date(task.sla.deadline).toLocaleString()}</span>}
           </div>
         </div>
       </div>
 
       {/* HITL Reason */}
-      <div style={{ padding: '12px 14px', background: 'rgba(224,64,251,.08)', border: '1px solid rgba(224,64,251,.25)', borderRadius: 7 }}>
-        <div style={{ fontSize: 10, color: 'var(--purple)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Decision Required</div>
-        <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6 }}>{task.hitl_reason || 'Human decision required before proceeding.'}</div>
+      <div style={{ padding: '14px 16px', background: '#F5F3FF', border: '1px solid #EDE9FE', borderRadius: 12 }}>
+        <div style={{ fontSize: 10, color: 'var(--purple)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>⚡ Decision Required</div>
+        <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.7 }}>{task.hitl_reason || 'Human decision required before agent can proceed.'}</div>
       </div>
 
-      {/* Description */}
       {task.description && (
         <div>
-          <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Context</div>
-          <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.6 }}>{task.description}</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Context</div>
+          <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6, background: '#F8FAFC', padding: 14, borderRadius: 10, border: '1px solid var(--border)' }}>{task.description}</div>
         </div>
       )}
 
       {/* Note input */}
       <div>
-        <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 6 }}>Optional note (sent to agent)</div>
-        <input value={note} onChange={e => setNote(e.target.value)}
-          placeholder="Add context for the agent..."
-          style={{
-            width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5,
-            padding: '8px 10px', fontSize: 12, color: 'var(--text)', fontFamily: 'inherit', outline: 'none',
-            boxSizing: 'border-box'
-          }} />
+        <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500, marginBottom: 6 }}>Add a note for the agent (optional)</div>
+        <input
+          value={note} onChange={e => setNote(e.target.value)}
+          placeholder="Provide guidance or context…"
+          className="input-base"
+          style={{ width: '100%', boxSizing: 'border-box' }}
+        />
       </div>
 
       {/* Action buttons */}
-      <div style={{ display: 'flex', gap: 10 }}>
+      <div style={{ display: 'flex', gap: 12 }}>
         <button onClick={() => act('approve')} disabled={!!loading} style={{
-          flex: 1, padding: '10px', background: 'rgba(0,230,118,.15)', border: '1px solid rgba(0,230,118,.4)',
-          color: 'var(--green)', borderRadius: 6, cursor: loading ? 'not-allowed' : 'pointer',
-          fontFamily: 'inherit', fontSize: 13, fontWeight: 700, transition: 'all .15s',
+          flex: 1, padding: '12px', background: loading === 'approve' ? '#D1FAE5' : '#ECFDF5',
+          border: '1px solid #6EE7B7', color: 'var(--mint)', borderRadius: 12,
+          fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.15s',
         }}>
-          {loading === 'approve' ? '...' : '✅ Approve — Continue'}
+          <CheckCircle2 size={16} /> {loading === 'approve' ? 'Processing…' : '✅ Approve — Continue'}
         </button>
         <button onClick={() => act('reject')} disabled={!!loading} style={{
-          flex: 1, padding: '10px', background: 'rgba(255,23,68,.1)', border: '1px solid rgba(255,23,68,.35)',
-          color: 'var(--red)', borderRadius: 6, cursor: loading ? 'not-allowed' : 'pointer',
-          fontFamily: 'inherit', fontSize: 13, fontWeight: 700, transition: 'all .15s',
+          flex: 1, padding: '12px', background: loading === 'reject' ? '#FEE2E2' : '#FEF2F2',
+          border: '1px solid #FCA5A5', color: 'var(--red)', borderRadius: 12,
+          fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.15s',
         }}>
-          {loading === 'reject' ? '...' : '❌ Reject — Block Task'}
+          <XCircle size={16} /> {loading === 'reject' ? 'Processing…' : '❌ Reject — Block'}
         </button>
       </div>
     </div>
   );
 }
 
-export default function HITLTab({ data, lastUpdated, toast }) {
+export default function HITLTab({ data, toast }) {
   const { hitl_tasks = [], agents = [] } = data || {};
   const [resolved, setResolved] = useState(new Set());
-
   const pending = hitl_tasks.filter(t => !resolved.has(t.id));
 
-  function onAction(taskId) {
-    setResolved(prev => new Set([...prev, taskId]));
-  }
-
   return (
-    <div className="fade-in" style={{ display: 'grid', gap: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: pending.length ? 'var(--red)' : 'var(--green)' }}>
-          {pending.length ? `🚨 ${pending.length} decision${pending.length > 1 ? 's' : ''} awaiting your input` : '✅ No pending HITL decisions'}
-        </span>
-        <LastUpdated ts={lastUpdated} />
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <h1 style={{ marginBottom: 4 }}>HITL Queue</h1>
+        <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>Human-in-the-loop decisions requiring your input</p>
       </div>
 
-      {pending.length === 0 && (
-        <div className="card" style={{ color: 'var(--muted)', fontSize: 13 }}>
-          All clear — no human decisions required right now. Agents are running autonomously.
+      {/* Status Banner */}
+      <div style={{
+        padding: '16px 20px', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 12,
+        background: pending.length > 0 ? '#FFF7ED' : '#ECFDF5',
+        border: `1px solid ${pending.length > 0 ? '#FED7AA' : '#A7F3D0'}`,
+      }}>
+        <span style={{ fontSize: 22 }}>{pending.length > 0 ? '🔔' : '✅'}</span>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: pending.length > 0 ? 'var(--amber)' : 'var(--mint)' }}>
+            {pending.length > 0 ? `${pending.length} decision${pending.length > 1 ? 's' : ''} awaiting your input` : 'All clear — no pending decisions'}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
+            {pending.length > 0 ? 'Agents are paused at approval gates below' : 'All agents are running autonomously'}
+          </div>
         </div>
-      )}
+        {resolved.size > 0 && (
+          <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--mint)', fontWeight: 600 }}>
+            {resolved.size} resolved this session
+          </div>
+        )}
+      </div>
 
       {pending.map(t => (
-        <HITLCard key={t.id} task={t} agents={agents} onAction={onAction} toast={toast} />
+        <HITLCard key={t.id} task={t} agents={agents} toast={toast}
+          onAction={id => setResolved(prev => new Set([...prev, id]))} />
       ))}
-
-      {resolved.size > 0 && (
-        <div style={{ padding: '10px 14px', background: 'rgba(0,230,118,.06)', border: '1px solid rgba(0,230,118,.2)', borderRadius: 6, fontSize: 12, color: 'var(--green)' }}>
-          ✅ {resolved.size} decision{resolved.size > 1 ? 's' : ''} resolved this session — agents notified via task status update.
-        </div>
-      )}
     </div>
   );
 }

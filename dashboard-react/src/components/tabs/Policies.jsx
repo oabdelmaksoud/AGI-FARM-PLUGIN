@@ -1,89 +1,67 @@
-import { useState, useEffect } from 'react';
-import { apiGet } from '../../lib/api';
-import LastUpdated from '../LastUpdated';
+import { ShieldCheck, CheckCircle2, XCircle } from 'lucide-react';
 
-export default function Policies({ data, lastUpdated, toast }) {
-  const [policies, setPolicies] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const result = await apiGet('/api/policies');
-        setPolicies(result);
-      } catch (e) {
-        toast?.(e.message, 'error');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  const rules = policies?.rules || [];
-
-  if (loading) {
-    return <div className="fade-in" style={{ textAlign: 'center', padding: 60, color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>LOADING_POLICIES...</div>;
-  }
+export default function Policies({ data }) {
+  const { featureFlags = {} } = data || {};
+  const policies = data?.policies || [];
 
   return (
-    <div className="fade-in" style={{ display: 'grid', gap: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>GOVERNANCE POLICIES</h2>
-          <div style={{ fontSize: 10, color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>
-            {rules.length} RULE{rules.length !== 1 ? 'S' : ''} ACTIVE
-          </div>
-        </div>
-        <LastUpdated ts={lastUpdated} />
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <h1 style={{ marginBottom: 4 }}>Policies & Governance</h1>
+        <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>Feature flags and policy rules governing agent behavior</p>
       </div>
 
-      {rules.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', color: 'var(--muted)', padding: 60 }}>
-          <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.5 }}>&#128274;</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>No policies configured</div>
-          <div style={{ fontSize: 11, marginTop: 4 }}>POLICIES.json is empty or not yet created.</div>
+      {/* Feature Flags */}
+      <div className="card">
+        <h2 style={{ fontSize: 15, marginBottom: 16 }}>Feature Flags</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+          {Object.entries(featureFlags).map(([flag, enabled]) => (
+            <div key={flag} style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
+              background: enabled ? '#ECFDF5' : '#F8FAFC', border: `1px solid ${enabled ? '#D1FAE5' : 'var(--border)'}`,
+              borderRadius: 10,
+            }}>
+              {enabled ? <CheckCircle2 size={14} color="var(--mint)" /> : <XCircle size={14} color="var(--muted)" />}
+              <span style={{ fontSize: 13, fontWeight: 500, color: enabled ? 'var(--text)' : 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
+                {flag}
+              </span>
+            </div>
+          ))}
         </div>
-      ) : (
-        <div style={{ border: '1px solid var(--border)', background: '#050505' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border)' }}>
-                {['RULE ID', 'ACTION PATTERN', 'AGENTS', 'APPROVAL', 'DENY', 'REASON'].map(h => (
-                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 9, color: 'var(--muted)', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rules.map((rule, i) => {
-                const isDeny = !!rule.deny;
-                const needsApproval = !!rule.requiresApproval;
-                return (
-                  <tr key={rule.id || i} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                    <td style={{ padding: '12px 16px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--cyan)' }}>{rule.id}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{rule.actionPattern}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {(rule.allowedAgents || ['*']).map(a => (
-                          <span key={a} style={{ fontSize: 9, padding: '2px 6px', background: 'rgba(0,240,255,0.05)', color: 'var(--cyan)', border: '1px solid rgba(0,240,255,0.15)', borderRadius: 2 }}>{a}</span>
-                        ))}
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ fontSize: 9, fontWeight: 800, color: needsApproval ? 'var(--amber)' : 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
-                        {needsApproval ? 'REQUIRED' : 'NO'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ fontSize: 9, fontWeight: 800, color: isDeny ? 'var(--red)' : 'var(--green)', fontFamily: 'var(--font-mono)' }}>
-                        {isDeny ? 'DENY' : 'ALLOW'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', fontSize: 11, color: 'var(--muted)' }}>{rule.reason || '\u2014'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      </div>
+
+      {/* Policy Rules */}
+      {policies.length > 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: 15, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ShieldCheck size={16} color="var(--accent)" /> Policy Rules
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {policies.map((policy, i) => (
+              <div key={policy.id || i} style={{
+                padding: '14px 16px', background: '#F8FAFC', border: '1px solid var(--border)',
+                borderRadius: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>{policy.name || policy.id}</div>
+                  {policy.description && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{policy.description}</div>}
+                </div>
+                <span style={{
+                  background: policy.enabled !== false ? '#ECFDF5' : '#F8FAFC',
+                  color: policy.enabled !== false ? 'var(--mint)' : 'var(--muted)',
+                  borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 600,
+                }}>
+                  {policy.enabled !== false ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {Object.keys(featureFlags).length === 0 && policies.length === 0 && (
+        <div className="card" style={{ textAlign: 'center', padding: 48, color: 'var(--muted)', fontSize: 13 }}>
+          No policies or feature flags configured
         </div>
       )}
     </div>

@@ -1,114 +1,46 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import LastUpdated from '../LastUpdated';
+import { TrendingUp, AlertTriangle } from 'lucide-react';
 
-export default function Budget({ data, lastUpdated }) {
-  const { budget = {} } = data || {};
-  const limits = budget.limits || {};
-  const current = budget.current || {};
-  const alerts = budget.alerts || {};
-  const byAgent = budget.per_agent || {};
-  const byModel = budget.per_model || {};
-  const notes = budget.notes || null;
-  const lastUpdatedData = budget.last_updated || null;
-
-  const periods = [
-    { label: 'DAILY_QUOTA', spent: current.daily_usd ?? 0, limit: limits.daily_usd ?? 0, threshold: alerts.daily_threshold_pct ?? 70 },
-    { label: 'WEEKLY_QUOTA', spent: current.weekly_usd ?? 0, limit: limits.weekly_usd ?? 0, threshold: alerts.weekly_threshold_pct ?? 70 },
-    { label: 'MONTHLY_QUOTA', spent: current.monthly_usd ?? 0, limit: limits.monthly_usd ?? 0, threshold: 80 },
-  ];
+function QuotaCard({ label, spent, limit, threshold }) {
+  const pct = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
+  const isOver = pct >= threshold;
+  const barColor = pct > threshold ? 'var(--red)' : pct > threshold * 0.8 ? 'var(--amber)' : 'var(--mint)';
+  const bgColor = pct > threshold ? '#FEF2F2' : pct > threshold * 0.5 ? '#FFFBEB' : '#F0FDF4';
+  const borderColor = pct > threshold ? '#FEE2E2' : pct > threshold * 0.5 ? '#FEF3C7' : '#D1FAE5';
 
   return (
-    <div className="fade-in" style={{ display: 'grid', gap: 16 }}>
-      {/* Notes / Alerts Banner */}
-      {notes && (
-        <div className="card shadow-glow" style={{
-          padding: '12px 20px', background: 'rgba(255,214,0,0.03)', border: '1px solid var(--amber)',
-          display: 'flex', alignItems: 'center', gap: 16
-        }}>
-          <span style={{ fontSize: 20, textShadow: '0 0 10px var(--amber)' }}>⚠</span>
-          <div style={{ flex: 1 }}>
-            <div className="section-title" style={{ fontSize: 9, color: 'var(--amber)', marginBottom: 2 }}>FISCAL_INTERRUPT_TRIGGERED</div>
-            <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{notes}</div>
-          </div>
-          {lastUpdatedData && (
-            <div style={{ textAlign: 'right', fontSize: 9, color: 'var(--muted)', fontFamily: 'JetBrains Mono, monospace' }}>
-              SOURCE_SYNC: {new Date(lastUpdatedData).toLocaleString().toUpperCase()}
-            </div>
-          )}
-          <div style={{ marginLeft: 16 }}><LastUpdated ts={lastUpdated} /></div>
-        </div>
-      )}
-
-      {/* Quota Matrices */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-        {periods.map(({ label, spent, limit, threshold }) => {
-          const pct = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
-          const isOver = pct >= threshold;
-          const color = pct > threshold ? 'var(--red)' : pct > threshold * 0.8 ? 'var(--amber)' : 'var(--cyan)';
-
-          return (
-            <div key={label} className="card shadow-glow" style={{ border: `1px solid ${isOver ? 'var(--red)' : 'var(--border)'}` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
-                <span className="section-title" style={{ fontSize: 9, marginBottom: 0 }}>{label}</span>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 16, fontWeight: 900, color, fontFamily: 'Rajdhani, sans-serif' }}>
-                    ${spent.toFixed(2)} <span style={{ fontSize: 10, color: 'var(--muted)' }}>/ ${limit}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="progress-track" style={{ height: 10, position: 'relative', background: 'rgba(255,255,255,0.02)' }}>
-                <div className="progress-fill" style={{
-                  width: `${pct}%`, background: color, boxShadow: `0 0 10px ${color}66`
-                }} />
-                {/* Threshold line */}
-                <div style={{
-                  position: 'absolute', top: -4, bottom: -4, left: `${threshold}%`,
-                  width: 2, background: 'var(--amber)', boxShadow: '0 0 8px var(--amber)', opacity: 0.8
-                }} />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 9, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>
-                <span style={{ color: 'var(--muted)' }}>UTILIZATION: {pct.toFixed(1)}%</span>
-                <span style={{ color: 'var(--amber)' }}>LIMITER: {threshold}%</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Distribution Chart */}
-      {Object.keys(byAgent).length > 0 && (
-        <div className="card">
-          <div className="section-title" style={{ fontSize: 9 }}>RESOURCE_COST_DISTRIBUTION_MATRIX</div>
-          <div style={{ height: Math.max(240, Object.keys(byAgent).length * 40), marginTop: 16 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={Object.entries(byAgent).map(([name, v]) => ({
-                name: name.toUpperCase(), spent: typeof v === 'object' ? (v.spent ?? 0) : v
-              })).sort((a, b) => b.spent - a.spent)} layout="vertical" margin={{ left: 100, right: 30, top: 0, bottom: 0 }}>
-                <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--muted)', fontSize: 10, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }} width={90} />
-                <Tooltip
-                  cursor={{ fill: 'rgba(255,255,255,0.02)' }}
-                  contentStyle={{ background: '#080810', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}
-                  formatter={(v) => [`$${v.toFixed(3)} USD`, 'RESOURCE_CONSUMPTION']}
-                />
-                <Bar dataKey="spent" radius={[0, 4, 4, 0]} barSize={16}>
-                  {Object.entries(byAgent).map(([name], i) => (
-                    <Cell key={name} fill={`hsl(${180 + i * 25}, 100%, 50%)`} fillOpacity={0.8} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+    <div style={{ background: bgColor, border: `1px solid ${borderColor}`, borderRadius: 16, padding: '20px 24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>{label}</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>
+            ${spent.toFixed(2)} <span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}>/ ${limit}</span>
           </div>
         </div>
-      )}
-
-      {/* Tables Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <BreakdownTable title="AGENTIC_CONSUMPTION_MATRIX" data={byAgent} />
-        <BreakdownTable title="MODEL_KERNEL_COST_MATRIX" data={byModel} />
+        <div style={{ fontSize: 22, fontWeight: 800, color: barColor }}>{pct.toFixed(0)}%</div>
       </div>
+
+      <div style={{ position: 'relative' }}>
+        <div className="progress-track" style={{ height: 10, position: 'relative' }}>
+          <div className="progress-fill" style={{ width: `${pct}%`, background: barColor, height: '100%', borderRadius: 8 }} />
+          {/* Threshold marker */}
+          <div style={{
+            position: 'absolute', top: -6, bottom: -6, left: `${threshold}%`,
+            width: 2, background: 'var(--amber)', borderRadius: 2,
+          }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 10, color: 'var(--muted)', fontWeight: 500 }}>
+          <span>Utilization {pct.toFixed(1)}%</span>
+          <span style={{ color: 'var(--amber)' }}>Alert at {threshold}%</span>
+        </div>
+      </div>
+
+      {isOver && (
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: '#FEE2E2', borderRadius: 8 }}>
+          <AlertTriangle size={12} color="var(--red)" />
+          <span style={{ fontSize: 11, color: 'var(--red)', fontWeight: 600 }}>Budget threshold exceeded</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -121,37 +53,113 @@ function BreakdownTable({ title, data }) {
   });
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-        <div className="section-title" style={{ fontSize: 9, marginBottom: 0 }}>{title}</div>
+    <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
+      <div style={{ background: '#F8FAFC', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{title}</div>
       </div>
-
       {entries.length === 0 ? (
-        <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 10 }}>DATA_INDEX_NULL</div>
+        <div style={{ padding: 32, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>No data yet</div>
       ) : (
-        <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ background: 'rgba(0,0,0,0.1)', borderBottom: '1px solid var(--border)' }}>
-              {['IDENTIFIER', 'EXPENDITURE', 'CYCLES'].map(h => (
-                <th key={h} style={{ textAlign: h === 'IDENTIFIER' ? 'left' : 'right', padding: '10px 16px', color: 'var(--muted)', fontSize: 8, fontWeight: 800, letterSpacing: '0.1em' }}>{h}</th>
+            <tr style={{ background: '#FAFAFA', borderBottom: '1px solid var(--border)' }}>
+              {['Name', 'Spend', 'Calls'].map(h => (
+                <th key={h} style={{ textAlign: h === 'Name' ? 'left' : 'right', padding: '8px 16px', fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {entries.map(([name, v]) => {
+            {entries.map(([name, v], i) => {
               const spent = typeof v === 'object' ? (v.spent ?? 0) : v;
-              const calls = typeof v === 'object' ? (v.calls ?? '--') : '--';
+              const calls = typeof v === 'object' ? (v.calls ?? '—') : '—';
               return (
-                <tr key={name} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }} className="task-row-hover">
-                  <td style={{ padding: '12px 16px', fontSize: 10, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}>{name.toUpperCase()}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--cyan)', fontWeight: 800, fontFamily: 'JetBrains Mono, monospace' }}>${spent.toFixed(3)}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--muted)', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}>{calls}</td>
+                <tr key={name} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
+                  <td style={{ padding: '10px 16px', fontWeight: 600, color: 'var(--text)' }}>{name}</td>
+                  <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--mint)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>${spent.toFixed(3)}</td>
+                  <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{calls}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       )}
+    </div>
+  );
+}
+
+export default function Budget({ data }) {
+  const { budget = {} } = data || {};
+  const limits = budget.limits || {};
+  const current = budget.current || {};
+  const alerts = budget.alerts || {};
+  const byAgent = budget.per_agent || {};
+  const byModel = budget.per_model || {};
+
+  const periods = [
+    { label: 'Daily', spent: current.daily_usd ?? 0, limit: limits.daily_usd ?? 0, threshold: alerts.daily_threshold_pct ?? 70 },
+    { label: 'Weekly', spent: current.weekly_usd ?? 0, limit: limits.weekly_usd ?? 0, threshold: alerts.weekly_threshold_pct ?? 70 },
+    { label: 'Monthly', spent: current.monthly_usd ?? 0, limit: limits.monthly_usd ?? 0, threshold: 80 },
+  ];
+
+  const agentChartData = Object.entries(byAgent).map(([name, v]) => ({
+    name, spent: typeof v === 'object' ? (v.spent ?? 0) : v,
+  })).sort((a, b) => b.spent - a.spent).slice(0, 10);
+
+  return (
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div>
+        <h1 style={{ marginBottom: 4 }}>Budget & Spend</h1>
+        <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>Resource consumption across daily, weekly, and monthly quotas</p>
+      </div>
+
+      {budget.notes && (
+        <div style={{ padding: '14px 18px', background: '#FFFBEB', border: '1px solid #FED7AA', borderRadius: 14, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>⚠️</span>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber)', marginBottom: 4 }}>Budget Alert</div>
+            <div style={{ fontSize: 13, color: 'var(--text)' }}>{budget.notes}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Quota Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        {periods.map(p => <QuotaCard key={p.label} {...p} />)}
+      </div>
+
+      {/* Spend Chart */}
+      {agentChartData.length > 0 && (
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            <TrendingUp size={16} color="var(--accent)" />
+            <h2 style={{ fontSize: 16, margin: 0 }}>Spend by Agent</h2>
+          </div>
+          <div style={{ height: Math.max(200, agentChartData.length * 40) }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={agentChartData} layout="vertical" margin={{ left: 120, right: 30, top: 0, bottom: 0 }}>
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false}
+                  tick={{ fill: 'var(--text-dim)', fontSize: 12, fontWeight: 500 }} width={110} />
+                <Tooltip
+                  contentStyle={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12 }}
+                  formatter={v => [`$${v.toFixed(3)}`, 'Spend']}
+                />
+                <Bar dataKey="spent" radius={[0, 6, 6, 0]} barSize={14}>
+                  {agentChartData.map((_, i) => (
+                    <Cell key={i} fill={`hsl(${220 + i * 25}, 70%, 55%)`} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Breakdown Tables */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <BreakdownTable title="Spend by Agent" data={byAgent} />
+        <BreakdownTable title="Spend by Model" data={byModel} />
+      </div>
     </div>
   );
 }
