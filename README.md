@@ -47,6 +47,13 @@
 - **Zero dependencies** — Pure markdown templates, instantly usable
 - **See:** [Agency-Agents Integration Guide](AGENCY_AGENTS_GUIDE.md)
 
+### 🔄 Enhanced Orchestration Patterns
+- **Pipeline orchestration** for Cooper: PM → Architect → [Dev ↔ QA Loop] → Integration
+- **Quality gate patterns** for Vigil: Evidence Collector + Reality Checker methodologies
+- **4 workflow templates**: Startup MVP, Marketing Campaign, Enterprise Feature, Quality-First teams
+- **Automated update system** for keeping Agency-Agents templates current
+- **See:** [Orchestration Patterns](templates/ORCHESTRATION_PATTERNS.md) | [Quality Gates](templates/QUALITY_GATE_PATTERNS.md) | [Workflow Templates](templates/WORKFLOW_TEMPLATES.md)
+
 ### Previous: ECC Integration v1.5.0
 - **69 specialized skills** from Everything Claude Code (Anthropic hackathon winner)
 - **16 ECC agent templates** for domain-specific delegation
