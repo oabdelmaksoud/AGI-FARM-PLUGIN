@@ -6,6 +6,35 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-03-07
+
+### 🔄 LobsterBoard Upstream Sync Infrastructure
+
+- Added automated upstream sync workflow:
+  - `.github/workflows/lobsterboard-upstream-sync.yml`
+- Added sync script:
+  - `scripts/sync-lobsterboard-upstream.js`
+- Added tracked upstream snapshot surface:
+  - `upstream/lobsterboard/**`
+- Added upstream version tracking file:
+  - `lobsterboard-resources/LOBSTERBOARD_VERSION`
+- Added parity planning document:
+  - `docs/LOBSTERBOARD_PARITY.md`
+
+### 🙏 Attribution & Documentation
+
+- Updated README with explicit acknowledgement of LobsterBoard and attribution section.
+- Documented clean-room porting policy and always-sync workflow for upstream parity.
+
+### 🚀 Release
+
+- Bumped package versions:
+  - `package.json`: `1.8.1` → `1.9.0`
+  - `openclaw.plugin.json`: `1.8.1` → `1.9.0`
+- Added npm scripts:
+  - `sync:lobsterboard`
+  - `sync:lobsterboard:check`
+
 ## [1.7.2] - 2026-03-07
 
 ### ✨ Enhanced Wizard with Workflow Templates + Agent Browser

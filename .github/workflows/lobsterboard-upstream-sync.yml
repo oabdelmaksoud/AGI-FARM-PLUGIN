@@ -1,0 +1,47 @@
+name: Sync LobsterBoard Upstream
+
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Sync upstream snapshot
+        run: node scripts/sync-lobsterboard-upstream.js
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(sync): update LobsterBoard upstream snapshot"
+          title: "chore(sync): update LobsterBoard upstream snapshot"
+          body: |
+            Automated upstream sync from `Curbob/LobsterBoard`.
+
+            Updated files:
+            - `lobsterboard-resources/LOBSTERBOARD_VERSION`
+            - `upstream/lobsterboard/**`
+          branch: "chore/lobsterboard-upstream-sync"
+          delete-branch: true

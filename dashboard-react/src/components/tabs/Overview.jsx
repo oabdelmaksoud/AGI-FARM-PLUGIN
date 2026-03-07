@@ -217,7 +217,9 @@ export default function Overview({ data }) {
   const projects = rawProjects.map(p => enrichProject(p, tasks, agents));
   const activeProjects = projects.filter(p => ['active', 'ACTIVE'].includes(p.status));
   const spent = budget.current?.daily_usd ?? 0;
-  const limit = budget.limits?.daily_usd ?? 1;
+  const hasDailyLimit = typeof budget.limits?.daily_usd === 'number' && budget.limits.daily_usd > 0;
+  const limit = hasDailyLimit ? budget.limits.daily_usd : 0;
+  const budgetUsagePct = hasDailyLimit ? Math.min(100, (spent / limit) * 100) : 0;
   const hitlCount = (tc.needs_human_decision ?? 0);
   const activeAgentCount = agents.filter(a => a.status !== 'available').length;
 
@@ -235,7 +237,14 @@ export default function Overview({ data }) {
         <KPICard icon={Users} label="Active Agents" value={`${activeAgentCount}/${agents.length}`} color="var(--accent)" accentBg="#EEF2FF" />
         <KPICard icon={FolderKanban} label="Active Projects" value={activeProjects.length} color="var(--cyan)" accentBg="#ECFEFF" sub={`of ${projects.length} total`} />
         <KPICard icon={AlertTriangle} label="HITL Queue" value={hitlCount} color={hitlCount > 0 ? 'var(--purple)' : 'var(--mint)'} accentBg={hitlCount > 0 ? '#F5F3FF' : '#ECFDF5'} sub="Needs your input" />
-        <KPICard icon={DollarSign} label="Daily Spend" value={`$${spent.toFixed(2)}`} color="var(--mint)" accentBg="#ECFDF5" sub={`of $${limit} limit`} />
+        <KPICard
+          icon={DollarSign}
+          label="Daily Spend"
+          value={`$${spent.toFixed(2)}`}
+          color="var(--mint)"
+          accentBg="#ECFDF5"
+          sub={hasDailyLimit ? `of $${limit} limit` : 'No daily limit set'}
+        />
       </div>
 
       {/* ── Budget Progress Bar ── */}
@@ -244,12 +253,12 @@ export default function Overview({ data }) {
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', minWidth: 120 }}>Daily Budget Usage</span>
         <div className="progress-track" style={{ flex: 1 }}>
           <div className="progress-fill" style={{
-            width: `${Math.min(100, (spent / limit) * 100)}%`,
-            background: spent / limit > 0.8 ? 'var(--red)' : spent / limit > 0.6 ? 'var(--amber)' : 'var(--mint)',
+            width: `${budgetUsagePct}%`,
+            background: budgetUsagePct > 80 ? 'var(--red)' : budgetUsagePct > 60 ? 'var(--amber)' : 'var(--mint)',
           }} />
         </div>
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', minWidth: 60, textAlign: 'right' }}>
-          {Math.round((spent / limit) * 100)}%
+          {Math.round(budgetUsagePct)}%
         </span>
       </div>
 

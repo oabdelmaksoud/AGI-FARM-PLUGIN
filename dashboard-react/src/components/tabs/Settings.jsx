@@ -1,17 +1,34 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiPost } from '../../lib/api';
 import { Save, RefreshCw } from 'lucide-react';
 
 export default function Settings({ data, toast }) {
-  const ws = data?.workspace || {};
+  const meta = data?.workspace_meta || {};
+  const sourceSettings = data?.settings || {};
   const [settings, setSettings] = useState({
-    budget_daily: ws.budget?.limits?.daily_usd ?? '',
-    budget_weekly: ws.budget?.limits?.weekly_usd ?? '',
-    budget_monthly: ws.budget?.limits?.monthly_usd ?? '',
-    hitl_enabled: ws.hitl_enabled !== false,
-    auto_resume: ws.auto_resume ?? false,
+    budget_daily: sourceSettings.budget_daily ?? '',
+    budget_weekly: sourceSettings.budget_weekly ?? '',
+    budget_monthly: sourceSettings.budget_monthly ?? '',
+    hitl_enabled: sourceSettings.hitl_enabled !== false,
+    auto_resume: sourceSettings.auto_resume === true,
   });
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setSettings({
+      budget_daily: sourceSettings.budget_daily ?? '',
+      budget_weekly: sourceSettings.budget_weekly ?? '',
+      budget_monthly: sourceSettings.budget_monthly ?? '',
+      hitl_enabled: sourceSettings.hitl_enabled !== false,
+      auto_resume: sourceSettings.auto_resume === true,
+    });
+  }, [
+    sourceSettings.budget_daily,
+    sourceSettings.budget_weekly,
+    sourceSettings.budget_monthly,
+    sourceSettings.hitl_enabled,
+    sourceSettings.auto_resume,
+  ]);
 
   const save = async () => {
     setSaving(true);
@@ -64,10 +81,10 @@ export default function Settings({ data, toast }) {
         <h2 style={{ fontSize: 15, marginBottom: 12 }}>Workspace Info</h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 13, color: 'var(--text-dim)' }}>
           {[
-            { k: 'Workspace Path', v: ws.path || ws.workspace_path || '—' },
-            { k: 'Team Name', v: ws.team || ws.team_name || '—' },
-            { k: 'Version', v: ws.version || data?.version || '1.4.0' },
-            { k: 'Process ID', v: ws.pid || '—' },
+            { k: 'Workspace Path', v: meta.path || data?.workspace || '—' },
+            { k: 'Team Name', v: meta.team_name || '—' },
+            { k: 'Version', v: meta.version || data?.version || '—' },
+            { k: 'Process ID', v: meta.pid || '—' },
           ].map(r => (
             <div key={r.k} style={{ padding: '12px', background: '#F8FAFC', borderRadius: 10, border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 4 }}>{r.k}</div>

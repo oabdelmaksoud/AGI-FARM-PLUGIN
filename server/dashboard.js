@@ -3,6 +3,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import { spawn, spawnSync } from 'child_process';
 import chokidar from 'chokidar';
 import os from 'os';
@@ -31,6 +32,14 @@ import { UpdateChecker } from './updater.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
+const PKG_VERSION = (() => {
+  try {
+    return require('../package.json')?.version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+})();
 
 const WATCHED_EXTENSIONS = ['.json', '.md'];
 const DEBOUNCE_MS = 250;
@@ -100,6 +109,8 @@ function isValidCsrfToken(token) {
 // Rotate token periodically
 setInterval(rotateCsrfToken, CSRF_ROTATE_MS);
 const CRON_FILE = path.join(os.homedir(), '.openclaw', 'cron', 'jobs.json');
+const SETTINGS_FILE = path.join(WORKSPACE, 'SETTINGS.json');
+const CHANNEL_ADAPTER_STATE_FILE = path.join(WORKSPACE, 'CHANNEL_ADAPTER_STATE.json');
 
 class SlowDataCache {
   constructor() {
@@ -241,10 +252,36 @@ function ensureOperationalFiles() {
     projects: [],
   })) created.push('PROJECTS.json');
   if (writeJsonIfMissing(path.join(WORKSPACE, 'PROJECT_EVENTS.json'), { events: [] })) created.push('PROJECT_EVENTS.json');
+  if (writeJsonIfMissing(path.join(WORKSPACE, 'SETTINGS.json'), {
+    budget_daily: null,
+    budget_weekly: null,
+    budget_monthly: null,
+    hitl_enabled: true,
+    auto_resume: false,
+  })) created.push('SETTINGS.json');
+  if (writeJsonIfMissing(CHANNEL_ADAPTER_STATE_FILE, { version: 1, seeded: false, files: {} })) created.push('CHANNEL_ADAPTER_STATE.json');
 
   if (created.length > 0) {
     console.log(`[dashboard] Seeded missing workspace files: ${created.join(', ')}`);
   }
+}
+
+function sanitizeSettingsPatch(body) {
+  const patch = asObject(body);
+  const toMoney = (value) => {
+    if (value === '' || value == null) return null;
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0) return null;
+    return Math.round(n * 100) / 100;
+  };
+  const out = {
+    budget_daily: toMoney(patch.budget_daily),
+    budget_weekly: toMoney(patch.budget_weekly),
+    budget_monthly: toMoney(patch.budget_monthly),
+    hitl_enabled: patch.hitl_enabled !== false,
+    auto_resume: patch.auto_resume === true,
+  };
+  return out;
 }
 
 function getHeartbeatAge(workspace, wsDir = '') {
@@ -299,6 +336,350 @@ function readProjectsStore() {
       ? obj.projects
       : (Array.isArray(obj.items) ? obj.items : []),
   };
+}
+
+function resolveOpenclawHome() {
+  const parent = path.dirname(WORKSPACE);
+  if (path.basename(WORKSPACE) === 'workspace' && path.basename(parent) === '.openclaw') {
+    return parent;
+  }
+  return path.join(os.homedir(), '.openclaw');
+}
+
+function listSessionJsonlFiles() {
+  const root = path.join(resolveOpenclawHome(), 'agents');
+  const files = [];
+  try {
+    const agentDirs = fs.readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory());
+    for (const agentDir of agentDirs) {
+      const sessionsDir = path.join(root, agentDir.name, 'sessions');
+      if (!fs.existsSync(sessionsDir)) continue;
+      const sessionFiles = fs.readdirSync(sessionsDir, { withFileTypes: true })
+        .filter((d) => d.isFile() && d.name.endsWith('.jsonl') && !d.name.endsWith('.lock'))
+        .map((d) => path.join(sessionsDir, d.name));
+      files.push(...sessionFiles);
+    }
+  } catch (err) {
+    console.warn(`[dashboard] session file listing failed: ${err.message}`);
+  }
+  return files;
+}
+
+function readLines(filePath) {
+  try {
+    const text = fs.readFileSync(filePath, 'utf-8');
+    return text.split('\n').filter((line) => line.trim().length > 0);
+  } catch {
+    return [];
+  }
+}
+
+function extractAgentIdFromSessionPath(filePath) {
+  const m = filePath.match(/[\/\\]agents[\/\\]([^\/\\]+)[\/\\]sessions[\/\\]/);
+  return (m?.[1] || 'main').toLowerCase();
+}
+
+function extractMessageText(content) {
+  if (typeof content === 'string') return sanitizeText(content, 8000).trim();
+  if (!Array.isArray(content)) return '';
+  const parts = content
+    .map((item) => {
+      if (!item || typeof item !== 'object') return '';
+      if (item.type === 'text' && typeof item.text === 'string') return item.text;
+      if (item.type === 'input_text' && typeof item.text === 'string') return item.text;
+      return '';
+    })
+    .filter(Boolean);
+  return sanitizeText(parts.join('\n\n'), 8000).trim();
+}
+
+function ensureCommsHeader(filePath, agentId, kind) {
+  if (fs.existsSync(filePath)) return;
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const name = agentId.charAt(0).toUpperCase() + agentId.slice(1);
+  const header = kind === 'inbox' ? `# ${name}'s Inbox\n\nNo messages yet.\n` : `# ${name}'s Outbox\n\nNo messages yet.\n`;
+  fs.writeFileSync(filePath, header, 'utf-8');
+}
+
+function appendInboundComms(agentId, timestamp, text) {
+  const target = path.join(WORKSPACE, 'comms', 'inboxes', `${agentId}.md`);
+  ensureCommsHeader(target, agentId, 'inbox');
+  const ts = asIsoOrNull(timestamp) || new Date().toISOString();
+  const entry = `\n## [HUMAN → ${agentId.toUpperCase()}] ${ts}\n${text}\n`;
+  fs.appendFileSync(target, entry, 'utf-8');
+}
+
+function appendOutboundComms(agentId, timestamp, text) {
+  const target = path.join(WORKSPACE, 'comms', 'outboxes', `${agentId}.md`);
+  ensureCommsHeader(target, agentId, 'outbox');
+  const ts = asIsoOrNull(timestamp) || new Date().toISOString();
+  const entry = `\n## [${agentId.toUpperCase()} → HUMAN] ${ts}\n${text}\n`;
+  fs.appendFileSync(target, entry, 'utf-8');
+}
+
+function isCronPrompt(text) {
+  return /^\s*\[cron:[^\]]+\]/i.test(text || '');
+}
+
+function buildBaselineAdapterState(sessionFiles) {
+  const files = {};
+  for (const filePath of sessionFiles) {
+    const lines = readLines(filePath);
+    let hadHumanUser = false;
+    for (const line of lines) {
+      try {
+        const row = JSON.parse(line);
+        const msg = row?.message;
+        if (row?.type === 'message' && msg?.role === 'user') {
+          const text = extractMessageText(msg.content);
+          if (text && !isCronPrompt(text)) {
+            hadHumanUser = true;
+            break;
+          }
+        }
+      } catch {
+        // ignore malformed lines in baseline scan
+      }
+    }
+    files[filePath] = { lineCount: lines.length, hadHumanUser };
+  }
+  return { version: 1, seeded: true, files };
+}
+
+function syncChannelSessionsToComms() {
+  const sessionFiles = listSessionJsonlFiles();
+  if (sessionFiles.length === 0) return;
+
+  let state = readJson(CHANNEL_ADAPTER_STATE_FILE);
+  if (!state || state.seeded !== true || !state.files || typeof state.files !== 'object') {
+    state = buildBaselineAdapterState(sessionFiles);
+    safeWriteJson(CHANNEL_ADAPTER_STATE_FILE, state);
+    return;
+  }
+
+  let changed = false;
+  let stateDirty = false;
+  for (const filePath of sessionFiles) {
+    const prev = asObject(state.files[filePath]);
+    const prevLineCount = Number(prev.lineCount || 0);
+    let hadHumanUser = prev.hadHumanUser === true;
+    const lines = readLines(filePath);
+    const startAt = (prevLineCount <= lines.length) ? prevLineCount : 0;
+
+    for (let i = startAt; i < lines.length; i += 1) {
+      let row = null;
+      try {
+        row = JSON.parse(lines[i]);
+      } catch {
+        continue;
+      }
+      if (row?.type !== 'message') continue;
+
+      const msg = row?.message || {};
+      const role = asString(msg.role).toLowerCase();
+      const text = extractMessageText(msg.content);
+      if (!text) continue;
+
+      const agentId = extractAgentIdFromSessionPath(filePath);
+      const ts = row?.timestamp || msg?.timestamp || new Date().toISOString();
+
+      if (role === 'user') {
+        if (isCronPrompt(text)) continue;
+        appendInboundComms(agentId, ts, text);
+        hadHumanUser = true;
+        changed = true;
+      } else if (role === 'assistant') {
+        const model = asString(msg.model).toLowerCase();
+        if (!hadHumanUser && model !== 'delivery-mirror') continue;
+        appendOutboundComms(agentId, ts, text);
+        changed = true;
+      }
+    }
+
+    const nextFileState = {
+      lineCount: lines.length,
+      hadHumanUser,
+    };
+    const prevState = asObject(state.files[filePath]);
+    if (Number(prevState.lineCount || 0) !== nextFileState.lineCount || (prevState.hadHumanUser === true) !== nextFileState.hadHumanUser) {
+      stateDirty = true;
+    }
+    state.files[filePath] = nextFileState;
+  }
+
+  // Garbage-collect removed session files from adapter state.
+  const live = new Set(sessionFiles);
+  for (const tracked of Object.keys(state.files)) {
+    if (!live.has(tracked)) {
+      delete state.files[tracked];
+      stateDirty = true;
+    }
+  }
+
+  if (changed || stateDirty) {
+    safeWriteJson(CHANNEL_ADAPTER_STATE_FILE, state);
+  }
+}
+
+function parseCommsEntries(markdown = '') {
+  const entries = [];
+  const text = asString(markdown, '');
+  if (!text.trim()) return entries;
+
+  const lines = text.split('\n');
+  let current = null;
+
+  for (const line of lines) {
+    const m = line.match(/^##\s+\[(.+?)\]\s+(.+)$/);
+    if (m) {
+      if (current) {
+        current.body = current.body.join('\n').trim();
+        entries.push(current);
+      }
+      const route = m[1] || '';
+      const tsRaw = (m[2] || '').trim();
+      const [from = '', to = ''] = route.split('→').map(s => s.trim());
+      const ts = asIsoOrNull(tsRaw) || null;
+      current = { from, to, ts, tsRaw, body: [] };
+      continue;
+    }
+    if (current) current.body.push(line);
+  }
+
+  if (current) {
+    current.body = current.body.join('\n').trim();
+    entries.push(current);
+  }
+
+  return entries;
+}
+
+function shortTaskTitle(text, maxLen = 80) {
+  const oneLine = asString(text, '')
+    .split('\n')
+    .map(s => s.trim())
+    .find(Boolean) || 'Chat request';
+  return oneLine.length > maxLen ? `${oneLine.slice(0, maxLen - 1)}…` : oneLine;
+}
+
+function deriveCommsTasksAndProjects(agentIds, comms, tasks, agents, projectsRaw) {
+  const existingTaskIds = new Set(asArray(tasks).map(t => asString(t?.id)));
+  const explicitProjectIds = new Set(asArray(projectsRaw).map(p => asString(p?.id)));
+  const agentStatusMap = new Map(asArray(agents).map(a => [asString(a?.id), asString(a?.status).toLowerCase()]));
+
+  const derivedTasks = [];
+  const projectTaskMap = new Map();
+
+  for (const agentId of agentIds) {
+    const inboxEntries = parseCommsEntries(comms?.[agentId]?.inbox || '');
+    const outboxEntries = parseCommsEntries(comms?.[agentId]?.outbox || '')
+      .filter(e => e.ts)
+      .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
+
+    const derivedProjectId = `chat-${agentId}`;
+    for (const entry of inboxEntries) {
+      const from = asString(entry.from).toUpperCase();
+      if (!from.includes('HUMAN')) continue;
+
+      const tsSeed = entry.ts || entry.tsRaw || `${Date.now()}`;
+      const safeTs = tsSeed.replace(/[^0-9A-Za-z]/g, '').slice(0, 18);
+      const taskId = `chat-${agentId}-${safeTs || Date.now()}`;
+      if (existingTaskIds.has(taskId)) continue;
+
+      const createdAt = entry.ts || new Date().toISOString();
+      const agentStatus = agentStatusMap.get(agentId) || 'available';
+      const response = outboxEntries.find(o => o.ts && new Date(o.ts).getTime() >= new Date(createdAt).getTime());
+      const isDone = Boolean(response);
+      const status = isDone ? 'complete' : (agentStatus === 'busy' || agentStatus === 'running' ? 'in-progress' : 'pending');
+
+      derivedTasks.push({
+        id: taskId,
+        title: shortTaskTitle(entry.body),
+        description: entry.body || '',
+        status,
+        assigned_to: agentId,
+        project_id: derivedProjectId,
+        source: 'comms',
+        created_at: createdAt,
+        updated_at: response?.ts || createdAt,
+        completed_at: isDone ? response.ts : null,
+        output: isDone ? shortTaskTitle(response.body, 140) : '',
+        depends_on: [],
+        chat: {
+          from: entry.from,
+          to: entry.to,
+          responded: isDone,
+          response_ts: response?.ts || null,
+        },
+      });
+      existingTaskIds.add(taskId);
+
+      if (!projectTaskMap.has(derivedProjectId)) projectTaskMap.set(derivedProjectId, []);
+      projectTaskMap.get(derivedProjectId).push(taskId);
+    }
+  }
+
+  const derivedProjects = [];
+  for (const [projectId, taskIds] of projectTaskMap.entries()) {
+    if (taskIds.length === 0) continue;
+    if (explicitProjectIds.has(projectId)) continue;
+    const owner = projectId.replace(/^chat-/, '');
+    const createdAt = derivedTasks
+      .filter(t => t.project_id === projectId)
+      .map(t => t.created_at)
+      .filter(Boolean)
+      .sort()[0] || new Date().toISOString();
+    const hasOpen = derivedTasks.some(t => t.project_id === projectId && t.status !== 'complete');
+
+    derivedProjects.push({
+      id: projectId,
+      name: `Chat Channel: ${owner}`,
+      description: `Auto-derived from HUMAN ↔ ${owner.toUpperCase()} chat messages.`,
+      status: hasOpen ? 'active' : 'complete',
+      owner,
+      created_at: createdAt,
+      updated_at: new Date().toISOString(),
+      task_ids: taskIds,
+      job_ids: [],
+      tags: ['chat-derived'],
+      auto_project_channel: true,
+    });
+  }
+
+  return { derivedTasks, derivedProjects };
+}
+
+function applyProjectFilters(projects, filters = {}) {
+  const q = asString(filters.search || '').trim().toLowerCase();
+  const statusFilter = asString(filters.status || '').trim().toLowerCase();
+  const ownerFilter = asString(filters.owner || '').trim().toLowerCase();
+  const riskFilter = asString(filters.risk || '').trim().toLowerCase();
+  const sort = asString(filters.sort || '').trim().toLowerCase();
+
+  let out = asArray(projects).filter((p) => {
+    if (statusFilter && asString(p.status).toLowerCase() !== statusFilter) return false;
+    if (ownerFilter && asString(p.owner).toLowerCase() !== ownerFilter) return false;
+    if (q) {
+      const hay = `${asString(p.id)} ${asString(p.name)} ${asString(p.description)} ${(asArray(p.tags).join(' '))}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (riskFilter) {
+      const unresolved = asArray(p._risks).filter((r) => !r?.resolved);
+      const sev = new Set(unresolved.map((r) => asString(r?.severity).toLowerCase()));
+      if (!sev.has(riskFilter)) return false;
+    }
+    return true;
+  });
+
+  if (sort === 'name') {
+    out.sort((a, b) => asString(a.name).localeCompare(asString(b.name)));
+  } else if (sort === 'progress') {
+    out.sort((a, b) => Number(b?._progress_pct || 0) - Number(a?._progress_pct || 0));
+  } else {
+    out.sort((a, b) => new Date(b?.updated_at || b?.created_at || 0).getTime() - new Date(a?.updated_at || a?.created_at || 0).getTime());
+  }
+
+  return out;
 }
 
 function loadCrons() {
@@ -412,6 +793,12 @@ function toggleCronEnabled(id) {
 const updateChecker = new UpdateChecker();
 
 function buildWorkspaceSnapshot(cache, services) {
+  try {
+    syncChannelSessionsToComms();
+  } catch (err) {
+    console.warn(`[dashboard] channel adapter sync failed: ${err.message}`);
+  }
+
   let tasks = asArray(readJson(path.join(WORKSPACE, 'TASKS.json')));
   const agentStatus = asObject(readJson(path.join(WORKSPACE, 'AGENT_STATUS.json')));
   const agentPerf = asObject(readJson(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json')));
@@ -431,6 +818,8 @@ function buildWorkspaceSnapshot(cache, services) {
   const alerts = asArray(readJson(path.join(WORKSPACE, 'ALERTS.json')));
   const projectsStore = readProjectsStore();
   const projectsRaw = asArray(projectsStore.projects);
+  const settings = asObject(readJson(SETTINGS_FILE));
+  const teamInfo = asObject(readJson(path.join(WORKSPACE, 'agi-farm-bundle', 'team.json')));
   const flags = getFeatureFlags();
 
   const crons = loadCrons();
@@ -490,8 +879,12 @@ function buildWorkspaceSnapshot(cache, services) {
       taskIds.add(job.rootTaskId);
     }
   }
-  // Merge explicit tasks + auto-derived from jobs
-  const allTasks = [...tasks, ...derivedTasks];
+  // Derive tasks/projects from chat channels (HUMAN inbox messages + agent outbox responses).
+  const { derivedTasks: commsDerivedTasks, derivedProjects: commsDerivedProjects } =
+    deriveCommsTasksAndProjects(Object.keys(agentStatus), comms, tasks, agents, projectsRaw);
+
+  // Merge explicit tasks + auto-derived from jobs + comms-derived tasks
+  const allTasks = [...tasks, ...derivedTasks, ...commsDerivedTasks];
   const taskCounts = {
     total: allTasks.length,
     pending: allTasks.filter((t) => t.status === 'pending').length,
@@ -529,14 +922,22 @@ function buildWorkspaceSnapshot(cache, services) {
     }
   }
 
-  // Merge: explicit projects from PROJECTS.json + auto-derived from jobs
-  const allProjectsRaw = [...projectsRaw, ...Object.values(jobProjects)];
+  // Merge: explicit projects + auto-derived from jobs + chat-derived projects
+  const allProjectsRaw = [...projectsRaw, ...Object.values(jobProjects), ...commsDerivedProjects];
   const projects = enrichProjects(allProjectsRaw, allTasks, agentPerf);
   const projectEvents = services.timeline ? services.timeline.list(null, { limit: 120 }) : [];
 
   return {
     timestamp: new Date().toISOString(),
     workspace: WORKSPACE,
+    workspace_meta: {
+      path: WORKSPACE,
+      team_name: asString(teamInfo.team_name || ''),
+      orchestrator_name: asString(teamInfo.orchestrator_name || ''),
+      version: PKG_VERSION,
+      pid: process.pid,
+    },
+    version: PKG_VERSION,
     tasks: allTasks,
     task_counts: taskCounts,
     hitl_tasks: hitlTasks,
@@ -564,6 +965,7 @@ function buildWorkspaceSnapshot(cache, services) {
     projects,
     project_defaults: projectsStore.defaults,
     project_events: projectEvents,
+    settings,
     comms,
     jobs,
     approvals,
@@ -778,15 +1180,28 @@ async function main() {
 
   const reactDist = path.join(__dirname, '..', 'dashboard-react', 'dist');
   const fallbackDist = path.join(__dirname, '..', 'dashboard-dist');
+  const staticOptions = {
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, filePath) => {
+      const ext = path.extname(filePath).toLowerCase();
+      if (ext === '.html') {
+        res.setHeader('Cache-Control', 'no-store');
+        return;
+      }
+      // Prevent stale lazy chunks after dashboard updates.
+      res.setHeader('Cache-Control', 'no-store');
+    },
+  };
 
   let staticRoot = null;
   if (fs.existsSync(reactDist)) {
     staticRoot = reactDist;
-    app.use(express.static(reactDist));
+    app.use(express.static(reactDist, staticOptions));
     console.log(`[dashboard] Serving React build from ${reactDist}`);
   } else if (fs.existsSync(fallbackDist)) {
     staticRoot = fallbackDist;
-    app.use(express.static(fallbackDist));
+    app.use(express.static(fallbackDist, staticOptions));
     console.log(`[dashboard] Serving React build from ${fallbackDist}`);
   } else {
     console.log('[dashboard] React build not found, serving API only');
@@ -855,7 +1270,7 @@ async function main() {
       search: req.query.search ? String(req.query.search) : undefined,
       sort: req.query.sort ? String(req.query.sort) : undefined,
     };
-    const projects = services.projects.list(filters, snapshot.tasks || [], asObject(readJson(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json'))));
+    const projects = applyProjectFilters(snapshot.projects || [], filters);
     res.json({ projects, defaults: services.projects.getDefaults() });
   });
 
@@ -875,7 +1290,7 @@ async function main() {
 
   app.get('/api/projects/:id', validateId, (req, res) => {
     const snapshot = buildWorkspaceSnapshot(cache, services);
-    const project = services.projects.get(req.params.id, snapshot.tasks || [], asObject(readJson(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json'))));
+    const project = asArray(snapshot.projects || []).find((p) => p.id === req.params.id) || null;
     if (!project) {
       res.status(404).json({ error: 'project_not_found' });
       return;
@@ -1417,6 +1832,20 @@ async function main() {
 
   app.get('/api/usage', requireFeature('metering'), (req, res) => {
     res.json(services.metering.getUsage());
+  });
+
+  app.post('/api/settings', actionLimiter, requireCsrf, createPolicyGate(services, () => 'settings:update'), (req, res) => {
+    try {
+      const next = sanitizeSettingsPatch(req.body);
+      withFileLockSync(SETTINGS_FILE, () => {
+        safeWriteJson(SETTINGS_FILE, next);
+      });
+      services.audit.log('settings_updated', { keys: Object.keys(next) });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, settings: next });
+    } catch (err) {
+      res.status(500).json({ error: 'settings_update_failed', message: err.message });
+    }
   });
 
   // ── Broadcast Endpoint ─────────────────────────────────────────────────

@@ -21,6 +21,7 @@ export function useDashboard() {
   const applyData = useCallback((d) => {
     if (!d || d.error || d.type === 'keepalive') return;
     setData(prev => ({ ...d })); // spread forces new reference → guaranteed re-render
+    setConnected(true);
     setLastUpdated(new Date());
     setUpdateCount(n => n + 1);
   }, []);

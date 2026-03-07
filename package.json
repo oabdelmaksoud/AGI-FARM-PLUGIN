@@ -1,6 +1,6 @@
 {
   "name": "agi-farm",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "description": "Multi-agent AI team builder for OpenClaw — bootstrap complete teams with auto-dispatcher, dashboard, and infrastructure",
   "main": "dist/index.js",
   "type": "module",
@@ -67,7 +67,9 @@
     "test:install:real-openclaw": "bash scripts/test-install-smoke.sh",
     "start-dashboard": "node server/dashboard.js",
     "validate": "node scripts/validate-config.js",
-    "lint": "eslint src --ext .ts,.js"
+    "lint": "eslint src --ext .ts,.js",
+    "sync:lobsterboard": "node scripts/sync-lobsterboard-upstream.js",
+    "sync:lobsterboard:check": "node scripts/sync-lobsterboard-upstream.js --dry-run"
   },
   "keywords": [
     "openclaw",

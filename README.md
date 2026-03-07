@@ -37,6 +37,29 @@
 
 ---
 
+## 🙏 Upstream Acknowledgement
+
+Parts of AGI Farm dashboard direction are inspired by the excellent work in **LobsterBoard** by [Curbob](https://github.com/Curbob):
+
+- Upstream repository: https://github.com/Curbob/LobsterBoard
+- Upstream license: Business Source License 1.1 (BSL-1.1)
+
+AGI Farm does not copy LobsterBoard code directly; features are re-implemented for AGI Farm architecture and compatibility.
+
+### 🔄 Always-Sync Policy
+
+To stay aligned with upstream updates, this repo now includes:
+
+- Automated scheduled sync workflow: `.github/workflows/lobsterboard-upstream-sync.yml`
+- Local sync script: `npm run sync:lobsterboard`
+- Snapshot mirror for review/porting: `upstream/lobsterboard/`
+- Tracking file: `lobsterboard-resources/LOBSTERBOARD_VERSION`
+- Parity plan: `docs/LOBSTERBOARD_PARITY.md`
+
+This keeps upstream diffs visible in PRs so feature ports can be done continuously.
+
+---
+
 ## 🆕 What's New in v1.8.0
 
 ### 🎨 Complete Dashboard Redesign — Day Theme (Minimalism 3.0 + Glassmorphism 2.0)

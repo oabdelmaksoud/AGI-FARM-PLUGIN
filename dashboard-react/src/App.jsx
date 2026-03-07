@@ -1,32 +1,33 @@
-import { Suspense, lazy, useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useDashboard } from './hooks/useDashboard';
 import Header from './components/Header';
 import Nav from './components/Nav';
 import { useToast } from './components/Toast';
+import { lazyWithRetry } from './lib/lazyWithRetry';
 
-const Overview = lazy(() => import('./components/tabs/Overview'));
-const Agents = lazy(() => import('./components/tabs/Agents'));
-const Tasks = lazy(() => import('./components/tabs/Tasks'));
-const Projects = lazy(() => import('./components/tabs/Projects'));
-const Jobs = lazy(() => import('./components/tabs/Jobs'));
-const Approvals = lazy(() => import('./components/tabs/Approvals'));
-const Usage = lazy(() => import('./components/tabs/Usage'));
-const Crons = lazy(() => import('./components/tabs/Crons'));
-const HITLTab = lazy(() => import('./components/tabs/HITL'));
-const AlertsTab = lazy(() => import('./components/tabs/Alerts'));
-const Velocity = lazy(() => import('./components/tabs/Velocity'));
-const Budget = lazy(() => import('./components/tabs/Budget'));
-const OKRs = lazy(() => import('./components/tabs/OKRs'));
-const Knowledge = lazy(() => import('./components/tabs/Knowledge'));
-const Comms = lazy(() => import('./components/tabs/Comms'));
-const Memory = lazy(() => import('./components/tabs/Memory'));
-const Processes = lazy(() => import('./components/tabs/Processes'));
-const Failures = lazy(() => import('./components/tabs/Failures'));
-const Decisions = lazy(() => import('./components/tabs/Decisions'));
-const Security = lazy(() => import('./components/tabs/Security'));
-const Policies = lazy(() => import('./components/tabs/Policies'));
-const AuditLog = lazy(() => import('./components/tabs/AuditLog'));
-const Settings = lazy(() => import('./components/tabs/Settings'));
+const Overview = lazyWithRetry(() => import('./components/tabs/Overview'));
+const Agents = lazyWithRetry(() => import('./components/tabs/Agents'));
+const Tasks = lazyWithRetry(() => import('./components/tabs/Tasks'));
+const Projects = lazyWithRetry(() => import('./components/tabs/Projects'));
+const Jobs = lazyWithRetry(() => import('./components/tabs/Jobs'));
+const Approvals = lazyWithRetry(() => import('./components/tabs/Approvals'));
+const Usage = lazyWithRetry(() => import('./components/tabs/Usage'));
+const Crons = lazyWithRetry(() => import('./components/tabs/Crons'));
+const HITLTab = lazyWithRetry(() => import('./components/tabs/HITL'));
+const AlertsTab = lazyWithRetry(() => import('./components/tabs/Alerts'));
+const Velocity = lazyWithRetry(() => import('./components/tabs/Velocity'));
+const Budget = lazyWithRetry(() => import('./components/tabs/Budget'));
+const OKRs = lazyWithRetry(() => import('./components/tabs/OKRs'));
+const Knowledge = lazyWithRetry(() => import('./components/tabs/Knowledge'));
+const Comms = lazyWithRetry(() => import('./components/tabs/Comms'));
+const Memory = lazyWithRetry(() => import('./components/tabs/Memory'));
+const Processes = lazyWithRetry(() => import('./components/tabs/Processes'));
+const Failures = lazyWithRetry(() => import('./components/tabs/Failures'));
+const Decisions = lazyWithRetry(() => import('./components/tabs/Decisions'));
+const Security = lazyWithRetry(() => import('./components/tabs/Security'));
+const Policies = lazyWithRetry(() => import('./components/tabs/Policies'));
+const AuditLog = lazyWithRetry(() => import('./components/tabs/AuditLog'));
+const Settings = lazyWithRetry(() => import('./components/tabs/Settings'));
 
 const TAB_COMPONENTS = {
   'Overview': Overview,
@@ -118,4 +119,3 @@ export default function App() {
     </div>
   );
 }
-
