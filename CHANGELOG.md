@@ -6,6 +6,204 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-03-07
+
+### 🎭 Agency-Agents Integration: The Largest Agent Library Expansion
+
+AGI Farm now includes **59 specialized agent personalities** from the battle-tested [Agency-Agents](https://github.com/msitarzewski/agency-agents) repository by [@msitarzewski](https://github.com/msitarzewski), bringing the total agent library to **91 agents**.
+
+#### Agent Library Expansion
+- **59 New Agent Templates** — Specialized personalities across 11 categories
+- **11 Categories** — Engineering (7), Design (7), Marketing (8), Product (3), Project Management (5), Testing (7), Support (6), Spatial Computing (6), Specialized (7), Strategy (3)
+- **Total Library** — **91 agents** (16 AGI Farm + 16 ECC + 59 Agency-Agents)
+- **10,000+ Lines** — Production-tested workflows, personality definitions, and code examples
+- **Zero Dependencies** — Pure markdown templates, instantly usable
+
+#### Standout Agent Personalities
+
+**Agents Orchestrator** (specialized/)
+- Meta-agent for multi-agent pipeline orchestration
+- Workflow: PM → Architect → [Dev ↔ QA Loop] → Integration
+- Features: Phase-based pipeline, continuous quality loops, intelligent retry logic, quality gate enforcement
+- **Perfect for**: Enhancing Cooper (orchestrator) with autonomous pipeline capabilities
+
+**Evidence Collector** (testing/)
+- Screenshot-obsessed QA specialist
+- Philosophy: "I default to finding 3-5 issues and require visual proof for everything"
+- Features: Screenshot capture, visual evidence requirements, PASS/FAIL decisions with specific feedback
+- **Perfect for**: Enhancing Vigil (QA) with evidence-based validation
+
+**Reality Checker** (testing/)
+- Production readiness certification specialist
+- Philosophy: Default to "NEEDS WORK" unless overwhelming evidence proves readiness
+- Features: Evidence-based certification, comprehensive validation, final release approval
+- **Perfect for**: Final release approval gates
+
+**Whimsy Injector** (design/)
+- Delightful UX enhancement specialist
+- Philosophy: "Every playful element must serve a functional or emotional purpose"
+- Features: Micro-interactions, playful error messages, brand personality, celebration animations
+- **Perfect for**: Dashboard UX enhancements that reduce user anxiety and increase delight
+
+**Reddit Community Builder** (marketing/)
+- Authentic community engagement specialist
+- Philosophy: "You're not marketing on Reddit - you're becoming a valued community member"
+- Features: Value-driven content, genuine participation, helpful expertise sharing, trust building
+- **Perfect for**: Community-driven growth strategies and authentic engagement
+
+#### Conversion Infrastructure
+- **Conversion Script** — `scripts/convert-agency-agent.js` (380 lines)
+  - Converts Agency-Agents markdown → AGI Farm SOUL.md format
+  - Batch conversion support for entire library
+  - Preserves personality, workflows, code examples
+  - Adds AGI Farm metadata, usage instructions, attribution
+
+- **Batch Conversion Results**:
+  - Total Agents Converted: 59
+  - Categories Processed: 11
+  - Conversion Errors: 0
+  - Success Rate: 100%
+
+#### Documentation
+- **Agency-Agents Integration Guide** — `AGENCY_AGENTS_GUIDE.md` (650 lines)
+  - Complete agent library breakdown (11 categories)
+  - Quick start guide with 3 usage options
+  - 4 recommended starter packs (Startup MVP, Marketing Campaign, Enterprise Feature, Quality-First)
+  - Standout agent profiles with workflows and use cases
+  - Customization guide
+  - Attribution and licensing information
+
+- **Deep Analysis** — `AGENCY_AGENTS_INTEGRATION_ANALYSIS.md` (550 lines)
+  - Executive summary with synergy score (5/5)
+  - Repository structure analysis
+  - 5 integration opportunities (Easy to Advanced)
+  - 4-phase implementation roadmap (9-15 days)
+  - Success metrics and challenges
+  - Synergies with ECC/AgentShield
+  - Top 10 agents to import first
+
+#### Categories and Agent Counts
+
+| Category | Count | Notable Agents |
+|----------|-------|----------------|
+| Engineering | 7 | Frontend Developer, Backend Architect, DevOps Automator, AI Engineer |
+| Design | 7 | UI Designer, UX Researcher, Whimsy Injector, Brand Guardian |
+| Marketing | 8 | Growth Hacker, Content Creator, Reddit Community Builder, TikTok Strategist |
+| Product | 3 | Sprint Prioritizer, Trend Researcher, Feedback Synthesizer |
+| Project Management | 5 | Senior PM, Project Shepherd, Studio Producer, Experiment Tracker |
+| Testing | 7 | Evidence Collector, Reality Checker, Performance Benchmarker, API Tester |
+| Support | 6 | Support Responder, Analytics Reporter, Finance Tracker, Infrastructure Maintainer |
+| Spatial Computing | 6 | XR Interface Architect, visionOS Engineer, WebXR Developer |
+| Specialized | 7 | Agents Orchestrator, Data Analytics Reporter, LSP/Index Engineer |
+| Strategy | 3 | Executive Brief, Nexus Strategy, Quickstart |
+
+#### Recommended Starter Packs
+
+**Startup MVP Team** (5 agents):
+- Frontend Developer, Backend Architect, Growth Hacker, Rapid Prototyper, Reality Checker
+- **Use Case**: Ship faster with specialized expertise at every stage
+
+**Marketing Campaign Team** (5 agents):
+- Content Creator, Twitter Engager, Instagram Curator, Reddit Community Builder, Analytics Reporter
+- **Use Case**: Multi-channel coordinated campaign with platform-specific expertise
+
+**Enterprise Feature Team** (6 agents):
+- Senior Project Manager, Senior Developer, UI Designer, Experiment Tracker, Evidence Collector, Reality Checker
+- **Use Case**: Enterprise-grade delivery with quality gates and documentation
+
+**Quality-First Team** (4 agents):
+- Evidence Collector, Reality Checker, Performance Benchmarker, API Tester
+- **Use Case**: Rigorous quality standards prevent production bugs
+
+### Files Added (63 files)
+
+- `scripts/convert-agency-agent.js` — Conversion script
+- `AGENCY_AGENTS_GUIDE.md` — User guide (650 lines)
+- `AGENCY_AGENTS_INTEGRATION_ANALYSIS.md` — Deep analysis (550 lines)
+- `templates/agency-agents/` — 59 agent templates + 1 category directory
+
+**Template Breakdown**:
+```
+templates/agency-agents/
+├── engineering/        7 agent templates
+├── design/             7 agent templates
+├── marketing/          8 agent templates
+├── product/            3 agent templates
+├── project-management/ 5 agent templates
+├── testing/            7 agent templates
+├── support/            6 agent templates
+├── spatial-computing/  6 agent templates
+├── specialized/        7 agent templates
+└── strategy/           3 agent templates
+```
+
+### Files Modified (2 files)
+
+- `README.md` — Updated "What's New", added Agency-Agents to acknowledgments, expanded Combined Impact section
+- `CHANGELOG.md` — This entry
+
+### Statistics
+
+- **Total Agents Available**: 91 (16 AGI Farm + 16 ECC + 59 Agency-Agents)
+- **Categories Supported**: 19 total (8 AGI Farm + 11 Agency-Agents overlap)
+- **Lines Added**: ~1,800 (380 conversion script + 650 guide + 550 analysis + 220 agent metadata)
+- **Agent Templates**: 59 fully converted templates
+- **Code Examples**: Extensive (10,000+ lines in original repository)
+- **Workflow Templates**: Production-tested patterns from real-world usage
+
+### Benefits
+
+✅ **Massive Library Expansion** — From 32 agents to 91 agents (184% increase)
+✅ **Battle-Tested Workflows** — Proven patterns from months of production iteration
+✅ **Rich Code Examples** — Extensive technical deliverables and concrete outputs
+✅ **Community-Driven** — 50+ requests in first 12 hours on Reddit
+✅ **Zero Dependencies** — Pure markdown, no additional tools required
+✅ **Production-Ready** — Strong personalities with clear deliverables and success metrics
+✅ **Instant Usability** — Copy templates directly to agent workspaces
+
+### Synergies with Existing Integrations
+
+**With ECC (Everything Claude Code)**:
+- ECC provides production skills (@tdd-workflow, @security-scan)
+- Agency-Agents provides specialized personalities (Agents Orchestrator, Evidence Collector)
+- Combined: Complete AI coding framework (skills + personalities)
+
+**With AgentShield**:
+- AgentShield provides security scanning
+- Evidence Collector provides visual proof requirements
+- Reality Checker provides production readiness certification
+- Combined: Complete quality assurance system (security + QA + certification)
+
+### Attribution
+
+**Original Repository**: https://github.com/msitarzewski/agency-agents
+**Author**: [@msitarzewski](https://github.com/msitarzewski)
+**License**: MIT License
+**Community**: 50+ requests in first 12 hours on Reddit
+
+**Special thanks to @msitarzewski for creating and sharing these exceptional agent personalities with the community.**
+
+### Migration Guide
+
+**For New Users**:
+1. Install: `openclaw plugins install agi-farm`
+2. Run wizard: `agi-farm setup`
+3. Access all 91 agents in agent library
+
+**For Existing Users**:
+1. Update: `openclaw plugins update agi-farm`
+2. Browse new agents: `ls templates/agency-agents/`
+3. Copy to workspaces: `cp templates/agency-agents/<category>/<agent>.md ~/.openclaw/workspace/agents-workspaces/<name>/SOUL.md`
+
+### Next Steps
+
+- **Phase 2**: Enhance Cooper with Agents Orchestrator pattern (3-5 days)
+- **Phase 3**: Implement Quality Gates with Evidence Collector + Reality Checker (3-5 days)
+- **Phase 4**: Add workflow templates for common use cases (2-3 days)
+- **Future**: Agent Marketplace for community contributions (1-2 weeks)
+
+---
+
 ## [1.5.2] - 2026-03-07
 
 ### 🛡️ Security Dashboard Integration

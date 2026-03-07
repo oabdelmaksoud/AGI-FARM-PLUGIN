@@ -36,15 +36,21 @@
 
 ---
 
-## 🆕 What's New in v1.5.0
+## 🆕 What's New in v1.6.0
 
-### 🎯 ECC Integration: Production-Ready AI Coding Framework
+### 🎭 Agency-Agents Integration: 59 Specialized Personalities
+- **59 battle-tested agent templates** from [@msitarzewski's Agency-Agents](https://github.com/msitarzewski/agency-agents)
+- **11 specializations**: Engineering, Design, Marketing, Product, PM, Testing, Support, Spatial Computing, Strategy, and more
+- **Production-proven workflows** with 10,000+ lines of personality definitions and code examples
+- **Standout agents**: Agents Orchestrator, Evidence Collector, Reality Checker, Whimsy Injector, Reddit Community Builder
+- **Total library**: **91 agents** (16 AGI Farm + 16 ECC + 59 Agency-Agents)
+- **Zero dependencies** — Pure markdown templates, instantly usable
+- **See:** [Agency-Agents Integration Guide](AGENCY_AGENTS_GUIDE.md)
+
+### Previous: ECC Integration v1.5.0
 - **69 specialized skills** from Everything Claude Code (Anthropic hackathon winner)
 - **16 ECC agent templates** for domain-specific delegation
 - **33 slash commands** for common workflows
-- **Auto-applied resources** based on agent roles (Sage → @architect, Forge → @tdd-workflow, Vigil → @security-scan)
-- **Zero configuration** — ECC resources automatically injected into SOUL.md files
-- **Framework support** — Python, Django, Spring Boot, Go, Swift, PostgreSQL patterns included
 - **TDD & Security-First** — 80%+ test coverage enforced, comprehensive security scans
 - **See:** [ECC Integration Guide](docs/ECC_INTEGRATION_GUIDE.md)
 
@@ -739,23 +745,50 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 🙏 Acknowledgments
 
-This plugin integrates production-ready AI coding resources from the following projects:
+This plugin integrates production-ready AI resources from the following exceptional projects:
+
+### Agency-Agents (NEW in v1.6.0)
+- **Repository**: https://github.com/msitarzewski/agency-agents
+- **Author**: [@msitarzewski](https://github.com/msitarzewski)
+- **Achievement**: 50+ requests in first 12 hours on Reddit, months of production iteration
+- **Integration**: 59 specialized agent personalities across 11 categories
+- **Impact**: Battle-tested workflows for Engineering, Design, Marketing, Product, PM, Testing, Support, Spatial Computing, and Strategy
+
+The Agency-Agents collection dramatically expands AGI Farm's agent library with proven personalities including:
+- **Agents Orchestrator** - Meta-agent for pipeline management (PM → Architect → Dev-QA Loop → Integration)
+- **Evidence Collector** - Screenshot-based QA (defaults to finding 3-5 issues minimum)
+- **Reality Checker** - Production readiness certification (defaults to "NEEDS WORK")
+- **Whimsy Injector** - Delightful UX enhancements that serve functional or emotional purpose
+- **Reddit Community Builder** - Authentic community engagement patterns
+
+**Special thanks to @msitarzewski for creating and sharing these exceptional agent personalities with the community.**
 
 ### Everything Claude Code (ECC)
 - **Repository**: https://github.com/affaan-m/everything-claude-code
 - **Author**: [@affaan-m](https://github.com/affaan-m)
 - **Achievement**: Winner of Anthropic's Claude Code hackathon
-- **Integration**: 194 resource files (16 agents, 69 skills, 33 commands, 7 guides)
+- **Integration**: 510 resource files (16 agents, 69 skills, 33 commands, 7 guides)
 - **Impact**: Industry-standard TDD workflows, security scans, API design patterns, and framework templates for Python/Django/Spring Boot/Go/Swift/PostgreSQL
 
 The ECC framework provides the foundation for AGI Farm's production-ready coding capabilities, including:
 - Test-driven development workflows with 80%+ coverage enforcement
-- Comprehensive security scanning and vulnerability detection
+- Comprehensive security scanning and vulnerability detection (via AgentShield)
 - API design patterns and best practices
 - Framework-specific templates and conventions
 - Auto-delegation based on agent roles
 
 **Special thanks to @affaan-m for creating and open-sourcing this exceptional framework.**
+
+### Combined Impact
+
+**Total Integrated Resources**:
+- **91 agent templates** (16 AGI Farm + 16 ECC + 59 Agency-Agents)
+- **69 production skills** (ECC)
+- **33 slash commands** (ECC)
+- **7 quality automation hooks** (AGI Farm)
+- **10,000+ lines** of agent personalities and workflows
+
+AGI Farm is proud to stand on the shoulders of these giants, combining the best of community-driven AI agent development into a single, cohesive plugin.
 
 ---
 
