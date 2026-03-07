@@ -1,0 +1,736 @@
+# Instincts generated from https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+# Generated: 2026-03-07T08:07:37.553Z
+# Version: 2.0
+
+---
+id: AGI-FARM-PLUGIN-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: feat, fix, docs, chore, release
+
+## Evidence
+
+- 99 commits analyzed
+- Detected conventional commit pattern
+- Examples: chore: Update package-lock.json after dependency install, feat: Release v1.7.1 — File locking, CSRF rotation, audit pagination
+
+---
+id: AGI-FARM-PLUGIN-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Commit Length
+
+## Action
+
+Write moderate-length commit messages (~50 characters)
+
+## Evidence
+
+- Average commit message length: 63 chars
+- Based on 99 commits
+
+---
+id: AGI-FARM-PLUGIN-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: AGI-FARM-PLUGIN-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Export Style
+
+## Action
+
+Prefer default exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: default
+
+---
+id: AGI-FARM-PLUGIN-arch-type-based
+trigger: "when adding new code"
+confidence: 0.8
+domain: architecture
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Arch Type Based
+
+## Action
+
+Place code in the appropriate type folder (components/, services/, utils/, etc.)
+
+## Evidence
+
+- Type-based module organization detected
+- Folders: 
+
+---
+id: AGI-FARM-PLUGIN-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: AGI-FARM-PLUGIN-test-framework
+trigger: "when writing tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Test Framework
+
+## Action
+
+Use jest as the test framework
+
+## Evidence
+
+- Test framework detected: jest
+- File pattern: *.test.js
+
+---
+id: AGI-FARM-PLUGIN-test-naming
+trigger: "when creating a test file"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Test Naming
+
+## Action
+
+Name test files using the pattern: *.test.js
+
+## Evidence
+
+- File pattern: *.test.js
+- Consistent across test files
+
+---
+id: AGI-FARM-PLUGIN-test-types
+trigger: "when planning tests for a feature"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Test Types
+
+## Action
+
+Write unit, integration tests to match project standards
+
+## Evidence
+
+- Test types detected: unit, integration
+- Coverage config: yes
+
+---
+id: AGI-FARM-PLUGIN-workflow-database-migration
+trigger: "when modifying the database schema or adding tables"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Workflow Database Migration
+
+## Action
+
+Follow the database-migration workflow:
+1. Create migration file
+2. Update schema definitions
+3. Generate/update types
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: **/schema.*, migrations/*
+
+---
+id: AGI-FARM-PLUGIN-workflow-feature-development
+trigger: "when implementing a new feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Workflow Feature Development
+
+## Action
+
+Follow the feature-development workflow:
+1. Add feature implementation
+2. Add tests for feature
+3. Update documentation
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~14x per month
+- Files: dashboard-react/src/components/*, dashboard-react/src/components/tabs/*, /*
+
+---
+id: AGI-FARM-PLUGIN-workflow-test-driven-development
+trigger: "when adding new functionality"
+confidence: 0.7
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Workflow Test Driven Development
+
+## Action
+
+Follow the test-driven-development workflow:
+1. Write failing test
+2. Implement code to pass test
+3. Refactor if needed
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~4x per month
+- Files: **/*.test.*, **/*.spec.*, src/**/*
+
+---
+id: AGI-FARM-PLUGIN-workflow-version-release-workflow
+trigger: "when doing version release workflow"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Workflow Version Release Workflow
+
+## Action
+
+Follow the version-release-workflow workflow:
+1. Update package.json version
+2. Update openclaw.plugin.json version
+3. Update CHANGELOG.md with release notes
+4. Sometimes update package-lock.json
+5. Sometimes update README.md
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~15x per month
+- Files: package.json, openclaw.plugin.json, CHANGELOG.md
+
+---
+id: AGI-FARM-PLUGIN-workflow-dashboard-rebuild-workflow
+trigger: "when doing dashboard rebuild workflow"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Workflow Dashboard Rebuild Workflow
+
+## Action
+
+Follow the dashboard-rebuild-workflow workflow:
+1. Modify React components in dashboard-react/src/
+2. Run build process
+3. Update dashboard-dist/ with new compiled assets
+4. Update index.html with new asset hashes
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~10x per month
+- Files: dashboard-react/src/components/**/*.jsx, dashboard-dist/assets/*.js, dashboard-dist/assets/*.css
+
+---
+id: AGI-FARM-PLUGIN-workflow-server-api-endpoint-workflow
+trigger: "when doing server api endpoint workflow"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Workflow Server Api Endpoint Workflow
+
+## Action
+
+Follow the server-api-endpoint-workflow workflow:
+1. Add new endpoint to server/dashboard.js
+2. Create or update service in server/services/
+3. Update React components to use new API
+4. Rebuild dashboard-dist
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~8x per month
+- Files: server/dashboard.js, server/services/*.js, dashboard-react/src/components/**/*.jsx
+
+---
+id: AGI-FARM-PLUGIN-workflow-security-hardening-workflow
+trigger: "when doing security hardening workflow"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Workflow Security Hardening Workflow
+
+## Action
+
+Follow the security-hardening-workflow workflow:
+1. Update server endpoints with CSRF protection
+2. Add input sanitization
+3. Update React components with safety guards
+4. Add validation checks
+5. Update tests
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~6x per month
+- Files: server/dashboard.js, dashboard-react/src/components/**/*.jsx, tests/*.test.js
+
+---
+id: AGI-FARM-PLUGIN-workflow-documentation-update-workflow
+trigger: "when doing documentation update workflow"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Workflow Documentation Update Workflow
+
+## Action
+
+Follow the documentation-update-workflow workflow:
+1. Create new .md documentation file
+2. Update README.md with new sections
+3. Update CHANGELOG.md with changes
+4. Sometimes add multiple related documentation files
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~12x per month
+- Files: *.md, README.md, CHANGELOG.md
+
+---
+id: AGI-FARM-PLUGIN-workflow-ecc-integration-workflow
+trigger: "when doing ecc integration workflow"
+confidence: 0.65
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Workflow Ecc Integration Workflow
+
+## Action
+
+Follow the ecc-integration-workflow workflow:
+1. Add/update files in ecc-resources/
+2. Update integration scripts
+3. Update documentation
+4. Update version tracking
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~3x per month
+- Files: ecc-resources/**/*.md, scripts/update-ecc-resources.js, ecc-resources/ECC_VERSION
+
+---
+id: AGI-FARM-PLUGIN-workflow-template-agent-workflow
+trigger: "when doing template agent workflow"
+confidence: 0.7
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# AGI FARM PLUGIN Workflow Template Agent Workflow
+
+## Action
+
+Follow the template-agent-workflow workflow:
+1. Create or update template files
+2. Add agent .md files
+3. Update template processing scripts
+4. Sometimes update mappings or configuration
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~4x per month
+- Files: templates/**/*.md, templates/agency-agents/**/*.md, scripts/convert-agency-agent.js
+
+---
+id: agi-farm-plugin-conventional-commits
+trigger: "When making a commit"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Conventional Commits
+
+## Action
+
+Use conventional commit format: type(scope): description, keeping length around 63 characters
+
+## Evidence
+
+- All commits follow conventional format
+- Average length 63 chars
+- Prefixes: feat, fix, docs, chore, release
+
+---
+id: agi-farm-plugin-camel-case-files
+trigger: "When creating new JavaScript files"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Camel Case Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Naming conventions show camelCase for files
+- Consistent across dashboard-react and server folders
+
+---
+id: agi-farm-plugin-pascal-case-classes
+trigger: "When defining a class"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Pascal Case Classes
+
+## Action
+
+Use PascalCase naming convention
+
+## Evidence
+
+- Code style analysis shows PascalCase for classes
+- Consistent with JavaScript best practices
+
+---
+id: agi-farm-plugin-screaming-snake-constants
+trigger: "When defining constants"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Screaming Snake Constants
+
+## Action
+
+Use SCREAMING_SNAKE_CASE naming convention
+
+## Evidence
+
+- Code style shows SCREAMING_SNAKE_CASE for constants
+- Standard JavaScript convention followed
+
+---
+id: agi-farm-plugin-jest-testing
+trigger: "When writing tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Jest Testing
+
+## Action
+
+Use Jest framework with *.test.js file pattern
+
+## Evidence
+
+- Jest config present
+- Test pattern *.test.js
+- Coverage config enabled
+
+---
+id: agi-farm-plugin-try-catch-errors
+trigger: "When handling errors"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Try Catch Errors
+
+## Action
+
+Use try-catch blocks for error handling
+
+## Evidence
+
+- Error handling style is try-catch
+- No custom error classes or global handlers detected
+
+---
+id: agi-farm-plugin-version-release
+trigger: "When releasing a new version"
+confidence: 0.95
+domain: workflow
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Version Release
+
+## Action
+
+Update package.json version, openclaw.plugin.json version, and CHANGELOG.md with release notes
+
+## Evidence
+
+- 15 occurrences of version-release-workflow
+- Consistent pattern across package.json, openclaw.plugin.json, CHANGELOG.md
+
+---
+id: agi-farm-plugin-dashboard-rebuild
+trigger: "When modifying React components in dashboard-react/src/"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Dashboard Rebuild
+
+## Action
+
+Rebuild dashboard-dist/ with new compiled assets and update index.html with new asset hashes
+
+## Evidence
+
+- 10 occurrences of dashboard-rebuild-workflow
+- Clear pattern of React changes followed by dist updates
+
+---
+id: agi-farm-plugin-api-endpoint-addition
+trigger: "When adding new server functionality"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Api Endpoint Addition
+
+## Action
+
+Add endpoint to server/dashboard.js, create/update service in server/services/, update React components, then rebuild dashboard-dist
+
+## Evidence
+
+- 8 occurrences of server-api-endpoint-workflow
+- Consistent full-stack update pattern
+
+---
+id: agi-farm-plugin-security-hardening
+trigger: "When implementing security improvements"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Security Hardening
+
+## Action
+
+Apply CSRF protection to server endpoints, add input sanitization, update React components with safety guards, add validation checks, and update tests
+
+## Evidence
+
+- 6 occurrences of security-hardening-workflow
+- Multi-layer security approach pattern
+
+---
+id: agi-farm-plugin-documentation-update
+trigger: "When documenting new features or processes"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Documentation Update
+
+## Action
+
+Create new .md documentation file, update README.md with new sections, and update CHANGELOG.md
+
+## Evidence
+
+- 12 occurrences of documentation-update-workflow
+- Comprehensive documentation pattern
+
+---
+id: agi-farm-plugin-ecc-sync
+trigger: "When syncing with upstream ECC repository"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Ecc Sync
+
+## Action
+
+Update files in ecc-resources/, update integration scripts, update documentation, and update version tracking
+
+## Evidence
+
+- 3 occurrences of ecc-integration-workflow
+- Specialized ECC resource management pattern
+
+---
+id: agi-farm-plugin-agent-template
+trigger: "When adding new agent personalities or updating existing ones"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Agent Template
+
+## Action
+
+Create/update template files, add agent .md files, update template processing scripts, and update mappings or configuration
+
+## Evidence
+
+- 4 occurrences of template-agent-workflow
+- Agent template management pattern with SOUL.md files
+
+---
+id: agi-farm-plugin-feature-tdd
+trigger: "When implementing new features"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Feature Tdd
+
+## Action
+
+Write failing test first, implement code to pass test, then refactor if needed
+
+## Evidence
+
+- 4 occurrences of test-driven-development workflow
+- TDD pattern with test files preceding implementation
+
+---
+id: agi-farm-plugin-default-exports
+trigger: "When exporting from modules"
+confidence: 0.6
+domain: code-style
+source: repo-analysis
+source_repo: oabdelmaksoud/AGI-FARM-PLUGIN
+---
+
+# Agi Farm Plugin Default Exports
+
+## Action
+
+Use default export style
+
+## Evidence
+
+- Export style identified as default
+- Consistent with single-entry-point architecture
+
