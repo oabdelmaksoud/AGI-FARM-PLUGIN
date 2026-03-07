@@ -619,6 +619,11 @@ function sanitizeNote(note) {
   return cleaned;
 }
 
+function sanitizeText(text, maxLen = 2000) {
+  if (typeof text !== 'string') return '';
+  return text.slice(0, maxLen).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
+}
+
 function requireFeature(name) {
   return (req, res, next) => {
     const flags = getFeatureFlags();
@@ -1327,7 +1332,7 @@ async function main() {
   });
 
   app.post('/api/approvals/:id/approve', actionLimiter, validateId, requireCsrf, requireFeature('approvals'), (req, res) => {
-    const note = typeof req.body?.note === 'string' ? req.body.note.slice(0, 300) : '';
+    const note = sanitizeNote(req.body?.note);
     const out = services.policy.resolveApproval(req.params.id, 'approved', 'human', note);
     if (!out.ok) {
       res.status(400).json(out);
@@ -1339,7 +1344,7 @@ async function main() {
   });
 
   app.post('/api/approvals/:id/reject', actionLimiter, validateId, requireCsrf, requireFeature('approvals'), (req, res) => {
-    const note = typeof req.body?.note === 'string' ? req.body.note.slice(0, 300) : '';
+    const note = sanitizeNote(req.body?.note);
     const out = services.policy.resolveApproval(req.params.id, 'rejected', 'human', note);
     if (!out.ok) {
       res.status(400).json(out);
@@ -1356,7 +1361,7 @@ async function main() {
 
   // ── Broadcast Endpoint ─────────────────────────────────────────────────
   app.post('/api/broadcast', actionLimiter, requireCsrf, (req, res) => {
-    const message = typeof req.body?.message === 'string' ? req.body.message.slice(0, 2000) : '';
+    const message = sanitizeText(req.body?.message, 2000);
     if (!message.trim()) {
       res.status(400).json({ error: 'empty_message' });
       return;
@@ -1387,10 +1392,10 @@ async function main() {
       const existing = asArray(readJson(knowledgePath));
       const entry = {
         id: `kn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        title: typeof title === 'string' ? title.slice(0, 200) : '',
-        content: content.slice(0, 5000),
-        category: typeof category === 'string' ? category.slice(0, 50) : 'general',
-        tags: Array.isArray(tags) ? tags.map(t => String(t).slice(0, 30)).slice(0, 10) : [],
+        title: sanitizeText(title, 200),
+        content: sanitizeText(content, 5000),
+        category: sanitizeText(category, 50) || 'general',
+        tags: Array.isArray(tags) ? tags.map(t => sanitizeText(String(t), 30)).slice(0, 10) : [],
         added_by: 'human',
         confidence: 0.95,
         created_at: new Date().toISOString(),
@@ -1427,7 +1432,7 @@ async function main() {
   // ── Comms Send Endpoint ────────────────────────────────────────────────
   app.post('/api/comms/:id/send', actionLimiter, validateId, requireCsrf, (req, res) => {
     const agentId = req.params.id;
-    const message = typeof req.body?.message === 'string' ? req.body.message.slice(0, 2000) : '';
+    const message = sanitizeText(req.body?.message, 2000);
     if (!message.trim()) {
       res.status(400).json({ error: 'empty_message' });
       return;
@@ -1545,6 +1550,15 @@ async function main() {
   setInterval(() => {
     broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
   }, FALLBACK_MS);
+
+  // Validate workspace directory exists (create if missing)
+  try {
+    fs.mkdirSync(WORKSPACE, { recursive: true });
+    fs.accessSync(WORKSPACE, fs.constants.R_OK | fs.constants.W_OK);
+  } catch (err) {
+    console.error(`[dashboard] Workspace not accessible: ${WORKSPACE} — ${err.message}`);
+    process.exit(1);
+  }
 
   app.listen(PORT, HOST, () => {
     console.log(`[dashboard] AGI Farm Dashboard running at http://${HOST}:${PORT}`);
