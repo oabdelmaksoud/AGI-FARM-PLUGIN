@@ -77,18 +77,32 @@ export class SecurityService {
   }
 
   _calculateGrade(score) {
-    if (score >= 95) return 'A';
-    if (score >= 85) return 'B';
-    if (score >= 70) return 'C';
-    if (score >= 50) return 'D';
+    const numeric = this._numericScore(score);
+    if (numeric >= 95) return 'A';
+    if (numeric >= 85) return 'B';
+    if (numeric >= 70) return 'C';
+    if (numeric >= 50) return 'D';
     return 'F';
+  }
+
+  _numericScore(score) {
+    if (typeof score === 'number' && Number.isFinite(score)) return score;
+    if (score && typeof score === 'object') {
+      if (typeof score.numericScore === 'number' && Number.isFinite(score.numericScore)) {
+        return score.numericScore;
+      }
+      if (typeof score.score === 'number' && Number.isFinite(score.score)) {
+        return score.score;
+      }
+    }
+    return 0;
   }
 
   _calculateTrend(history) {
     if (history.length < 2) return 'stable';
     const recent = history.slice(-3);
-    const first = recent[0]?.score ?? 0;
-    const last = recent[recent.length - 1]?.score ?? 0;
+    const first = this._numericScore(recent[0]?.score);
+    const last = this._numericScore(recent[recent.length - 1]?.score);
     if (last > first + 2) return 'improving';
     if (last < first - 2) return 'degrading';
     return 'stable';
@@ -101,12 +115,14 @@ export class SecurityService {
 
     const findings = scanResult?.findings || { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
     const score = scanResult?.score ?? 100;
+    const numericScore = this._numericScore(score);
     const grade = this._calculateGrade(score);
 
     history.push({
       timestamp: now,
       grade,
       score,
+      numeric_score: numericScore,
       findings_count: Object.values(findings).reduce((a, b) => a + b, 0),
     });
 
@@ -114,6 +130,7 @@ export class SecurityService {
       timestamp: now,
       grade,
       score,
+      numeric_score: numericScore,
       findings,
       details: scanResult?.details || {},
       auto_fixed: scanResult?.auto_fixed || 0,

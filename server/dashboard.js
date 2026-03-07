@@ -467,20 +467,6 @@ function buildWorkspaceSnapshot(cache, services) {
     };
   });
 
-  const taskCounts = {
-    total: tasks.length,
-    pending: tasks.filter((t) => t.status === 'pending').length,
-    'in-progress': tasks.filter((t) => t.status === 'in-progress').length,
-    complete: tasks.filter((t) => t.status === 'complete').length,
-    failed: tasks.filter((t) => t.status === 'failed').length,
-    blocked: tasks.filter((t) => t.status === 'blocked').length,
-    hitl: tasks.filter((t) => t.status === 'needs_human_decision').length,
-    needs_human_decision: tasks.filter((t) => t.status === 'needs_human_decision').length,
-  };
-
-  const hitlTasks = tasks.filter((t) => t.status === 'needs_human_decision');
-  const slaAtRisk = tasks.filter((t) => t.status !== 'complete' && t.sla?.deadline && new Date(t.sla.deadline) < new Date(Date.now() + 3600000));
-
   const jobs = flags.jobs ? services.jobs.list({}).slice(0, 100) : [];
   const approvals = flags.approvals ? services.policy.listApprovals() : [];
   const usage = flags.metering ? services.metering.getUsage() : { records: [], perAgent: {}, perModel: {}, totals: {} };
@@ -506,6 +492,19 @@ function buildWorkspaceSnapshot(cache, services) {
   }
   // Merge explicit tasks + auto-derived from jobs
   const allTasks = [...tasks, ...derivedTasks];
+  const taskCounts = {
+    total: allTasks.length,
+    pending: allTasks.filter((t) => t.status === 'pending').length,
+    'in-progress': allTasks.filter((t) => t.status === 'in-progress').length,
+    complete: allTasks.filter((t) => t.status === 'complete').length,
+    failed: allTasks.filter((t) => t.status === 'failed').length,
+    blocked: allTasks.filter((t) => t.status === 'blocked').length,
+    hitl: allTasks.filter((t) => t.status === 'needs_human_decision').length,
+    needs_human_decision: allTasks.filter((t) => t.status === 'needs_human_decision').length,
+  };
+
+  const hitlTasks = allTasks.filter((t) => t.status === 'needs_human_decision');
+  const slaAtRisk = allTasks.filter((t) => t.status !== 'complete' && t.sla?.deadline && new Date(t.sla.deadline) < new Date(Date.now() + 3600000));
 
   // Auto-derive projects from jobs that have projectId
   const jobProjects = {};
@@ -532,7 +531,7 @@ function buildWorkspaceSnapshot(cache, services) {
 
   // Merge: explicit projects from PROJECTS.json + auto-derived from jobs
   const allProjectsRaw = [...projectsRaw, ...Object.values(jobProjects)];
-  const projects = enrichProjects(allProjectsRaw, tasks, agentPerf);
+  const projects = enrichProjects(allProjectsRaw, allTasks, agentPerf);
   const projectEvents = services.timeline ? services.timeline.list(null, { limit: 120 }) : [];
 
   return {
@@ -1231,6 +1230,35 @@ async function main() {
       res.status(500).json({ error: e.message });
     }
   });
+  // Backward-compatible aliases used by older dashboard bundles.
+  app.post('/api/crons/:id/run', actionLimiter, validateId, requireCsrf, createPolicyGate(services, (req) => `cron:trigger:${req.params.id}`), async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await runOpenclaw(['cron', 'run', id]);
+      if (result.ok) {
+        services.audit.log('cron_triggered', { id });
+        res.json({ ok: true });
+        return;
+      }
+      res.status(500).json({ ok: false, code: result.code, error: result.stderr || 'cron_run_failed' });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+  app.post('/api/crons/:id/toggle', actionLimiter, validateId, requireCsrf, createPolicyGate(services, (req) => `cron:toggle:${req.params.id}`), async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = toggleCronEnabled(id);
+      if (!result.ok) {
+        res.status(result.status || 500).json({ ok: false, error: result.error || 'toggle_failed' });
+        return;
+      }
+      services.audit.log('cron_toggled', { id, enabled: result.enabled });
+      res.json({ ok: true, enabled: result.enabled });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 
   app.post('/api/hitl/:id/:action', actionLimiter, validateId, validateAction, requireCsrf, createPolicyGate(services, (req) => `hitl:${req.params.action}:${req.params.id}`), async (req, res) => {
     const { id, action } = req.params;
@@ -1565,7 +1593,7 @@ async function main() {
     }
   });
 
-  app.post('/api/update-install', actionLimiter, requireCsrf, async (req, res) => {
+  app.post('/api/update-install', actionLimiter, requireCsrf, createPolicyGate(services, () => 'update:install'), async (req, res) => {
     try {
       const result = await updateChecker.performUpdate();
       res.json(result);
@@ -1577,6 +1605,10 @@ async function main() {
   // SPA route fallback (supports direct links like /projects, /tasks, etc.)
   if (staticRoot) {
     app.get(/^\/(?!api\/).*/, (req, res) => {
+      if (req.path.startsWith('/assets/') || path.extname(req.path)) {
+        res.status(404).end();
+        return;
+      }
       res.sendFile(path.join(staticRoot, 'index.html'));
     });
   }

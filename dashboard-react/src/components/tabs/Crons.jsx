@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { apiPost } from '../../lib/api';
-import { Play, Pause, RefreshCw, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Play, Pause, AlertCircle, Clock } from 'lucide-react';
 
 function relTime(iso) {
   if (!iso) return 'Never';
@@ -18,6 +18,32 @@ function StatusDot({ errors }) {
   return <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />;
 }
 
+function formatSchedule(schedule) {
+  if (!schedule) return 'No schedule';
+  if (typeof schedule === 'string') return schedule;
+  if (schedule.kind === 'every' && Number(schedule.everyMs) > 0) {
+    return `every ${Math.round(Number(schedule.everyMs) / 60000)}m`;
+  }
+  if (typeof schedule.cronExpression === 'string') return schedule.cronExpression;
+  if (typeof schedule.expr === 'string') {
+    return schedule.tz ? `${schedule.expr} (${schedule.tz})` : schedule.expr;
+  }
+  return schedule.kind || 'No schedule';
+}
+
+function fromSecondsAgo(seconds) {
+  if (seconds == null || Number.isNaN(Number(seconds))) return null;
+  return new Date(Date.now() - (Number(seconds) * 1000)).toISOString();
+}
+
+function fmtNextSeconds(sec) {
+  if (sec == null || Number.isNaN(Number(sec))) return '—';
+  if (sec < 0) return 'overdue';
+  if (sec < 60) return `${sec}s`;
+  if (sec < 3600) return `${Math.round(sec / 60)}m`;
+  return `${Math.round(sec / 3600)}h`;
+}
+
 function CronRow({ cron: j, toast }) {
   const [loading, setLoading] = useState(null);
   const errors = j._consecutive_errors || 0;
@@ -25,7 +51,7 @@ function CronRow({ cron: j, toast }) {
   async function toggle() {
     setLoading('toggle');
     try {
-      await apiPost(`/api/crons/${j.id}/toggle`);
+      await apiPost(`/api/cron/${j.id}/toggle`);
       toast?.(j.enabled !== false ? 'Job paused' : 'Job resumed', 'success');
     } catch (e) { toast?.(e.message, 'error'); }
     setLoading(null);
@@ -33,7 +59,7 @@ function CronRow({ cron: j, toast }) {
   async function runNow() {
     setLoading('run');
     try {
-      await apiPost(`/api/crons/${j.id}/run`);
+      await apiPost(`/api/cron/${j.id}/trigger`);
       toast?.('Job triggered', 'success');
     } catch (e) { toast?.(e.message, 'error'); }
     setLoading(null);
@@ -57,10 +83,10 @@ function CronRow({ cron: j, toast }) {
         </div>
         <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', gap: 12 }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Clock size={10} /> {j.schedule || 'No schedule'}
+            <Clock size={10} /> {formatSchedule(j.schedule)}
           </span>
-          <span>Last: {relTime(j.last_run)}</span>
-          {j.next_run && <span>Next: {relTime(j.next_run)}</span>}
+          <span>Last: {relTime(fromSecondsAgo(j._last_run_sec))}</span>
+          <span>Next: {fmtNextSeconds(j._next_run_sec)}</span>
         </div>
       </div>
 
