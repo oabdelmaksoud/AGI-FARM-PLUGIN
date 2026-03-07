@@ -26,6 +26,7 @@ import { PolicyService } from './services/policy.js';
 import { MeteringService } from './services/metering.js';
 import { WorkerService } from './services/worker.js';
 import { safeWriteJson } from './services/storage.js';
+import { SecurityService } from './services/security.js';
 import { UpdateChecker } from './updater.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -389,6 +390,10 @@ function buildWorkspaceSnapshot(cache, services) {
   const improvementBacklog = asObject(readJson(path.join(WORKSPACE, 'IMPROVEMENT_BACKLOG.json')));
   const sharedKnowledge = asArray(readJson(path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json')));
   const memory = readMd(path.join(WORKSPACE, 'MEMORY.md'));
+  const failures = readMd(path.join(WORKSPACE, 'FAILURES.md'));
+  const decisions = readMd(path.join(WORKSPACE, 'DECISIONS.md'));
+  const processes = extractProcesses(readJson(path.join(WORKSPACE, 'PROCESSES.json')));
+  const securityStatus = readJson(path.join(WORKSPACE, 'SECURITY_STATUS.json'));
   const alerts = asArray(readJson(path.join(WORKSPACE, 'ALERTS.json')));
   const projectsStore = readProjectsStore();
   const projectsRaw = asArray(projectsStore.projects);
@@ -513,7 +518,12 @@ function buildWorkspaceSnapshot(cache, services) {
     shared_knowledge: sharedKnowledge,
     knowledge: sharedKnowledge,
     knowledge_count: sharedKnowledge.length,
+    memory,
     memory_lines: memory.split('\n').length,
+    failures,
+    decisions,
+    processes,
+    security_status: securityStatus,
     crons,
     alerts,
     projects,
@@ -665,8 +675,10 @@ async function main() {
     policy: null,
     metering: null,
     worker: null,
+    security: null,
   };
 
+  services.security = new SecurityService(WORKSPACE);
   services.jobs = new JobsService(WORKSPACE, services.audit);
   services.projects = new ProjectService(WORKSPACE);
   services.tasks = new TaskService(WORKSPACE);
@@ -1325,6 +1337,34 @@ async function main() {
 
   app.get('/api/usage', requireFeature('metering'), (req, res) => {
     res.json(services.metering.getUsage());
+  });
+
+  // ── Security Endpoints ───────────────────────────────────────────────────
+  app.get('/api/security/status', (req, res) => {
+    const status = services.security.getStatus();
+    res.json(status || { grade: null, score: null, findings: { critical: 0, high: 0, medium: 0, low: 0, info: 0 }, status: 'NO_DATA', notes: 'No security scan has been run yet.' });
+  });
+
+  app.get('/api/security/history', (req, res) => {
+    res.json({ history: services.security.getHistory() });
+  });
+
+  app.post('/api/security/scan', actionLimiter, requireCsrf, async (req, res) => {
+    try {
+      const result = await services.security.runScan({ fix: req.body?.fix === true });
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: 'scan_failed', message: err.message });
+    }
+  });
+
+  app.post('/api/security/fix', actionLimiter, requireCsrf, async (req, res) => {
+    try {
+      const result = await services.security.autoFix();
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: 'fix_failed', message: err.message });
+    }
   });
 
   // ── Update Check Endpoints ─────────────────────────────────────────────────

@@ -498,6 +498,38 @@ export default function Projects({ data, lastUpdated, toast }) {
     finally { setSubmittingIntake(false); }
   };
 
+  const handleReplan = async (projectId) => {
+    try {
+      await planProject(projectId);
+      await refreshProjects();
+      toast?.('Replan initiated', 'success');
+    } catch (e) { toast?.(e.message, 'error'); }
+  };
+
+  const handleExecute = async (projectId) => {
+    try {
+      await executeProject(projectId);
+      await refreshProjects();
+      toast?.('Execution started', 'success');
+    } catch (e) { toast?.(e.message, 'error'); }
+  };
+
+  const handleBudgetQuickSave = async (projectId, budget) => {
+    try {
+      await updateProjectBudget(projectId, budget);
+      await refreshProjects();
+      toast?.('Budget updated', 'success');
+    } catch (e) { toast?.(e.message, 'error'); }
+  };
+
+  const handleOkrQuickSave = async (projectId, okrLink) => {
+    try {
+      await updateProjectOkrLink(projectId, okrLink);
+      await refreshProjects();
+      toast?.('OKR link updated', 'success');
+    } catch (e) { toast?.(e.message, 'error'); }
+  };
+
   const enriched = useMemo(() => projectsData.map(p => {
     const pTasks = tasks.filter(t => (p.task_ids || []).includes(t.id));
     const done = pTasks.filter(t => t.status === 'complete').length;
