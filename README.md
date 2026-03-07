@@ -37,7 +37,19 @@
 
 ---
 
-## 🆕 What's New in v1.7.1
+## 🆕 What's New in v1.7.2
+
+### ✨ Enhanced Wizard with Workflow Templates + Agent Browser
+- **4 workflow templates** — Pre-built teams for common use cases: Startup MVP (5 agents), Marketing Campaign (5 agents), Enterprise Feature (6 agents), Quality-First (4 agents)
+- **Agent browser** — Browse and select from all **91 agents** across 11 categories (AGI Farm + ECC + Agency-Agents)
+- **Auto-template copying** — SOUL.md templates automatically copied to agent workspaces during setup
+- **Workflow documentation** — Each template links to orchestration patterns and quick-start guides
+- **Backward compatible** — Legacy wizard (3/5/11 fixed rosters) preserved
+- **Zero manual setup** — Agency-Agents templates work out-of-box with no file copying required
+
+Run enhanced wizard: `node scripts/setup-enhanced.js`
+
+### Previous: v1.7.1 — Architectural Hardening
 
 ### 🔒 Architectural Hardening
 - **Per-file mutex locking** — All service read-modify-write operations (`JobsService`, `ProjectService`, `TaskService`, `PolicyService`, `MeteringService`, `MemoryService`, `SkillsService`) now serialize concurrent writes via `withFileLockSync()`, preventing data loss from race conditions

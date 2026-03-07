@@ -6,6 +6,79 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-03-07
+
+### ✨ Enhanced Wizard with Workflow Templates + Agent Browser
+
+Complete wizard overhaul providing 100% coverage of the 91-agent library with workflow templates and custom team builder.
+
+#### Phase 1: Workflow Templates ✅
+
+**4 Pre-Built Use-Case Templates**:
+1. **🚀 Startup MVP** (5 agents, 1-2 weeks)
+   - Cooper, Forge, Pixel, Vigil, marketing-growth-hacker
+   - Rapid prototype development with growth experiments
+
+2. **📈 Marketing Campaign** (5 agents, 2-4 weeks)
+   - Cooper, content-creator, twitter-engager, reddit-builder, analytics
+   - Multi-channel coordinated campaigns with performance tracking
+
+3. **🏢 Enterprise Feature** (6 agents, 4-8 weeks)
+   - Cooper, Vista, Sage, Vigil, experiment-tracker, reality-checker
+   - Complex features with quality gates and gradual rollout
+
+4. **🔬 Quality-First** (4 agents, quality-driven)
+   - Cooper, Vigil (Evidence Collector), reality-checker, performance-benchmarker
+   - Security-critical systems with zero-defect requirements
+
+#### Phase 2: Agent Browser ✅
+
+**Custom Team Builder** (91 agents):
+- Browse by category (Testing, Engineering, Design, Marketing, etc.)
+- Select agents with descriptions and roles
+- Multi-select from all sources (AGI Farm + ECC + Agency-Agents)
+- Visual category navigation with emoji indicators
+
+#### Phase 3: Template Auto-Copy ✅
+
+**Automatic SOUL.md Template Copying**:
+- Templates copied to agent workspaces during creation
+- Agency-Agents templates work immediately
+- No manual file copying required
+- Preserves backward compatibility with legacy rosters
+
+### Files Added (3)
+
+- **scripts/setup-enhanced.js** (880 lines) — Enhanced wizard with workflow templates, agent browser, auto-copy
+- **scripts/lib/agent-registry.js** (180 lines) — Agent indexing system with metadata extraction
+- **WIZARD_ENHANCEMENT_PLAN.md** (600 lines) — Complete implementation plan and design
+
+### Files Modified (1)
+
+- **README.md** — Enhanced wizard documentation and usage guide
+
+### Benefits
+
+✅ **Immediate access to 91 agents** — No manual template exploration
+✅ **Proven team combinations** — 4 workflow templates with documented patterns
+✅ **Custom team flexibility** — Browse and select any combination
+✅ **Zero manual setup** — Templates auto-copied, ready to use
+✅ **Backward compatible** — Legacy rosters (3/5/11) still available
+✅ **100% coverage** — All Agency-Agents integration work now accessible
+
+### Usage
+
+**Enhanced Wizard** (v1.7.2):
+```bash
+cd ~/.openclaw/extensions/agi-farm
+node scripts/setup-enhanced.js
+```
+
+**Classic Wizard** (preserved):
+```bash
+agi-farm setup  # or agi-farm
+```
+
 ## [1.6.0] - 2026-03-07
 
 ### 🎭 Agency-Agents Integration: The Largest Agent Library Expansion
