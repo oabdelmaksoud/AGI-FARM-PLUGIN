@@ -30,7 +30,7 @@ function parseFailures(md) {
 const TYPE_COLOR = { bug: 'var(--red)', error: 'var(--red)', timeout: 'var(--amber)', sla_breach: 'var(--amber)', logic: 'var(--purple)', unknown: 'var(--muted)' };
 
 export default function Failures({ data, lastUpdated }) {
-  const { failures = '' } = data;
+  const { failures = '' } = data || {};
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
 
@@ -41,7 +41,7 @@ export default function Failures({ data, lastUpdated }) {
     if (typeFilter && e.type !== typeFilter) return false;
     if (!search) return true;
     const q = search.toLowerCase();
-    return e.title.toLowerCase().includes(q) || e.rootCause.toLowerCase().includes(q) || e.lesson.toLowerCase().includes(q);
+    return (e.title || '').toLowerCase().includes(q) || (e.rootCause || '').toLowerCase().includes(q) || (e.lesson || '').toLowerCase().includes(q);
   });
 
   return (

@@ -42,17 +42,21 @@ function CronRow({ job, agents, onTrigger, onToggle }) {
 
   async function trigger() {
     setTriggering(true);
-    await apiPost(`/api/cron/${job.id}/trigger`);
-    onTrigger?.(job.id);
+    try {
+      await apiPost(`/api/cron/${job.id}/trigger`);
+      onTrigger?.(job.id);
+    } catch { }
     setTimeout(() => setTriggering(false), 2000);
   }
 
   async function toggle() {
     setToggling(true);
-    const res = await apiPost(`/api/cron/${job.id}/toggle`);
-    if (res.ok) setLocalEnabled(res.enabled);
+    try {
+      const res = await apiPost(`/api/cron/${job.id}/toggle`);
+      if (res.ok) setLocalEnabled(res.enabled);
+      onToggle?.(job.id, res.enabled);
+    } catch { }
     setToggling(false);
-    onToggle?.(job.id, res.enabled);
   }
 
   return (

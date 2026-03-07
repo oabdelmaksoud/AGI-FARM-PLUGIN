@@ -167,7 +167,7 @@ export default function Velocity({ data, lastUpdated }) {
                 </div>
                 <div style={{ fontSize: '18px' }}>{a.emoji}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700 }}>{a.name.toUpperCase()}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700 }}>{(a.name || a.id || '').toUpperCase()}</div>
                   <div style={{ fontSize: '8px', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{a.id}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>

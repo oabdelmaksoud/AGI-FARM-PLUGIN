@@ -30,7 +30,7 @@ function parseDecisions(md) {
 const STATUS_COLOR = { accepted: 'var(--green)', proposed: 'var(--amber)', superseded: 'var(--muted)', deprecated: 'var(--red)' };
 
 export default function Decisions({ data, lastUpdated }) {
-  const { decisions = '' } = data;
+  const { decisions = '' } = data || {};
   const [search, setSearch] = useState('');
 
   const entries = useMemo(() => parseDecisions(decisions), [decisions]);
@@ -38,7 +38,7 @@ export default function Decisions({ data, lastUpdated }) {
   const filtered = entries.filter(e => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return e.title.toLowerCase().includes(q) || e.context.toLowerCase().includes(q) || e.consequences.toLowerCase().includes(q);
+    return (e.title || '').toLowerCase().includes(q) || (e.context || '').toLowerCase().includes(q) || (e.consequences || '').toLowerCase().includes(q);
   });
 
   return (

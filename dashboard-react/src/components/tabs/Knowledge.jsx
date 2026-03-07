@@ -16,10 +16,10 @@ export default function Knowledge({ data, lastUpdated, toast }) {
     try {
       const payload = { ...newEntry, tags: newEntry.tags ? newEntry.tags.split(',').map(t => t.trim()).filter(Boolean) : [] };
       await apiPost('/api/knowledge', payload);
-      toast('Neural integration successful', 'success');
+      toast?.('Neural integration successful', 'success');
       setShowNew(false);
       setNewEntry({ title: '', content: '', category: 'general', tags: '' });
-    } catch (e) { toast(e.message, 'error'); }
+    } catch (e) { toast?.(e.message, 'error'); }
     setSaving(false);
   };
 
@@ -27,8 +27,8 @@ export default function Knowledge({ data, lastUpdated, toast }) {
     if (!confirm('Purge this neural entry?')) return;
     try {
       await apiDelete(`/api/knowledge/${id}`);
-      toast('Entry purged from archive', 'success');
-    } catch (e) { toast(e.message, 'error'); }
+      toast?.('Entry purged from archive', 'success');
+    } catch (e) { toast?.(e.message, 'error'); }
   };
 
   const categories = useMemo(() => {

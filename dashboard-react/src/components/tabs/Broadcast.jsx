@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { apiPost } from '../../lib/api';
 
 export default function Broadcast({ data, toast }) {
-  const { broadcast = '' } = data;
+  const { broadcast = '' } = data || {};
   const ref = useRef(null);
 
   useEffect(() => {
@@ -17,9 +17,9 @@ export default function Broadcast({ data, toast }) {
     setPosting(true);
     try {
       await apiPost('/api/broadcast', { message: msg.trim() });
-      toast('Broadcast posted', 'success');
+      toast?.('Broadcast posted', 'success');
       setMsg('');
-    } catch (e) { toast(e.message, 'error'); }
+    } catch (e) { toast?.(e.message, 'error'); }
     setPosting(false);
   };
 

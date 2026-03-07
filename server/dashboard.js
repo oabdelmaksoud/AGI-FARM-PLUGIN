@@ -522,7 +522,7 @@ function buildWorkspaceSnapshot(cache, services) {
     knowledge: sharedKnowledge,
     knowledge_count: sharedKnowledge.length,
     memory,
-    memory_lines: memory.split('\n').length,
+    memory_lines: memory.trim() ? memory.split('\n').length : 0,
     failures,
     decisions,
     processes,

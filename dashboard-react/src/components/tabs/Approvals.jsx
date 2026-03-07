@@ -2,7 +2,7 @@ import { useState } from 'react';
 import LastUpdated from '../LastUpdated';
 import { approveApproval, rejectApproval } from '../../lib/api';
 
-export default function Approvals({ data, lastUpdated }) {
+export default function Approvals({ data, lastUpdated, toast }) {
   const { approvals = [], featureFlags = {} } = data || {};
   const [notes, setNotes] = useState({});
 
@@ -13,11 +13,11 @@ export default function Approvals({ data, lastUpdated }) {
   const pending = approvals.filter((a) => a.status === 'pending');
 
   async function onApprove(id) {
-    try { await approveApproval(id, notes[id] || ''); } catch { }
+    try { await approveApproval(id, notes[id] || ''); toast?.('Approved', 'success'); } catch (e) { toast?.(e.message, 'error'); }
   }
 
   async function onReject(id) {
-    try { await rejectApproval(id, notes[id] || ''); } catch { }
+    try { await rejectApproval(id, notes[id] || ''); toast?.('Rejected', 'success'); } catch (e) { toast?.(e.message, 'error'); }
   }
 
   return (

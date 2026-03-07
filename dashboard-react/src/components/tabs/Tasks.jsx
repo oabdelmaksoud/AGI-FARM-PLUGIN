@@ -203,10 +203,10 @@ export default function Tasks({ data, lastUpdated, toast }) {
     setSaving(true);
     try {
       await createTask(newTask);
-      toast('MISSION_OBJECTIVE_STAGED', 'success');
+      toast?.('MISSION_OBJECTIVE_STAGED', 'success');
       setShowNew(false);
       setNewTask({ id: '', title: '', description: '', priority: 'P2', assigned_to: '', type: 'dev' });
-    } catch (e) { toast(e.message, 'error'); }
+    } catch (e) { toast?.(e.message, 'error'); }
     finally { setSaving(false); }
   };
 
