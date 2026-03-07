@@ -203,7 +203,8 @@ View and edit defaults via:
 
 | Command | CLI Shortcut | Description |
 |---------|-------------|-------------|
-| 🎯 `agi-farm setup` | `agi-farm` | Full wizard — agents, workspace, crons |
+| 🎯 `agi-farm setup` | `agi-farm` | Full wizard — agents, workspace, crons (Classic mode: 3/5/11 agents) |
+| ✨ `node scripts/setup-enhanced.js` | — | **Enhanced wizard (v1.7.0)** — Workflow templates + Agent browser (91 agents) |
 | 🗑️ `agi-farm teardown` | `agi-farm-teardown` | Team teardown — removes AGI Farm agents, bundle, and workspace registries |
 | 📊 `agi-farm status` | `agi-farm-status` | Team health: agents, tasks, cron status |
 | 🔧 `agi-farm rebuild` | `agi-farm-rebuild` | Regenerate workspace from bundle |
@@ -211,6 +212,25 @@ View and edit defaults via:
 | 🖥️ `agi-farm dashboard` | `agi-farm-dashboard` | Launch live ops room (SSE, :8080) |
 | ⚡ `agi-farm dispatch` | `agi-farm-dispatch` | Run auto-dispatcher manually |
 | 🍎 `agi-farm launchagent` | `agi-farm-launchagent` | Install/uninstall macOS LaunchAgent for persistent dashboard |
+
+### 🆕 Enhanced Wizard (v1.7.0)
+
+The enhanced wizard offers **4 workflow templates** and **agent browsing** for all 91 agents:
+
+**Run it**:
+```bash
+cd ~/.openclaw/extensions/agi-farm  # or global npm path
+node scripts/setup-enhanced.js
+```
+
+**Features**:
+- 🚀 **Startup MVP** (5 agents, 1-2 weeks) — Cooper, Forge, Pixel, Vigil, Growth Hacker
+- 📈 **Marketing Campaign** (5 agents, 2-4 weeks) — Cooper, Content Creator, Twitter Engager, Reddit Builder, Analytics
+- 🏢 **Enterprise Feature** (6 agents, 4-8 weeks) — Cooper, Vista, Sage, Vigil, Experiment Tracker, Reality Checker
+- 🔬 **Quality-First** (4 agents, quality-driven) — Cooper, Vigil (Evidence), Reality Checker, Performance Benchmarker
+- 🎨 **Custom** — Browse all 91 agents by category and select your own team
+
+**Automatic template copying**: Agency-Agents SOUL.md templates are copied to agent workspaces automatically.
 
 ---
 
