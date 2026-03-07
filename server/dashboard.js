@@ -378,7 +378,7 @@ function toggleCronEnabled(id) {
 const updateChecker = new UpdateChecker();
 
 function buildWorkspaceSnapshot(cache, services) {
-  const tasks = asArray(readJson(path.join(WORKSPACE, 'TASKS.json')));
+  let tasks = asArray(readJson(path.join(WORKSPACE, 'TASKS.json')));
   const agentStatus = asObject(readJson(path.join(WORKSPACE, 'AGENT_STATUS.json')));
   const agentPerf = asObject(readJson(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json')));
   const budget = asObject(readJson(path.join(WORKSPACE, 'BUDGET.json')));
@@ -446,6 +446,28 @@ function buildWorkspaceSnapshot(cache, services) {
   const approvals = flags.approvals ? services.policy.listApprovals() : [];
   const usage = flags.metering ? services.metering.getUsage() : { records: [], perAgent: {}, perModel: {}, totals: {} };
 
+  // Auto-derive tasks from jobs that have rootTaskId
+  const taskIds = new Set(tasks.map(t => t.id));
+  const derivedTasks = [];
+  for (const job of jobs) {
+    if (job.rootTaskId && !taskIds.has(job.rootTaskId)) {
+      derivedTasks.push({
+        id: job.rootTaskId,
+        title: job.title || `Task from job ${job.id.slice(0, 8)}`,
+        description: job.intent || '',
+        status: job.status === 'complete' ? 'complete' : (job.status === 'running' ? 'in-progress' : 'pending'),
+        assigned_to: job.assignedAgent || job.requestedBy || 'system',
+        project_id: job.projectId || null,
+        created_at: job.createdAt,
+        updated_at: job.updatedAt,
+        depends_on: [],
+      });
+      taskIds.add(job.rootTaskId);
+    }
+  }
+  // Merge explicit tasks + auto-derived from jobs
+  const allTasks = [...tasks, ...derivedTasks];
+
   // Auto-derive projects from jobs that have projectId
   const jobProjects = {};
   for (const job of jobs) {
@@ -477,7 +499,7 @@ function buildWorkspaceSnapshot(cache, services) {
   return {
     timestamp: new Date().toISOString(),
     workspace: WORKSPACE,
-    tasks,
+    tasks: allTasks,
     task_counts: taskCounts,
     hitl_tasks: hitlTasks,
     sla_at_risk: slaAtRisk,
