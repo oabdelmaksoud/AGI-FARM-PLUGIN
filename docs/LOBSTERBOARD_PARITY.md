@@ -16,9 +16,9 @@ This document tracks feature parity work against:
 ## Feature Buckets
 
 `P0` (core platform)
-- Template gallery import/export (merge/replace)
-- Secret masking + separate secret store
-- Public mode + PIN lock for write/edit APIs
+- Template gallery import/export (merge/replace) ✅ foundation shipped (`/api/templates/*`)
+- Secret masking + separate secret store ✅ foundation shipped (`/api/secrets/*`)
+- Public mode + PIN lock for write/edit APIs ✅ shipped (`/api/auth/*` + write gate)
 - Multi-theme packs + persisted selection
 - Canvas presets and font scaling controls
 

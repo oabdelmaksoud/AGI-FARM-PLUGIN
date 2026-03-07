@@ -649,11 +649,21 @@ The dashboard enables direct control over team operations via authenticated REST
 - `GET /api/usage` — Usage and cost aggregates for dashboard
 
 **CRUD Operations:**
-- `POST /api/task` — Create a new task with assignee, priority, dependencies
-- `POST /api/agent/:id/message` — Send a message to a specific agent
+- `POST /api/tasks` — Create a new task with assignee, priority, dependencies
+- `POST /api/comms/:id/send` — Send a message to a specific agent inbox
 - `POST /api/broadcast` — Post a team-wide broadcast message
 - `POST /api/knowledge` — Add a shared knowledge entry
 - `DELETE /api/knowledge/:id` — Remove a knowledge entry
+
+**LobsterBoard Parity Foundations (P0):**
+- `GET /api/auth/status` — PIN/public-mode status + write unlock state
+- `POST /api/auth/verify-pin` — Verify PIN and issue write auth token
+- `POST /api/auth/set-pin` / `POST /api/auth/remove-pin` — Manage dashboard PIN lock
+- `POST /api/auth/public-mode` — Toggle read-only public mode
+- `GET /api/secrets` / `GET /api/secrets/:scope` — List masked secrets metadata
+- `POST /api/secrets/:scope` / `DELETE /api/secrets/:scope/:key` — Store/delete scoped secrets
+- `GET /api/templates` / `GET /api/templates/:id` — List and inspect dashboard templates
+- `POST /api/templates/export` / `POST /api/templates/import` — Export/import template settings
 
 **Auto-Update:**
 - `GET /api/update-check` — Force a fresh GitHub release check

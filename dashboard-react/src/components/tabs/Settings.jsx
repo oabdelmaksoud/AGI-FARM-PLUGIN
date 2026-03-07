@@ -1,5 +1,18 @@
 import { useEffect, useState } from 'react';
-import { apiPost } from '../../lib/api';
+import {
+  apiPost,
+  getAuthStatus,
+  verifyPin,
+  setPin as apiSetPin,
+  removePin as apiRemovePin,
+  setPublicMode,
+  listTemplates,
+  exportTemplate,
+  importTemplate,
+  listSecrets,
+  updateSecrets,
+  deleteSecret,
+} from '../../lib/api';
 import { Save, RefreshCw } from 'lucide-react';
 
 export default function Settings({ data, toast }) {
@@ -11,8 +24,26 @@ export default function Settings({ data, toast }) {
     budget_monthly: sourceSettings.budget_monthly ?? '',
     hitl_enabled: sourceSettings.hitl_enabled !== false,
     auto_resume: sourceSettings.auto_resume === true,
+    auth: {
+      public_mode: sourceSettings.auth?.public_mode === true,
+      has_pin: sourceSettings.auth?.has_pin === true,
+    },
   });
   const [saving, setSaving] = useState(false);
+  const [pinUnlock, setPinUnlock] = useState('');
+  const [pinCurrent, setPinCurrent] = useState('');
+  const [pinNew, setPinNew] = useState('');
+  const [pinRemove, setPinRemove] = useState('');
+  const [publicModePin, setPublicModePin] = useState('');
+  const [authState, setAuthState] = useState({ hasPin: false, publicMode: false, writeUnlocked: false });
+  const [templates, setTemplates] = useState([]);
+  const [templateName, setTemplateName] = useState('My Dashboard');
+  const [templateId, setTemplateId] = useState('');
+  const [templateMode, setTemplateMode] = useState('replace');
+  const [secretsScopes, setSecretsScopes] = useState([]);
+  const [secretScope, setSecretScope] = useState('default');
+  const [secretKey, setSecretKey] = useState('');
+  const [secretValue, setSecretValue] = useState('');
 
   useEffect(() => {
     setSettings({
@@ -21,6 +52,10 @@ export default function Settings({ data, toast }) {
       budget_monthly: sourceSettings.budget_monthly ?? '',
       hitl_enabled: sourceSettings.hitl_enabled !== false,
       auto_resume: sourceSettings.auto_resume === true,
+      auth: {
+        public_mode: sourceSettings.auth?.public_mode === true,
+        has_pin: sourceSettings.auth?.has_pin === true,
+      },
     });
   }, [
     sourceSettings.budget_daily,
@@ -28,7 +63,32 @@ export default function Settings({ data, toast }) {
     sourceSettings.budget_monthly,
     sourceSettings.hitl_enabled,
     sourceSettings.auto_resume,
+    sourceSettings.auth?.public_mode,
+    sourceSettings.auth?.has_pin,
   ]);
+
+  const refreshAux = async () => {
+    try {
+      const [auth, tpl, sec] = await Promise.all([
+        getAuthStatus(),
+        listTemplates(),
+        listSecrets(),
+      ]);
+      setAuthState({
+        hasPin: auth?.hasPin === true,
+        publicMode: auth?.publicMode === true,
+        writeUnlocked: auth?.writeUnlocked === true,
+      });
+      setTemplates(tpl?.templates || []);
+      setSecretsScopes(sec?.scopes || []);
+    } catch (e) {
+      // non-blocking for settings page
+    }
+  };
+
+  useEffect(() => {
+    refreshAux();
+  }, []);
 
   const save = async () => {
     setSaving(true);
@@ -37,6 +97,96 @@ export default function Settings({ data, toast }) {
       toast?.('Settings saved', 'success');
     } catch (e) { toast?.(e.message, 'error'); }
     setSaving(false);
+  };
+
+  const unlockWrites = async () => {
+    if (!pinUnlock.trim()) return;
+    try {
+      await verifyPin(pinUnlock.trim());
+      setPinUnlock('');
+      await refreshAux();
+      toast?.('Write access unlocked', 'success');
+    } catch (e) {
+      toast?.(e.message, 'error');
+    }
+  };
+
+  const savePin = async () => {
+    try {
+      await apiSetPin(pinNew.trim(), pinCurrent.trim());
+      setPinCurrent('');
+      setPinNew('');
+      await refreshAux();
+      toast?.('PIN updated', 'success');
+    } catch (e) {
+      toast?.(e.message, 'error');
+    }
+  };
+
+  const removePin = async () => {
+    try {
+      await apiRemovePin(pinRemove.trim());
+      setPinRemove('');
+      await refreshAux();
+      toast?.('PIN removed', 'success');
+    } catch (e) {
+      toast?.(e.message, 'error');
+    }
+  };
+
+  const togglePublicMode = async () => {
+    try {
+      await setPublicMode(!authState.publicMode, publicModePin.trim());
+      setPublicModePin('');
+      await refreshAux();
+      toast?.('Public mode updated', 'success');
+    } catch (e) {
+      toast?.(e.message, 'error');
+    }
+  };
+
+  const runExportTemplate = async () => {
+    try {
+      await exportTemplate({ name: templateName.trim(), id: templateId.trim() || undefined });
+      await refreshAux();
+      toast?.('Template exported', 'success');
+    } catch (e) {
+      toast?.(e.message, 'error');
+    }
+  };
+
+  const runImportTemplate = async () => {
+    if (!templateId.trim()) return;
+    try {
+      await importTemplate({ id: templateId.trim(), mode: templateMode });
+      await refreshAux();
+      toast?.('Template imported', 'success');
+    } catch (e) {
+      toast?.(e.message, 'error');
+    }
+  };
+
+  const saveSecret = async () => {
+    if (!secretScope.trim() || !secretKey.trim() || !secretValue.trim()) return;
+    try {
+      await updateSecrets(secretScope.trim(), { [secretKey.trim()]: secretValue });
+      setSecretValue('');
+      await refreshAux();
+      toast?.('Secret stored', 'success');
+    } catch (e) {
+      toast?.(e.message, 'error');
+    }
+  };
+
+  const removeSecret = async () => {
+    if (!secretScope.trim() || !secretKey.trim()) return;
+    try {
+      await deleteSecret(secretScope.trim(), secretKey.trim());
+      await refreshAux();
+      toast?.('Secret removed', 'success');
+    } catch (e) {
+      toast?.(e.message, 'error');
+    }
   };
 
   function Row({ label, sub, children }) {
@@ -124,6 +274,70 @@ export default function Settings({ data, toast }) {
         <Row label="Auto Resume" sub="Automatically resume tasks after approval">
           <Toggle value={settings.auto_resume} onChange={v => setSettings(s => ({ ...s, auto_resume: v }))} />
         </Row>
+      </div>
+
+      <div className="card">
+        <h2 style={{ fontSize: 15, marginBottom: 4 }}>Access Control</h2>
+        <Row label="Write Access" sub={authState.writeUnlocked ? 'Unlocked for this browser session' : 'PIN required for edits'}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="input-base" style={{ width: 130 }} placeholder="PIN" value={pinUnlock} onChange={e => setPinUnlock(e.target.value)} />
+            <button className="btn-secondary" onClick={unlockWrites}>Unlock</button>
+          </div>
+        </Row>
+        <Row label="Public Mode" sub="Read-only dashboard mode">
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="input-base" style={{ width: 130 }} placeholder="PIN (if set)" value={publicModePin} onChange={e => setPublicModePin(e.target.value)} />
+            <button className="btn-secondary" onClick={togglePublicMode}>{authState.publicMode ? 'Disable' : 'Enable'}</button>
+          </div>
+        </Row>
+        <Row label="Set/Rotate PIN" sub="4-8 digits">
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="input-base" style={{ width: 130 }} placeholder="Current PIN" value={pinCurrent} onChange={e => setPinCurrent(e.target.value)} />
+            <input className="input-base" style={{ width: 130 }} placeholder="New PIN" value={pinNew} onChange={e => setPinNew(e.target.value)} />
+            <button className="btn-secondary" onClick={savePin}>Save PIN</button>
+          </div>
+        </Row>
+        <Row label="Remove PIN" sub="Disables PIN lock">
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="input-base" style={{ width: 130 }} placeholder="Current PIN" value={pinRemove} onChange={e => setPinRemove(e.target.value)} />
+            <button className="btn-secondary" onClick={removePin}>Remove</button>
+          </div>
+        </Row>
+      </div>
+
+      <div className="card">
+        <h2 style={{ fontSize: 15, marginBottom: 4 }}>Templates</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+          <input className="input-base" placeholder="Template name" value={templateName} onChange={e => setTemplateName(e.target.value)} />
+          <input className="input-base" placeholder="Template id (optional)" value={templateId} onChange={e => setTemplateId(e.target.value)} />
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <button className="btn-secondary" onClick={runExportTemplate}>Export Current</button>
+          <select className="input-base" value={templateMode} onChange={e => setTemplateMode(e.target.value)} style={{ width: 130 }}>
+            <option value="replace">Replace</option>
+            <option value="merge">Merge</option>
+          </select>
+          <button className="btn-secondary" onClick={runImportTemplate}>Import Selected ID</button>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          Available: {(templates || []).map(t => t.id).join(', ') || 'none'}
+        </div>
+      </div>
+
+      <div className="card">
+        <h2 style={{ fontSize: 15, marginBottom: 4 }}>Secrets</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+          <input className="input-base" placeholder="Scope" value={secretScope} onChange={e => setSecretScope(e.target.value)} />
+          <input className="input-base" placeholder="Key" value={secretKey} onChange={e => setSecretKey(e.target.value)} />
+          <input className="input-base" placeholder="Value" value={secretValue} onChange={e => setSecretValue(e.target.value)} />
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <button className="btn-secondary" onClick={saveSecret}>Store Secret</button>
+          <button className="btn-secondary" onClick={removeSecret}>Delete Secret Key</button>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          Scopes: {(secretsScopes || []).map(s => `${s.scope}(${s.count})`).join(', ') || 'none'}
+        </div>
       </div>
 
       <button onClick={save} disabled={saving} className="btn-primary" style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 28px' }}>

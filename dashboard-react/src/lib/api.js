@@ -1,4 +1,5 @@
 let csrfTokenPromise = null;
+const WRITE_AUTH_TOKEN_KEY = 'agi_farm_write_auth_token';
 
 async function loadCsrfToken() {
   const res = await fetch('/api/session');
@@ -22,11 +23,37 @@ export async function getCsrfToken() {
   return csrfTokenPromise;
 }
 
+function getWriteAuthToken() {
+  try {
+    return window.localStorage.getItem(WRITE_AUTH_TOKEN_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function setWriteAuthToken(token) {
+  try {
+    if (!token) {
+      window.localStorage.removeItem(WRITE_AUTH_TOKEN_KEY);
+      return;
+    }
+    window.localStorage.setItem(WRITE_AUTH_TOKEN_KEY, String(token));
+  } catch {
+    // ignore
+  }
+}
+
+function withAuthHeaders(base = {}) {
+  const auth = getWriteAuthToken();
+  if (!auth) return base;
+  return { ...base, 'x-agi-farm-auth': auth };
+}
+
 export async function apiPut(path, body = null) {
   const token = await getCsrfToken();
   const opts = {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'x-agi-farm-csrf': token },
+    headers: withAuthHeaders({ 'Content-Type': 'application/json', 'x-agi-farm-csrf': token }),
   };
   if (body !== null) opts.body = JSON.stringify(body);
   const res = await fetch(path, opts);
@@ -40,7 +67,7 @@ export async function apiDelete(path) {
   const token = await getCsrfToken();
   const res = await fetch(path, {
     method: 'DELETE',
-    headers: { 'x-agi-farm-csrf': token },
+    headers: withAuthHeaders({ 'x-agi-farm-csrf': token }),
   });
   let payload = {};
   try { payload = await res.json(); } catch { payload = {}; }
@@ -57,7 +84,7 @@ export async function apiPost(path, body = null) {
 
   const opts = {
     method: 'POST',
-    headers,
+    headers: withAuthHeaders(headers),
   };
   if (body !== null) opts.body = JSON.stringify(body);
 
@@ -77,7 +104,7 @@ export async function apiPost(path, body = null) {
 export async function apiGet(path) {
   const token = await getCsrfToken();
   const res = await fetch(path, {
-    headers: { 'x-agi-farm-csrf': token },
+    headers: withAuthHeaders({ 'x-agi-farm-csrf': token }),
   });
   let payload = {};
   try {
@@ -185,7 +212,7 @@ export async function apiPatch(path, body = null) {
   const token = await getCsrfToken();
   const opts = {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', 'x-agi-farm-csrf': token },
+    headers: withAuthHeaders({ 'Content-Type': 'application/json', 'x-agi-farm-csrf': token }),
   };
   if (body !== null) opts.body = JSON.stringify(body);
   const res = await fetch(path, opts);
@@ -193,4 +220,58 @@ export async function apiPatch(path, body = null) {
   try { payload = await res.json(); } catch { payload = {}; }
   if (!res.ok) throw new Error(payload?.error || `request_failed_${res.status}`);
   return payload;
+}
+
+export async function getAuthStatus() {
+  return apiGet('/api/auth/status');
+}
+
+export async function verifyPin(pin) {
+  const out = await apiPost('/api/auth/verify-pin', { pin });
+  if (out?.authToken) setWriteAuthToken(out.authToken);
+  return out;
+}
+
+export async function setPin(pin, currentPin = '') {
+  return apiPost('/api/auth/set-pin', { pin, currentPin: currentPin || undefined });
+}
+
+export async function removePin(pin) {
+  return apiPost('/api/auth/remove-pin', { pin });
+}
+
+export async function setPublicMode(publicMode, pin = '') {
+  return apiPost('/api/auth/public-mode', { publicMode, pin: pin || undefined });
+}
+
+export async function listTemplates() {
+  return apiGet('/api/templates');
+}
+
+export async function getTemplate(id) {
+  return apiGet(`/api/templates/${id}`);
+}
+
+export async function exportTemplate(payload) {
+  return apiPost('/api/templates/export', payload);
+}
+
+export async function importTemplate(payload) {
+  return apiPost('/api/templates/import', payload);
+}
+
+export async function listSecrets() {
+  return apiGet('/api/secrets');
+}
+
+export async function getSecrets(scope) {
+  return apiGet(`/api/secrets/${scope}`);
+}
+
+export async function updateSecrets(scope, updates) {
+  return apiPost(`/api/secrets/${scope}`, { updates });
+}
+
+export async function deleteSecret(scope, key) {
+  return apiDelete(`/api/secrets/${scope}/${key}`);
 }

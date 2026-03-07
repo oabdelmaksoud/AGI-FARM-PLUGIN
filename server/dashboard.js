@@ -111,6 +111,8 @@ setInterval(rotateCsrfToken, CSRF_ROTATE_MS);
 const CRON_FILE = path.join(os.homedir(), '.openclaw', 'cron', 'jobs.json');
 const SETTINGS_FILE = path.join(WORKSPACE, 'SETTINGS.json');
 const CHANNEL_ADAPTER_STATE_FILE = path.join(WORKSPACE, 'CHANNEL_ADAPTER_STATE.json');
+const SECRETS_FILE = path.join(WORKSPACE, 'SECRETS.json');
+const DASHBOARD_TEMPLATES_DIR = path.join(WORKSPACE, 'dashboard-templates');
 
 class SlowDataCache {
   constructor() {
@@ -258,7 +260,12 @@ function ensureOperationalFiles() {
     budget_monthly: null,
     hitl_enabled: true,
     auto_resume: false,
+    auth: {
+      public_mode: false,
+      pin_hash: null,
+    },
   })) created.push('SETTINGS.json');
+  if (writeJsonIfMissing(SECRETS_FILE, {})) created.push('SECRETS.json');
   if (writeJsonIfMissing(CHANNEL_ADAPTER_STATE_FILE, { version: 1, seeded: false, files: {} })) created.push('CHANNEL_ADAPTER_STATE.json');
 
   if (created.length > 0) {
@@ -282,6 +289,54 @@ function sanitizeSettingsPatch(body) {
     auto_resume: patch.auto_resume === true,
   };
   return out;
+}
+
+function readSettings() {
+  const raw = asObject(readJson(SETTINGS_FILE));
+  const auth = asObject(raw.auth);
+  return {
+    budget_daily: raw.budget_daily ?? null,
+    budget_weekly: raw.budget_weekly ?? null,
+    budget_monthly: raw.budget_monthly ?? null,
+    hitl_enabled: raw.hitl_enabled !== false,
+    auto_resume: raw.auto_resume === true,
+    auth: {
+      public_mode: auth.public_mode === true,
+      pin_hash: typeof auth.pin_hash === 'string' && auth.pin_hash ? auth.pin_hash : null,
+    },
+  };
+}
+
+function updateSettings(mutator) {
+  return withFileLockSync(SETTINGS_FILE, () => {
+    const current = readSettings();
+    const next = mutator(current);
+    safeWriteJson(SETTINGS_FILE, next);
+    return next;
+  });
+}
+
+function publicSettingsView(settings) {
+  const s = settings || readSettings();
+  return {
+    budget_daily: s.budget_daily ?? null,
+    budget_weekly: s.budget_weekly ?? null,
+    budget_monthly: s.budget_monthly ?? null,
+    hitl_enabled: s.hitl_enabled !== false,
+    auto_resume: s.auto_resume === true,
+    auth: {
+      public_mode: s.auth?.public_mode === true,
+      has_pin: !!s.auth?.pin_hash,
+    },
+  };
+}
+
+function hashPin(pin) {
+  return crypto.createHash('sha256').update(String(pin)).digest('hex');
+}
+
+function isValidPinFormat(pin) {
+  return typeof pin === 'string' && /^\d{4,8}$/.test(pin);
 }
 
 function getHeartbeatAge(workspace, wsDir = '') {
@@ -720,6 +775,14 @@ const ALLOWED_ORIGINS = new Set([
   `http://localhost:${PORT}`,
   `http://[::1]:${PORT}`,
 ]);
+const WRITE_AUTH_TTL_MS = 12 * 60 * 60 * 1000;
+const _writeAuthTokens = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, expiresAt] of _writeAuthTokens.entries()) {
+    if (expiresAt <= now) _writeAuthTokens.delete(token);
+  }
+}, 60_000);
 
 function requireCsrf(req, res, next) {
   const origin = req.header('origin');
@@ -731,6 +794,52 @@ function requireCsrf(req, res, next) {
   const token = req.header('x-agi-farm-csrf');
   if (!token || !isValidCsrfToken(token)) {
     res.status(403).json({ error: 'forbidden' });
+    return;
+  }
+  next();
+}
+
+function issueWriteAuthToken() {
+  const token = crypto.randomBytes(24).toString('hex');
+  _writeAuthTokens.set(token, Date.now() + WRITE_AUTH_TTL_MS);
+  return token;
+}
+
+function isValidWriteAuthToken(token) {
+  if (!token) return false;
+  const expiresAt = _writeAuthTokens.get(token);
+  if (!expiresAt) return false;
+  if (Date.now() > expiresAt) {
+    _writeAuthTokens.delete(token);
+    return false;
+  }
+  return true;
+}
+
+function requireWriteAccess(req, res, next) {
+  const method = String(req.method || 'GET').toUpperCase();
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
+    next();
+    return;
+  }
+  if (req.path.startsWith('/auth/')) {
+    next();
+    return;
+  }
+
+  const settings = readSettings();
+  if (settings.auth.public_mode === true) {
+    res.status(403).json({ error: 'public_mode_read_only' });
+    return;
+  }
+  if (!settings.auth.pin_hash) {
+    next();
+    return;
+  }
+
+  const authToken = req.header('x-agi-farm-auth');
+  if (!isValidWriteAuthToken(authToken)) {
+    res.status(401).json({ error: 'pin_required' });
     return;
   }
   next();
@@ -818,7 +927,7 @@ function buildWorkspaceSnapshot(cache, services) {
   const alerts = asArray(readJson(path.join(WORKSPACE, 'ALERTS.json')));
   const projectsStore = readProjectsStore();
   const projectsRaw = asArray(projectsStore.projects);
-  const settings = asObject(readJson(SETTINGS_FILE));
+  const settings = readSettings();
   const teamInfo = asObject(readJson(path.join(WORKSPACE, 'agi-farm-bundle', 'team.json')));
   const flags = getFeatureFlags();
 
@@ -965,7 +1074,7 @@ function buildWorkspaceSnapshot(cache, services) {
     projects,
     project_defaults: projectsStore.defaults,
     project_events: projectEvents,
-    settings,
+    settings: publicSettingsView(settings),
     comms,
     jobs,
     approvals,
@@ -1056,6 +1165,15 @@ function sanitizeText(text, maxLen = 2000) {
   return text.slice(0, maxLen).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
 }
 
+function readSecrets() {
+  return asObject(readJson(SECRETS_FILE));
+}
+
+function sanitizeTemplateId(value) {
+  const id = sanitizeText(String(value || '').toLowerCase(), 64).replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  return id || `template-${Date.now()}`;
+}
+
 function requireFeature(name) {
   return (req, res, next) => {
     const flags = getFeatureFlags();
@@ -1106,6 +1224,7 @@ async function main() {
   const actionLimiter = createRateLimiter(60000, 30);
   const sessionLimiter = createRateLimiter(60000, 20); // stricter limit for token endpoint
   app.use('/api', apiLimiter);
+  app.use('/api', requireWriteAccess);
 
   const cache = new SlowDataCache();
   const broadcaster = new Broadcaster();
@@ -1176,6 +1295,108 @@ async function main() {
 
   app.get('/api/session', sessionLimiter, (req, res) => {
     res.json({ csrfToken: getCsrfToken() });
+  });
+
+  app.get('/api/auth/status', requireCsrf, (req, res) => {
+    const settings = readSettings();
+    res.json({
+      hasPin: !!settings.auth.pin_hash,
+      publicMode: settings.auth.public_mode === true,
+      writeUnlocked: isValidWriteAuthToken(req.header('x-agi-farm-auth')),
+    });
+  });
+
+  app.post('/api/auth/verify-pin', actionLimiter, requireCsrf, (req, res) => {
+    const pin = sanitizeText(req.body?.pin, 16);
+    const settings = readSettings();
+    if (!settings.auth.pin_hash) {
+      res.json({ valid: true, authToken: issueWriteAuthToken() });
+      return;
+    }
+    const valid = isValidPinFormat(pin) && constantTimeEquals(hashPin(pin), settings.auth.pin_hash);
+    if (!valid) {
+      res.status(401).json({ valid: false, error: 'invalid_pin' });
+      return;
+    }
+    res.json({ valid: true, authToken: issueWriteAuthToken() });
+  });
+
+  app.post('/api/auth/set-pin', actionLimiter, requireCsrf, (req, res) => {
+    const pin = sanitizeText(req.body?.pin, 16);
+    const currentPin = sanitizeText(req.body?.currentPin, 16);
+    if (!isValidPinFormat(pin)) {
+      res.status(400).json({ error: 'invalid_pin_format' });
+      return;
+    }
+    try {
+      const next = updateSettings((current) => {
+        if (current.auth.pin_hash) {
+          if (!isValidPinFormat(currentPin) || !constantTimeEquals(hashPin(currentPin), current.auth.pin_hash)) {
+            throw new Error('invalid_current_pin');
+          }
+        }
+        return {
+          ...current,
+          auth: {
+            ...current.auth,
+            pin_hash: hashPin(pin),
+          },
+        };
+      });
+      services.audit.log('auth_pin_set', {});
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, settings: publicSettingsView(next) });
+    } catch (err) {
+      res.status(err.message === 'invalid_current_pin' ? 401 : 500).json({ error: err.message || 'pin_set_failed' });
+    }
+  });
+
+  app.post('/api/auth/remove-pin', actionLimiter, requireCsrf, (req, res) => {
+    const pin = sanitizeText(req.body?.pin, 16);
+    try {
+      const next = updateSettings((current) => {
+        if (!current.auth.pin_hash) return current;
+        if (!isValidPinFormat(pin) || !constantTimeEquals(hashPin(pin), current.auth.pin_hash)) {
+          throw new Error('invalid_pin');
+        }
+        return {
+          ...current,
+          auth: {
+            ...current.auth,
+            pin_hash: null,
+          },
+        };
+      });
+      services.audit.log('auth_pin_removed', {});
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, settings: publicSettingsView(next) });
+    } catch (err) {
+      res.status(err.message === 'invalid_pin' ? 401 : 500).json({ error: err.message || 'pin_remove_failed' });
+    }
+  });
+
+  app.post('/api/auth/public-mode', actionLimiter, requireCsrf, (req, res) => {
+    const publicMode = req.body?.publicMode === true;
+    const pin = sanitizeText(req.body?.pin, 16);
+    try {
+      const next = updateSettings((current) => {
+        if (current.auth.pin_hash && (!isValidPinFormat(pin) || !constantTimeEquals(hashPin(pin), current.auth.pin_hash))) {
+          throw new Error('invalid_pin');
+        }
+        return {
+          ...current,
+          auth: {
+            ...current.auth,
+            public_mode: publicMode,
+          },
+        };
+      });
+      services.audit.log('auth_public_mode_updated', { publicMode });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, settings: publicSettingsView(next) });
+    } catch (err) {
+      res.status(err.message === 'invalid_pin' ? 401 : 500).json({ error: err.message || 'public_mode_update_failed' });
+    }
   });
 
   const reactDist = path.join(__dirname, '..', 'dashboard-react', 'dist');
@@ -1836,15 +2057,219 @@ async function main() {
 
   app.post('/api/settings', actionLimiter, requireCsrf, createPolicyGate(services, () => 'settings:update'), (req, res) => {
     try {
-      const next = sanitizeSettingsPatch(req.body);
-      withFileLockSync(SETTINGS_FILE, () => {
-        safeWriteJson(SETTINGS_FILE, next);
+      const patch = sanitizeSettingsPatch(req.body);
+      const next = updateSettings((current) => {
+        return {
+          ...current,
+          ...patch,
+          auth: {
+            ...current.auth,
+          },
+        };
       });
       services.audit.log('settings_updated', { keys: Object.keys(next) });
       broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
-      res.json({ ok: true, settings: next });
+      res.json({ ok: true, settings: publicSettingsView(next) });
     } catch (err) {
       res.status(500).json({ error: 'settings_update_failed', message: err.message });
+    }
+  });
+
+  app.get('/api/secrets', requireCsrf, (req, res) => {
+    const secrets = readSecrets();
+    const scopes = Object.keys(secrets).map((scope) => {
+      const keys = Object.keys(asObject(secrets[scope]));
+      return { scope, keys, count: keys.length };
+    });
+    res.json({ scopes });
+  });
+
+  app.get('/api/secrets/:scope', requireCsrf, (req, res) => {
+    const scope = req.params.scope;
+    if (!ID_PATTERN.test(scope)) {
+      res.status(400).json({ error: 'invalid_scope' });
+      return;
+    }
+    const secrets = readSecrets();
+    const scoped = asObject(secrets[scope]);
+    const masked = {};
+    Object.keys(scoped).forEach((key) => {
+      masked[key] = '__SECRET__';
+    });
+    res.json({ scope, secrets: masked, count: Object.keys(masked).length });
+  });
+
+  app.post('/api/secrets/:scope', actionLimiter, requireCsrf, (req, res) => {
+    const scope = req.params.scope;
+    if (!ID_PATTERN.test(scope)) {
+      res.status(400).json({ error: 'invalid_scope' });
+      return;
+    }
+    const updates = asObject(req.body?.updates);
+    const entries = Object.entries(updates).slice(0, 50);
+    if (entries.length === 0) {
+      res.status(400).json({ error: 'updates_required' });
+      return;
+    }
+    const clean = {};
+    for (const [key, value] of entries) {
+      if (!ID_PATTERN.test(key)) continue;
+      const val = sanitizeText(String(value ?? ''), 5000).trim();
+      if (!val) continue;
+      clean[key] = val;
+    }
+    if (Object.keys(clean).length === 0) {
+      res.status(400).json({ error: 'no_valid_secret_keys' });
+      return;
+    }
+    withFileLockSync(SECRETS_FILE, () => {
+      const existing = readSecrets();
+      existing[scope] = {
+        ...asObject(existing[scope]),
+        ...clean,
+      };
+      safeWriteJson(SECRETS_FILE, existing);
+    });
+    services.audit.log('secrets_updated', { scope, keys: Object.keys(clean) });
+    res.json({ ok: true, scope, keys: Object.keys(clean) });
+  });
+
+  app.delete('/api/secrets/:scope/:key', actionLimiter, requireCsrf, (req, res) => {
+    const scope = req.params.scope;
+    const key = req.params.key;
+    if (!ID_PATTERN.test(scope) || !ID_PATTERN.test(key)) {
+      res.status(400).json({ error: 'invalid_secret_path' });
+      return;
+    }
+    withFileLockSync(SECRETS_FILE, () => {
+      const existing = readSecrets();
+      if (!existing[scope]) return;
+      delete existing[scope][key];
+      if (Object.keys(asObject(existing[scope])).length === 0) {
+        delete existing[scope];
+      }
+      safeWriteJson(SECRETS_FILE, existing);
+    });
+    services.audit.log('secret_deleted', { scope, key });
+    res.json({ ok: true });
+  });
+
+  app.get('/api/templates', requireCsrf, (req, res) => {
+    try {
+      fs.mkdirSync(DASHBOARD_TEMPLATES_DIR, { recursive: true });
+      const dirs = fs.readdirSync(DASHBOARD_TEMPLATES_DIR, { withFileTypes: true }).filter((d) => d.isDirectory());
+      const templates = dirs.map((d) => {
+        const id = d.name;
+        const metaPath = path.join(DASHBOARD_TEMPLATES_DIR, id, 'meta.json');
+        const meta = asObject(readJson(metaPath));
+        return {
+          id,
+          name: asString(meta.name || id),
+          description: asString(meta.description || ''),
+          tags: asArray(meta.tags).map((t) => sanitizeText(String(t), 32)).slice(0, 20),
+          createdAt: asString(meta.createdAt || ''),
+          updatedAt: asString(meta.updatedAt || ''),
+        };
+      });
+      templates.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      res.json({ templates });
+    } catch (err) {
+      res.status(500).json({ error: 'templates_list_failed', message: err.message });
+    }
+  });
+
+  app.get('/api/templates/:id', requireCsrf, validateId, (req, res) => {
+    const id = req.params.id;
+    try {
+      const base = path.join(DASHBOARD_TEMPLATES_DIR, id);
+      const meta = asObject(readJson(path.join(base, 'meta.json')));
+      const config = asObject(readJson(path.join(base, 'config.json')));
+      if (!Object.keys(meta).length && !Object.keys(config).length) {
+        res.status(404).json({ error: 'template_not_found' });
+        return;
+      }
+      res.json({ id, meta, config });
+    } catch (err) {
+      res.status(500).json({ error: 'template_read_failed', message: err.message });
+    }
+  });
+
+  app.post('/api/templates/export', actionLimiter, requireCsrf, (req, res) => {
+    try {
+      fs.mkdirSync(DASHBOARD_TEMPLATES_DIR, { recursive: true });
+      const title = sanitizeText(req.body?.name || 'Dashboard Template', 120).trim() || 'Dashboard Template';
+      const id = sanitizeTemplateId(req.body?.id || title);
+      const description = sanitizeText(req.body?.description || '', 500);
+      const tags = asArray(req.body?.tags).map((t) => sanitizeText(String(t), 32)).filter(Boolean).slice(0, 20);
+      const base = path.join(DASHBOARD_TEMPLATES_DIR, id);
+      fs.mkdirSync(base, { recursive: true });
+      const settings = publicSettingsView(readSettings());
+      const exportConfig = {
+        settings: {
+          budget_daily: settings.budget_daily,
+          budget_weekly: settings.budget_weekly,
+          budget_monthly: settings.budget_monthly,
+          hitl_enabled: settings.hitl_enabled,
+          auto_resume: settings.auto_resume,
+          auth: {
+            public_mode: settings.auth.public_mode,
+          },
+        },
+      };
+      const now = new Date().toISOString();
+      const meta = {
+        id,
+        name: title,
+        description,
+        tags,
+        createdAt: asString(asObject(readJson(path.join(base, 'meta.json'))).createdAt || now),
+        updatedAt: now,
+      };
+      safeWriteJson(path.join(base, 'meta.json'), meta);
+      safeWriteJson(path.join(base, 'config.json'), exportConfig);
+      services.audit.log('template_exported', { id });
+      res.json({ ok: true, id, meta });
+    } catch (err) {
+      res.status(500).json({ error: 'template_export_failed', message: err.message });
+    }
+  });
+
+  app.post('/api/templates/import', actionLimiter, requireCsrf, (req, res) => {
+    const id = sanitizeText(req.body?.id, 128);
+    const mode = req.body?.mode === 'merge' ? 'merge' : 'replace';
+    if (!ID_PATTERN.test(id)) {
+      res.status(400).json({ error: 'invalid_template_id' });
+      return;
+    }
+    try {
+      const configPath = path.join(DASHBOARD_TEMPLATES_DIR, id, 'config.json');
+      const config = asObject(readJson(configPath));
+      const incoming = asObject(config.settings);
+      if (Object.keys(incoming).length === 0) {
+        res.status(400).json({ error: 'template_missing_settings' });
+        return;
+      }
+      const current = readSettings();
+      const merged = sanitizeSettingsPatch({
+        budget_daily: mode === 'merge' ? (current.budget_daily ?? incoming.budget_daily) : incoming.budget_daily,
+        budget_weekly: mode === 'merge' ? (current.budget_weekly ?? incoming.budget_weekly) : incoming.budget_weekly,
+        budget_monthly: mode === 'merge' ? (current.budget_monthly ?? incoming.budget_monthly) : incoming.budget_monthly,
+        hitl_enabled: incoming.hitl_enabled,
+        auto_resume: incoming.auto_resume,
+      });
+      const next = updateSettings((state) => ({
+        ...state,
+        ...merged,
+        auth: {
+          ...state.auth,
+          public_mode: asObject(incoming.auth).public_mode === true,
+        },
+      }));
+      services.audit.log('template_imported', { id, mode });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, id, mode, settings: publicSettingsView(next) });
+    } catch (err) {
+      res.status(500).json({ error: 'template_import_failed', message: err.message });
     }
   });
 

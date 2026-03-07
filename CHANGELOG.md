@@ -6,6 +6,54 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-03-07
+
+### 🦞 LobsterBoard Parity (P0 Core)
+
+- Added dashboard write access control with PIN lock:
+  - `GET /api/auth/status`
+  - `POST /api/auth/verify-pin`
+  - `POST /api/auth/set-pin`
+  - `POST /api/auth/remove-pin`
+  - `POST /api/auth/public-mode`
+- Added public mode enforcement for write/edit APIs (`public_mode_read_only` protection).
+- Added write-session auth token support (`x-agi-farm-auth`) in dashboard client API layer.
+
+### 🔐 Secrets Store Foundation
+
+- Added workspace-backed secrets file:
+  - `workspace/SECRETS.json`
+- Added masked secrets APIs:
+  - `GET /api/secrets`
+  - `GET /api/secrets/:scope`
+  - `POST /api/secrets/:scope`
+  - `DELETE /api/secrets/:scope/:key`
+
+### 🧩 Template Import/Export Foundation
+
+- Added dashboard template directory support:
+  - `workspace/dashboard-templates/*`
+- Added template APIs:
+  - `GET /api/templates`
+  - `GET /api/templates/:id`
+  - `POST /api/templates/export`
+  - `POST /api/templates/import`
+
+### ⚙️ Settings + Snapshot Hardening
+
+- Added auth settings schema in `SETTINGS.json` (`auth.public_mode`, `auth.pin_hash`).
+- Updated snapshot settings output to return safe auth view only (`has_pin`, `public_mode`).
+- Refactored settings save path to merge safely and preserve protected auth fields.
+
+### 🖥️ Dashboard UI Wiring
+
+- Extended `Settings` tab to manage:
+  - PIN unlock/rotation/removal
+  - Public mode toggle
+  - Template export/import actions
+  - Secrets store updates/deletes
+- Added persistent write-auth token handling in dashboard client API utilities.
+
 ## [1.9.0] - 2026-03-07
 
 ### 🔄 LobsterBoard Upstream Sync Infrastructure
