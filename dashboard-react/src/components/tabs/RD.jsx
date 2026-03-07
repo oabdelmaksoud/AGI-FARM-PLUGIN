@@ -1,3 +1,4 @@
+import { FlaskConical, Cpu, List, CheckCircle2 } from 'lucide-react';
 import LastUpdated from '../LastUpdated';
 
 export default function RD({ data, lastUpdated }) {
@@ -6,56 +7,60 @@ export default function RD({ data, lastUpdated }) {
   const evaluations = benchmarks?.evaluations || [];
   const lastRun = benchmarks?.last_run;
 
+  const PRIORITY_CFG = {
+    P1: { bg: '#FEF2F2', color: 'var(--red)', border: '#FEE2E2' },
+    P2: { bg: '#FFFBEB', color: 'var(--amber)', border: '#FEF3C7' },
+    P3: { bg: '#F1F5F9', color: 'var(--muted)', border: '#E2E8F0' },
+  };
+
   return (
-    <div className="fade-in" style={{ display: 'grid', gap: 16 }}>
-      {/* Experiments Section */}
-      <div className="card shadow-glow" style={{ border: '1px solid var(--cyan-glow)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-          <div className="section-title" style={{ marginBottom: 0 }}>NEURAL EXPERIMENTATION LAB</div>
-          <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--cyan)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>ACTIVE_CYCLES: {experiments.length}</span>
-          <LastUpdated ts={lastUpdated} />
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <h1 style={{ marginBottom: 4 }}>R&D Lab</h1>
+          <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>Experiments, benchmarks, and evolution pipeline</p>
+        </div>
+        <LastUpdated ts={lastUpdated} />
+      </div>
+
+      {/* Experiments */}
+      <div className="card">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+          <FlaskConical size={16} color="var(--accent)" />
+          <h2 style={{ fontSize: 15, margin: 0 }}>Active Experiments</h2>
+          <span style={{ marginLeft: 'auto', background: '#EEF2FF', color: 'var(--accent)', borderRadius: 999, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>{experiments.length}</span>
         </div>
 
         {experiments.length === 0 ? (
-          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
-            <div style={{ fontSize: 24, marginBottom: 8, opacity: 0.5 }}>🧪</div>
-            <div style={{ fontSize: 10, letterSpacing: '0.1em' }}>LABORATORY_IDLE // NO ACTIVE HYPOTHESES</div>
+          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)', background: '#F8FAFC', borderRadius: 12, border: '1px dashed var(--border)' }}>
+            <FlaskConical size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
+            <div style={{ fontSize: 13 }}>No active experiments</div>
           </div>
         ) : (
-          <div style={{ overflow: 'hidden', borderRadius: 8, border: '1px solid var(--border)' }}>
-            <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse', background: 'rgba(0,0,0,0.2)' }}>
+          <div style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+            <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border)' }}>
-                  {['VECTOR_ID', 'HYPOTHESIS', 'COGNITION_STATE', 'INITIALIZED', 'OUTCOME'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '10px 14px', fontSize: 9, color: 'var(--muted)', fontWeight: 800, letterSpacing: '0.05em' }}>{h}</th>
+                <tr style={{ background: '#F8FAFC', borderBottom: '1px solid var(--border)' }}>
+                  {['ID', 'Hypothesis', 'Status', 'Started', 'Outcome'].map(h => (
+                    <th key={h} style={{ textAlign: 'left', padding: '10px 14px', fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {experiments.map((e, i) => {
                   const st = (e.status || '').toLowerCase();
-                  const color = st === 'complete' ? 'var(--green)' : st === 'running' ? 'var(--cyan)' : st === 'failed' ? 'var(--red)' : 'var(--muted)';
+                  const statusCfg = { complete: { bg: '#ECFDF5', color: 'var(--mint)' }, running: { bg: '#EEF2FF', color: 'var(--accent)' }, failed: { bg: '#FEF2F2', color: 'var(--red)' } }[st] || { bg: '#F1F5F9', color: 'var(--muted)' };
                   return (
-                    <tr key={e.id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }} className="task-row-hover">
-                      <td style={{ padding: '12px 14px', color: 'var(--cyan)', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}>{e.id || '--'}</td>
-                      <td style={{ padding: '12px 14px' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220 }}>{e.title || e.hypothesis || '—'}</div>
+                    <tr key={e.id || i} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
+                      <td style={{ padding: '10px 14px', fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{(e.id || '--').slice(0, 12)}</td>
+                      <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text)', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {e.title || e.hypothesis || '—'}
                       </td>
-                      <td style={{ padding: '12px 14px' }}>
-                        <span className="badge" style={{
-                          fontSize: 9, color, background: `${color}11`, border: `1px solid ${color}33`,
-                          display: 'inline-flex', alignItems: 'center', gap: 4
-                        }}>
-                          {st === 'running' && <div className="status-dot" style={{ background: color, boxShadow: `0 0 8px ${color}` }} />}
-                          {e.status?.toUpperCase()}
-                        </span>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ background: statusCfg.bg, color: statusCfg.color, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 600 }}>{e.status}</span>
                       </td>
-                      <td style={{ padding: '12px 14px', color: 'var(--muted)', fontFamily: 'JetBrains Mono, monospace' }}>{e.started_at ? new Date(e.started_at).toLocaleDateString() : '--'}</td>
-                      <td style={{ padding: '12px 14px' }}>
-                        <div style={{ color: 'var(--muted)', fontSize: 10, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>
-                          {e.result || e.outcome || '--'}
-                        </div>
-                      </td>
+                      <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: 12 }}>{e.started_at ? new Date(e.started_at).toLocaleDateString() : '—'}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text-dim)', fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.result || e.outcome || '—'}</td>
                     </tr>
                   );
                 })}
@@ -65,39 +70,33 @@ export default function RD({ data, lastUpdated }) {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20 }}>
         {/* Benchmarks */}
         <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-            <span className="section-title" style={{ marginBottom: 0 }}>KINETIC PERFORMANCE MATRIX</span>
-            {lastRun && <span style={{ fontSize: 9, color: 'var(--muted)', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>SYNC: {new Date(lastRun).toLocaleDateString()}</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <Cpu size={15} color="var(--accent)" />
+            <h2 style={{ fontSize: 15, margin: 0 }}>Benchmarks</h2>
+            {lastRun && <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>Last run: {new Date(lastRun).toLocaleDateString()}</span>}
           </div>
-
           {evaluations.length === 0 ? (
-            <div style={{ padding: '30px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 10 }}>MATRIX_EMPTY // NO DATA POINTS</div>
+            <div style={{ padding: '30px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>No benchmark data yet</div>
           ) : (
-            <div style={{ overflow: 'hidden', borderRadius: 8, border: '1px solid var(--border)' }}>
-              <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
+            <div style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border)' }}>
-                    {['MODEL_KERNEL', 'RATING', 'LATENCY', 'LOG'].map(h => (
-                      <th key={h} style={{ textAlign: 'left', padding: '10px 14px', fontSize: 9, color: 'var(--muted)', fontWeight: 800 }}>{h}</th>
+                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid var(--border)' }}>
+                    {['Model', 'Score', 'Latency', 'Notes'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '8px 12px', fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {evaluations.map((ev, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,.02)' }}>
-                      <td style={{ padding: '10px 14px', fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'var(--cyan)' }}>{ev.model}</td>
-                      <td style={{ padding: '10px 14px' }}>
-                        <span style={{ color: 'var(--amber)', fontWeight: 800, fontSize: 13, textShadow: '0 0 10px rgba(255,214,0,0.3)' }}>
-                          ★{(ev.score ?? 0).toFixed(2)}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 14px', color: 'var(--purple)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
-                        {ev.latency_ms ? `${ev.latency_ms}MS` : '--'}
-                      </td>
-                      <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: 9 }}>{ev.notes || '--'}</td>
+                    <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
+                      <td style={{ padding: '8px 12px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{ev.model}</td>
+                      <td style={{ padding: '8px 12px', color: 'var(--amber)', fontWeight: 800 }}>★{(ev.score ?? 0).toFixed(2)}</td>
+                      <td style={{ padding: '8px 12px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>{ev.latency_ms ? `${ev.latency_ms}ms` : '—'}</td>
+                      <td style={{ padding: '8px 12px', color: 'var(--muted)', fontSize: 11 }}>{ev.notes || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -108,39 +107,35 @@ export default function RD({ data, lastUpdated }) {
 
         {/* Backlog */}
         <div className="card">
-          <div className="section-title">NEURAL EVOLUTION PIPELINE</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <List size={15} color="var(--accent)" />
+            <h2 style={{ fontSize: 15, margin: 0 }}>Evolution Pipeline</h2>
+            <span style={{ marginLeft: 'auto', background: '#F1F5F9', color: 'var(--muted)', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{backlog.length}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {backlog.length === 0 ? (
-              <div style={{ padding: '30px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 10 }}>PIPELINE_CLEAR</div>
-            ) : (
-              backlog.slice(0, 15).map((item, i) => {
-                const pri = (item.priority || '').toUpperCase();
-                const priNorm = pri === 'HIGH' ? 'P1' : pri === 'MEDIUM' ? 'P2' : pri === 'LOW' ? 'P3' : pri;
-                const isDone = item.status === 'done';
-
-                return (
-                  <div key={item.id || i} style={{
-                    display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-                    background: isDone ? 'rgba(0,255,157,0.02)' : 'rgba(255,255,255,0.01)',
-                    border: '1px solid rgba(255,255,255,0.03)', borderRadius: 6,
-                    opacity: isDone ? 0.6 : 1, transition: 'all 0.2s'
-                  }} className="task-row-hover">
-                    <span className={`pri-tag ${priNorm.toLowerCase()}`} style={{
-                      fontSize: 8, fontWeight: 900, width: 20, textAlign: 'center'
-                    }}>{priNorm}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title || item.description}</div>
-                      <div style={{ fontSize: 8, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{item.category || 'GENERAL_EVO'}</div>
-                    </div>
-                    {isDone ? (
-                      <span style={{ color: 'var(--green)', fontSize: 12, fontWeight: 900 }}>✓</span>
-                    ) : (
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--border)' }} />
-                    )}
+              <div style={{ padding: 28, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Pipeline is clear</div>
+            ) : backlog.slice(0, 15).map((item, i) => {
+              const pri = (item.priority || '').toUpperCase();
+              const priNorm = pri === 'HIGH' ? 'P1' : pri === 'MEDIUM' ? 'P2' : 'P3';
+              const priCfg = PRIORITY_CFG[priNorm];
+              const isDone = item.status === 'done';
+              return (
+                <div key={item.id || i} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                  background: isDone ? '#F0FDF4' : '#F8FAFC',
+                  border: `1px solid ${isDone ? '#D1FAE5' : 'var(--border)'}`,
+                  borderRadius: 10, opacity: isDone ? 0.7 : 1, transition: 'all 0.15s',
+                }}>
+                  <span style={{ background: priCfg.bg, color: priCfg.color, border: `1px solid ${priCfg.border}`, borderRadius: 4, padding: '1px 5px', fontSize: 9, fontWeight: 800, flexShrink: 0 }}>{priNorm}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: isDone ? 'line-through' : 'none' }}>{item.title || item.description}</div>
+                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>{item.category || 'General'}</div>
                   </div>
-                );
-              })
-            )}
+                  {isDone && <CheckCircle2 size={14} color="var(--mint)" style={{ flexShrink: 0 }} />}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
