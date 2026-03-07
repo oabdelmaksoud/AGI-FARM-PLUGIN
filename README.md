@@ -181,14 +181,21 @@ Run enhanced wizard: `node scripts/setup-enhanced.js`
 
 ## 🚀 Quick Start
 
-### Install
+### One-Step Install & Setup
+
+The recommended way to install and configure AGI Farm is with this single command. It will globally install the CLI and immediately launch the interactive setup wizard:
 
 ```bash
-# Recommended: install via OpenClaw plugin manager
-openclaw plugins install agi-farm
+npm install -g agi-farm && agi-farm setup
+```
 
-# Optional: install standalone global CLI binary
-npm install -g agi-farm
+### Alternative Installation
+
+If you prefer to install it purely as an OpenClaw plugin (without the global CLI binary), you can use the built-in plugin manager, but you **must** use the `npx` runner to execute the setup wizard:
+
+```bash
+openclaw plugins install agi-farm
+npx agi-farm setup
 ```
 
 ### Upgrade (Existing Install)
@@ -204,7 +211,7 @@ openclaw plugins install agi-farm || openclaw plugins update agi-farm
 ### Run Setup Wizard
 
 ```bash
-# Start the interactive wizard
+# Start the interactive wizard anytime
 agi-farm setup
 ```
 
