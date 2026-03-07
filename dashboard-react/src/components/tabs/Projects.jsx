@@ -447,6 +447,49 @@ function ProjectDetail({ project: p, agents, tasks, okrs, onClose, onReplan, onE
 
         {section === 'RESOURCES' && <BudgetMeter project={p} />}
 
+        {section === 'OKRS' && (
+          <div>
+            {(p.okr_links || []).length === 0 ? (
+              <div style={{ padding: '40px', border: '1px solid var(--border)', color: 'var(--muted)', fontSize: '11px', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
+                [NULL] NO_OKR_LINKS // PROJECT_UNLINKED
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 12 }}>
+                {(p.okr_links || []).map((link, i) => (
+                  <div key={i} style={{ padding: '16px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
+                      {link.objective || link.title || `OKR #${i + 1}`}
+                    </div>
+                    {link.key_result && (
+                      <div style={{ fontSize: '10px', color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>
+                        KR: {link.key_result}
+                      </div>
+                    )}
+                    {link.contribution && (
+                      <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>
+                        Contribution: {link.contribution}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {p.decisions?.length > 0 && (
+              <div style={{ marginTop: '24px' }}>
+                <div className="section-title">PROJECT_DECISIONS</div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {p.decisions.map((d, i) => (
+                    <div key={i} style={{ padding: '12px', border: '1px solid var(--border)', fontSize: '11px' }}>
+                      <div style={{ fontWeight: 600, color: '#fff' }}>{d.decision}</div>
+                      {d.rationale && <div style={{ color: 'var(--muted)', marginTop: '4px', fontSize: '10px' }}>{d.rationale}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {section === 'LOGS' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
             {(p._sessions || []).map((s, i) => (
@@ -472,7 +515,6 @@ export default function Projects({ data, lastUpdated, toast }) {
   const [selectedId, setSelectedId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState({ status: 'all', search: '', health: 'all' });
-  const [sortBy, setSortBy] = useState('priority');
   const [submittingIntake, setSubmittingIntake] = useState(false);
   const [intake, setIntake] = useState({ title: '', intent: '', description: '', priority: 'P2', tags: '', project_hint: '', deadline: '', budget_usd: '' });
 

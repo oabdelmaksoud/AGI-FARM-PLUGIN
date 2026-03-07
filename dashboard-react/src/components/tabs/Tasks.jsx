@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createTask } from '../../lib/api';
+import { createTask, updateTask } from '../../lib/api';
 import LastUpdated from '../LastUpdated';
 
 const FILTERS = ['all', 'pending', 'in-progress', 'complete', 'failed', 'blocked', 'hitl'];
@@ -38,7 +38,7 @@ function DeadlineBadge({ deadline }) {
   }
 }
 
-function TaskRow({ task: t, expanded, onToggle }) {
+function TaskRow({ task: t, expanded, onToggle, toast }) {
   const pri = (t.sla?.priority || t.priority || 'P3').toUpperCase();
   const status = (t.status || '').toLowerCase();
 
@@ -157,6 +157,28 @@ function TaskRow({ task: t, expanded, onToggle }) {
                     </div>
                   </div>
                 )}
+
+                <div className="card">
+                  <div className="section-title">UPDATE_STATUS</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {['pending', 'in-progress', 'complete', 'failed', 'blocked'].filter(s => s !== status).map(s => {
+                      const btnColor = { complete: 'var(--mint)', failed: 'var(--red)', blocked: 'var(--red)', 'in-progress': 'var(--accent)', pending: 'var(--muted)' }[s] || 'var(--muted)';
+                      return (
+                        <button key={s} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '9px', color: btnColor, borderColor: btnColor }}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              await updateTask(t.id, { status: s });
+                              toast?.('Status updated', 'success');
+                            } catch (err) { toast?.(err.message, 'error'); }
+                          }}
+                        >
+                          {s.toUpperCase().replace(/-/g, '_')}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           </td>
@@ -269,7 +291,7 @@ export default function Tasks({ data, lastUpdated, toast }) {
                 </td>
               </tr>
             ) : (
-              paged.map(t => <TaskRow key={t.id} task={t} expanded={expanded === t.id} onToggle={() => setExpanded(expanded === t.id ? null : t.id)} />)
+              paged.map(t => <TaskRow key={t.id} task={t} expanded={expanded === t.id} onToggle={() => setExpanded(expanded === t.id ? null : t.id)} toast={toast} />)
             )}
           </tbody>
         </table>

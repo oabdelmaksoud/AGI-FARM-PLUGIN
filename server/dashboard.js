@@ -513,7 +513,8 @@ function buildWorkspaceSnapshot(cache, services) {
     velocity,
     okrs,
     broadcast,
-    experiments,
+    experiments: asArray(experiments.experiments || experiments),
+    backlog: asArray(improvementBacklog.items || improvementBacklog),
     improvement_backlog: improvementBacklog,
     shared_knowledge: sharedKnowledge,
     knowledge: sharedKnowledge,
@@ -1337,6 +1338,117 @@ async function main() {
 
   app.get('/api/usage', requireFeature('metering'), (req, res) => {
     res.json(services.metering.getUsage());
+  });
+
+  // ── Broadcast Endpoint ─────────────────────────────────────────────────
+  app.post('/api/broadcast', actionLimiter, requireCsrf, (req, res) => {
+    const message = typeof req.body?.message === 'string' ? req.body.message.slice(0, 2000) : '';
+    if (!message.trim()) {
+      res.status(400).json({ error: 'empty_message' });
+      return;
+    }
+    try {
+      const broadcastPath = path.join(WORKSPACE, 'comms', 'broadcast.md');
+      fs.mkdirSync(path.dirname(broadcastPath), { recursive: true });
+      const timestamp = new Date().toISOString();
+      const entry = `\n## [${timestamp}]\n${message}\n`;
+      fs.appendFileSync(broadcastPath, entry, 'utf-8');
+      services.audit.log('broadcast_posted', { length: message.length });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: 'broadcast_failed', message: err.message });
+    }
+  });
+
+  // ── Knowledge Endpoints ────────────────────────────────────────────────
+  app.post('/api/knowledge', actionLimiter, requireCsrf, (req, res) => {
+    const { title, content, category, tags } = req.body || {};
+    if (!content || typeof content !== 'string' || !content.trim()) {
+      res.status(400).json({ error: 'content_required' });
+      return;
+    }
+    try {
+      const knowledgePath = path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json');
+      const existing = asArray(readJson(knowledgePath));
+      const entry = {
+        id: `kn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        title: typeof title === 'string' ? title.slice(0, 200) : '',
+        content: content.slice(0, 5000),
+        category: typeof category === 'string' ? category.slice(0, 50) : 'general',
+        tags: Array.isArray(tags) ? tags.map(t => String(t).slice(0, 30)).slice(0, 10) : [],
+        added_by: 'human',
+        confidence: 0.95,
+        created_at: new Date().toISOString(),
+      };
+      existing.push(entry);
+      safeWriteJson(knowledgePath, existing);
+      services.audit.log('knowledge_created', { id: entry.id });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, entry });
+    } catch (err) {
+      res.status(500).json({ error: 'knowledge_create_failed', message: err.message });
+    }
+  });
+
+  app.delete('/api/knowledge/:id', actionLimiter, validateId, requireCsrf, (req, res) => {
+    try {
+      const knowledgePath = path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json');
+      const existing = asArray(readJson(knowledgePath));
+      const idx = existing.findIndex(e => e.id === req.params.id);
+      if (idx === -1) {
+        res.status(404).json({ error: 'not_found' });
+        return;
+      }
+      existing.splice(idx, 1);
+      safeWriteJson(knowledgePath, existing);
+      services.audit.log('knowledge_deleted', { id: req.params.id });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: 'knowledge_delete_failed', message: err.message });
+    }
+  });
+
+  // ── Comms Send Endpoint ────────────────────────────────────────────────
+  app.post('/api/comms/:id/send', actionLimiter, validateId, requireCsrf, (req, res) => {
+    const agentId = req.params.id;
+    const message = typeof req.body?.message === 'string' ? req.body.message.slice(0, 2000) : '';
+    if (!message.trim()) {
+      res.status(400).json({ error: 'empty_message' });
+      return;
+    }
+    try {
+      const inboxPath = path.join(WORKSPACE, 'comms', 'inboxes', `${agentId}.md`);
+      fs.mkdirSync(path.dirname(inboxPath), { recursive: true });
+      const timestamp = new Date().toISOString();
+      const entry = `\n## [HUMAN → ${agentId.toUpperCase()}] ${timestamp}\n${message}\n`;
+      fs.appendFileSync(inboxPath, entry, 'utf-8');
+      services.audit.log('comms_sent', { agentId, length: message.length });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: 'comms_send_failed', message: err.message });
+    }
+  });
+
+  // ── Audit Log Endpoint ─────────────────────────────────────────────────
+  app.get('/api/audit', requireCsrf, (req, res) => {
+    const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
+    try {
+      const auditPath = path.join(WORKSPACE, 'AUDIT_LOG.jsonl');
+      let lines = [];
+      try {
+        const raw = fs.readFileSync(auditPath, 'utf-8');
+        lines = raw.split('\n').filter(l => l.trim()).map(l => {
+          try { return JSON.parse(l); } catch { return null; }
+        }).filter(Boolean);
+      } catch { /* file doesn't exist yet */ }
+      const entries = lines.slice(-limit).reverse();
+      res.json({ entries, total: lines.length });
+    } catch (err) {
+      res.status(500).json({ error: 'audit_read_failed', message: err.message });
+    }
   });
 
   // ── Security Endpoints ───────────────────────────────────────────────────

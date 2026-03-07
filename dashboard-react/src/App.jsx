@@ -26,6 +26,9 @@ const Processes = lazy(() => import('./components/tabs/Processes'));
 const Failures = lazy(() => import('./components/tabs/Failures'));
 const Decisions = lazy(() => import('./components/tabs/Decisions'));
 const Security = lazy(() => import('./components/tabs/Security'));
+const Skills = lazy(() => import('./components/tabs/Skills'));
+const Policies = lazy(() => import('./components/tabs/Policies'));
+const AuditLog = lazy(() => import('./components/tabs/AuditLog'));
 const Settings = lazy(() => import('./components/tabs/Settings'));
 
 const TABS = [
@@ -34,7 +37,8 @@ const TABS = [
   'Crons', 'HITL', 'Alerts',
   'Velocity', 'Budget', 'OKRs',
   'Knowledge', 'Memory', 'Comms',
-  'Security', 'Processes', 'Failures', 'Decisions',
+  'Security', 'Skills', 'Policies', 'Audit',
+  'Processes', 'Failures', 'Decisions',
   'R&D', 'Broadcast', 'Settings',
 ];
 
@@ -56,6 +60,9 @@ const TAB_COMPONENTS = {
   'Memory': Memory,
   'Comms': Comms,
   'Security': Security,
+  'Skills': Skills,
+  'Policies': Policies,
+  'Audit': AuditLog,
   'Processes': Processes,
   'Failures': Failures,
   'Decisions': Decisions,
