@@ -651,14 +651,14 @@ export default function Projects({ data, lastUpdated, toast }) {
         <LastUpdated ts={lastUpdated} />
       </div>
 
-      {enriched.find(p => p.id === selectedId) && (
+      {(() => { const sel = enriched.find(p => p.id === selectedId); return sel ? (
         <ProjectDetail
-          project={enriched.find(p => p.id === selectedId)}
+          project={sel}
           agents={agents} tasks={tasks} okrs={okrs} lastUpdated={lastUpdated}
           onReplan={handleReplan} onExecute={handleExecute} onSaveBudget={handleBudgetQuickSave} onSaveOkr={handleOkrQuickSave}
           onClose={() => setSelectedId(null)}
         />
-      )}
+      ) : null; })()}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 24, opacity: selectedId ? 0.4 : 1, transition: 'opacity 0.3s' }}>
         {filtered.map(p => <ProjectCard key={p.id} project={p} agents={agents} selected={selectedId === p.id} onClick={() => setSelectedId(p.id)} />)}

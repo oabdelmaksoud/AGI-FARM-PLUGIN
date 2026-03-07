@@ -18,7 +18,7 @@ function Breakdown({ title, map }) {
 }
 
 export default function Usage({ data, lastUpdated }) {
-  const { usage = {}, featureFlags = {} } = data;
+  const { usage = {}, featureFlags = {} } = data || {};
   const totals = usage.totals || {};
 
   if (!featureFlags.metering) {

@@ -32,7 +32,7 @@ function StatusDot({ status, errors }) {
   return <span className="dot dot-offline" />;
 }
 
-function CronRow({ job, agents, onTrigger, onToggle }) {
+function CronRow({ job, agents, onTrigger, onToggle, toast }) {
   const [triggering, setTriggering] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [localEnabled, setLocalEnabled] = useState(job.enabled !== false);
@@ -45,7 +45,7 @@ function CronRow({ job, agents, onTrigger, onToggle }) {
     try {
       await apiPost(`/api/cron/${job.id}/trigger`);
       onTrigger?.(job.id);
-    } catch { }
+    } catch (e) { toast?.(e.message, 'error'); }
     setTimeout(() => setTriggering(false), 2000);
   }
 
@@ -55,7 +55,7 @@ function CronRow({ job, agents, onTrigger, onToggle }) {
       const res = await apiPost(`/api/cron/${job.id}/toggle`);
       if (res.ok) setLocalEnabled(res.enabled);
       onToggle?.(job.id, res.enabled);
-    } catch { }
+    } catch (e) { toast?.(e.message, 'error'); }
     setToggling(false);
   }
 
@@ -139,7 +139,7 @@ function CronRow({ job, agents, onTrigger, onToggle }) {
   );
 }
 
-export default function Crons({ data, lastUpdated }) {
+export default function Crons({ data, lastUpdated, toast }) {
   const { crons = [], agents = [] } = data || {};
   const [filter, setFilter] = useState('all');
 
@@ -211,7 +211,7 @@ export default function Crons({ data, lastUpdated }) {
               <tr><td colSpan={8} style={{ padding: '20px', color: 'var(--muted)', textAlign: 'center' }}>No cron jobs match filter</td></tr>
             )}
             {filtered.map(j => (
-              <CronRow key={j.id} job={j} agents={agents} />
+              <CronRow key={j.id} job={j} agents={agents} toast={toast} />
             ))}
           </tbody>
         </table>

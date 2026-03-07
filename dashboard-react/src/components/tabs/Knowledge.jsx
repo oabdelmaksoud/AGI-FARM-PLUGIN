@@ -126,7 +126,7 @@ export default function Knowledge({ data, lastUpdated, toast }) {
               <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div style={{ fontSize: 10, color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 4, fontFamily: 'JetBrains Mono, monospace' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>AUTHOR:</span><span style={{ color: 'var(--cyan)' }}>{agent?.name.toUpperCase() || 'SYSTEM'}</span>
+                    <span>AUTHOR:</span><span style={{ color: 'var(--cyan)' }}>{(agent?.name || 'SYSTEM').toUpperCase()}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>SIG:</span><span>{entry.source_task || '—'}</span>

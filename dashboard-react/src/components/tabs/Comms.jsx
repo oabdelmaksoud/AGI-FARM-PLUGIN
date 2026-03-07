@@ -61,9 +61,9 @@ export default function Comms({ data, lastUpdated, toast }) {
     setSending(true);
     try {
       await apiPost(`/api/comms/${selectedAgent}/send`, { message: composeMsg.trim() });
-      toast('Signal frequencies locked and transmitted', 'success');
+      toast?.('Signal frequencies locked and transmitted', 'success');
       setComposeMsg('');
-    } catch (e) { toast(e.message, 'error'); }
+    } catch (e) { toast?.(e.message, 'error'); }
     setSending(false);
   };
 

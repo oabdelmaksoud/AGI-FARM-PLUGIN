@@ -264,7 +264,7 @@ export default function Tasks({ data, lastUpdated, toast }) {
           </select>
           <select className="input-base" value={newTask.assigned_to} onChange={e => setNewTask({ ...newTask, assigned_to: e.target.value })}>
             <option value="">NODE_ASSIGNMENT...</option>
-            {agents.map(a => <option key={a.id} value={a.id}>{a.emoji} {a.name.toUpperCase()}</option>)}
+            {agents.map(a => <option key={a.id} value={a.id}>{a.emoji} {(a.name || a.id || '').toUpperCase()}</option>)}
           </select>
           <button className="btn-primary" onClick={handleCreate} disabled={saving || !newTask.id || !newTask.title} style={{ gridColumn: 'span 1' }}>{saving ? 'PROCESSING...' : 'INITIALIZE'}</button>
         </div>

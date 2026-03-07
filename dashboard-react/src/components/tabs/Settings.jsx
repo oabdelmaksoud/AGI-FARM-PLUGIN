@@ -24,7 +24,8 @@ export default function Settings({ data, toast }) {
   };
 
   const handleSave = async () => {
-    if (!csrf || !defaults) return;
+    if (!defaults) return;
+    if (!csrf) { toast?.('Session expired — please refresh', 'error'); return; }
     setSaving(true);
     try {
       const res = await fetch('/api/projects/defaults', {
