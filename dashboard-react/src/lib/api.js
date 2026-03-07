@@ -75,7 +75,10 @@ export async function apiPost(path, body = null) {
 }
 
 export async function apiGet(path) {
-  const res = await fetch(path);
+  const token = await getCsrfToken();
+  const res = await fetch(path, {
+    headers: { 'x-agi-farm-csrf': token },
+  });
   let payload = {};
   try {
     payload = await res.json();

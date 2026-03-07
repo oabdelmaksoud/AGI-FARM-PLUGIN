@@ -394,6 +394,7 @@ function buildWorkspaceSnapshot(cache, services) {
   const decisions = readMd(path.join(WORKSPACE, 'DECISIONS.md'));
   const processes = extractProcesses(readJson(path.join(WORKSPACE, 'PROCESSES.json')));
   const securityStatus = readJson(path.join(WORKSPACE, 'SECURITY_STATUS.json'));
+  const benchmarks = asObject(readJson(path.join(WORKSPACE, 'BENCHMARKS.json')));
   const alerts = asArray(readJson(path.join(WORKSPACE, 'ALERTS.json')));
   const projectsStore = readProjectsStore();
   const projectsRaw = asArray(projectsStore.projects);
@@ -514,6 +515,7 @@ function buildWorkspaceSnapshot(cache, services) {
     okrs,
     broadcast,
     experiments: asArray(experiments.experiments || experiments),
+    benchmarks,
     backlog: asArray(improvementBacklog.items || improvementBacklog),
     improvement_backlog: improvementBacklog,
     shared_knowledge: sharedKnowledge,

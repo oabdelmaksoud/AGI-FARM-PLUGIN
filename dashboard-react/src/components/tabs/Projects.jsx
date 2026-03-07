@@ -183,7 +183,7 @@ function GanttChart({ project: p }) {
                 fontSize: '11px', color: isComplete ? 'var(--muted)' : '#fff', width: '140px', flexShrink: 0,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600
               }}>
-                {ms.title.toUpperCase()}
+                {(ms.title || '').toUpperCase()}
               </div>
               <div style={{ flex: 1, position: 'relative', height: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: '1px' }}>
                 <div style={{
@@ -285,12 +285,12 @@ function ProjectCard({ project: p, agents, selected, onClick }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '4px' }}>
             <span style={{ fontWeight: 800, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {p.name.toUpperCase()}
+              {(p.name || '').toUpperCase()}
             </span>
             <HealthIndicator health={health} />
           </div>
           <div style={{ fontSize: '9px', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
-            {p.id} // STATUS: {p.status.toUpperCase()}
+            {p.id} // STATUS: {(p.status || '').toUpperCase()}
           </div>
         </div>
       </div>
@@ -345,7 +345,7 @@ function ProjectDetail({ project: p, agents, tasks, okrs, onClose, onReplan, onE
         <ProgressRing pct={pct} size={90} color={color} />
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: '8px' }}>
-            <span style={{ fontSize: '28px', fontWeight: 800 }}>{p.name.toUpperCase()}</span>
+            <span style={{ fontSize: '28px', fontWeight: 800 }}>{(p.name || '').toUpperCase()}</span>
             <Badge label={p.status} color={STATUS_COLOR[p.status]} />
             <HealthIndicator health={health} />
           </div>
@@ -396,9 +396,9 @@ function ProjectDetail({ project: p, agents, tasks, okrs, onClose, onReplan, onE
               {risks.length > 0 ? (
                 risks.map(r => (
                   <div key={r.id} style={{ padding: '12px', border: '1px solid var(--red)', borderLeftWidth: '4px', marginBottom: '12px', background: 'rgba(255,42,85,0.03)' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>{r.description.toUpperCase()}</div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>{(r.description || '').toUpperCase()}</div>
                     <div style={{ fontSize: '9px', color: 'var(--red)', fontWeight: 800, marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
-                      SEVERITY: {r.severity.toUpperCase()} // DETECTED: {relTime(r.detected_at)}
+                      SEVERITY: {(r.severity || '').toUpperCase()} // DETECTED: {relTime(r.detected_at)}
                     </div>
                   </div>
                 ))
@@ -414,7 +414,7 @@ function ProjectDetail({ project: p, agents, tasks, okrs, onClose, onReplan, onE
                 {(p._activity || []).slice(0, 10).map((a, i) => (
                   <div key={i} style={{ display: 'flex', gap: 12, fontSize: '11px' }}>
                     <span style={{ color: 'var(--muted)', flexShrink: 0, fontFamily: 'var(--font-mono)' }}>[{relTime(a.ts)}]</span>
-                    <span style={{ color: '#fff', fontWeight: 500 }}>{a.text.toUpperCase()}</span>
+                    <span style={{ color: '#fff', fontWeight: 500 }}>{(a.text || '').toUpperCase()}</span>
                   </div>
                 ))}
               </div>
@@ -435,7 +435,7 @@ function ProjectDetail({ project: p, agents, tasks, okrs, onClose, onReplan, onE
                   </div>
                   {list.map(t => (
                     <div key={t.id} style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', marginBottom: '8px', borderRadius: '2px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 600 }}>{t.title.toUpperCase()}</div>
+                      <div style={{ fontSize: '11px', fontWeight: 600 }}>{(t.title || '').toUpperCase()}</div>
                       <div style={{ fontSize: '8px', color: 'var(--muted)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>{t.id}</div>
                     </div>
                   ))}
@@ -587,7 +587,7 @@ export default function Projects({ data, lastUpdated, toast }) {
   const filtered = useMemo(() => enriched.filter(p => {
     if (filters.status !== 'all' && p.status !== filters.status) return false;
     if (filters.health !== 'all' && healthScore(p) !== filters.health) return false;
-    if (filters.search && !p.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    if (filters.search && !(p.name || '').toLowerCase().includes(filters.search.toLowerCase())) return false;
     return true;
   }).sort((a, b) => (b.priority_weight || 0) - (a.priority_weight || 0)), [enriched, filters]);
 
