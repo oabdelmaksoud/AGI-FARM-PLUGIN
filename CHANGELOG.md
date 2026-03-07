@@ -6,6 +6,95 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-03-07
+
+### 🛡️ Security Dashboard Integration
+
+#### New Security Tab
+- **Visual Security Monitoring** — Comprehensive security dashboard in Ops Room
+  - **Security Grade Display** — Letter grade (A-F) with color-coded indicators
+  - **Numeric Score** — 0-100 scale with progress bar visualization
+  - **Trend Indicator** — Shows improving (↗), stable (→), or degrading (↘) trends
+  - **Findings Summary** — 5 severity-level cards (Critical, High, Medium, Low, Info)
+  - **Action Buttons** — "Scan Now" and "Auto-Fix" with loading states
+  - **Status Messages** — Current security posture and next scan time
+  - **Scan Categories** — Explains 5 AgentShield scan categories
+
+#### Backend Services
+- **Security Service** — `server/services/security.js` (380 lines)
+  - `runSecurityScan()` — Execute AgentShield scans
+  - `updateSecurityStatus()` — Maintain SECURITY_STATUS.json
+  - `getSecurityStatus()` — Read current security posture
+  - `scanAndUpdate()` — Combined scan + update operation
+  - `autoFixSecurityIssues()` — Run scan with --fix flag
+  - `getSecurityHistory()` — Retrieve last 30 scans
+  - Trend calculation (improving/stable/degrading)
+  - Scan history tracking with timestamps
+
+#### API Endpoints
+- **4 New REST Endpoints** — Added to `server/dashboard.js`
+  - `GET /api/security/status` — Get current security status
+  - `POST /api/security/scan` — Trigger manual scan (optional auto-fix)
+  - `POST /api/security/fix` — Auto-fix security issues
+  - `GET /api/security/history` — Get scan history (last 30)
+  - CSRF protection on all POST endpoints
+  - Rate limiting (5 requests/minute) on action endpoints
+
+#### Frontend Components
+- **Security Tab Component** — `dashboard-react/src/components/tabs/Security.jsx` (350+ lines)
+  - Real-time security status display
+  - Interactive scan and auto-fix buttons
+  - Error handling with user-friendly messages
+  - Loading states for async operations
+  - Responsive layout with gradient backgrounds
+  - Integration with existing API client (`apiGet`, `apiPost`)
+
+#### Documentation
+- **Complete Integration Guide** — `SECURITY_DASHBOARD.md` (550 lines)
+  - Architecture overview (backend + frontend)
+  - Data flow diagrams for all operations
+  - File structure and component hierarchy
+  - Security status JSON schema
+  - Manual testing checklist (6 test cases)
+  - Troubleshooting guide (4 common issues)
+  - Performance benchmarks
+  - Future enhancement roadmap (3 phases)
+
+#### Integration with Daily Cron
+- **Seamless Coordination** — Dashboard displays results from Vigil's daily scan
+  - Cron job updates SECURITY_STATUS.json at 9 AM EST
+  - Dashboard reads and displays latest scan results
+  - Manual scans also update the same status file
+  - Consistent data source for all security visibility
+
+### Files Added (3 files)
+
+- `server/services/security.js` — Security operations backend service
+- `dashboard-react/src/components/tabs/Security.jsx` — Security tab React component
+- `SECURITY_DASHBOARD.md` — Complete integration documentation
+
+### Files Modified (2 files)
+
+- `server/dashboard.js` — Added 4 security API endpoints
+- `dashboard-react/src/App.jsx` — Added Security tab to navigation
+
+### Statistics
+
+- **Lines Added**: ~1,200 (380 backend + 350 frontend + 550 docs)
+- **API Endpoints**: 4 new REST endpoints
+- **React Components**: 1 new tab component
+- **Build Size**: Security tab bundle ~9.24 KB (2.67 KB gzipped)
+- **Performance**: Initial load ~100-200ms, manual scan ~15-30s
+
+### Benefits
+
+✅ **Real-time Visibility** — View security posture at a glance from dashboard
+✅ **On-Demand Scanning** — Trigger security scans anytime, not just daily cron
+✅ **Auto-Fix Capability** — One-click automated fixes for safe issues
+✅ **Trend Tracking** — Monitor security improvements or degradations over time
+✅ **User-Friendly UI** — Visual, color-coded interface for non-technical users
+✅ **Zero Config** — Works out-of-box with existing AgentShield integration
+
 ## [1.5.1] - 2026-03-06
 
 ### 🔬 Enhanced OpenClaw Compatibility System

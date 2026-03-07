@@ -31,3 +31,4 @@ coverage/
 # Dashboard React build (included in repo for convenience)
 # dashboard-react/dist/  # uncomment to exclude
 dashboard-react/node_modules/
+*.tgz
