@@ -1,7 +1,7 @@
 import LastUpdated from '../LastUpdated';
 
 export default function OKRs({ data, lastUpdated }) {
-  const okrs = data.okrs || {};
+  const okrs = data?.okrs || {};
   const objectives = okrs.objectives || okrs.okrs || [];
 
   return (

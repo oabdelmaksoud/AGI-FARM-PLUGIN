@@ -1,5 +1,5 @@
 import path from 'path';
-import { ensureJsonFile, safeReadJson, safeWriteJson } from './storage.js';
+import { ensureJsonFile, safeReadJson, safeWriteJson, withFileLockSync } from './storage.js';
 
 const VALID_STATUS = new Set(['pending', 'in-progress', 'needs_human_decision', 'blocked', 'failed', 'complete', 'cancelled']);
 const STATUS_FLOW = {
@@ -98,48 +98,52 @@ export class TaskService {
   }
 
   create(payload = {}) {
-    const tasks = this._read();
-    const next = normalizeTask({
-      ...payload,
-      status: payload.status || 'pending',
-      created_at: nowIso(),
-      updated_at: nowIso(),
+    return withFileLockSync(this.tasksPath, () => {
+      const tasks = this._read();
+      const next = normalizeTask({
+        ...payload,
+        status: payload.status || 'pending',
+        created_at: nowIso(),
+        updated_at: nowIso(),
+      });
+      if (tasks.some((t) => t.id === next.id)) {
+        throw new Error('task_id_conflict');
+      }
+      const graph = buildGraph([...tasks, next]);
+      if (hasCycle(graph)) throw new Error('invalid_dependencies_cycle');
+      tasks.push(next);
+      this._write(tasks);
+      return next;
     });
-    if (tasks.some((t) => t.id === next.id)) {
-      throw new Error('task_id_conflict');
-    }
-    const graph = buildGraph([...tasks, next]);
-    if (hasCycle(graph)) throw new Error('invalid_dependencies_cycle');
-    tasks.push(next);
-    this._write(tasks);
-    return next;
   }
 
   update(id, patch = {}) {
-    const tasks = this._read();
-    const idx = tasks.findIndex((t) => t.id === id);
-    if (idx < 0) return null;
+    return withFileLockSync(this.tasksPath, () => {
+      const tasks = this._read();
+      const idx = tasks.findIndex((t) => t.id === id);
+      if (idx < 0) return null;
 
-    const prev = tasks[idx];
-    const targetStatus = patch.status ? String(patch.status) : prev.status;
-    if (patch.status && !VALID_STATUS.has(targetStatus)) throw new Error('invalid_status');
-    if (patch.status && prev.status !== targetStatus && !STATUS_FLOW[prev.status]?.has(targetStatus)) {
-      throw new Error('invalid_status_transition');
-    }
+      const prev = tasks[idx];
+      const targetStatus = patch.status ? String(patch.status) : prev.status;
+      if (patch.status && !VALID_STATUS.has(targetStatus)) throw new Error('invalid_status');
+      if (patch.status && prev.status !== targetStatus && !STATUS_FLOW[prev.status]?.has(targetStatus)) {
+        throw new Error('invalid_status_transition');
+      }
 
-    const next = normalizeTask({
-      ...prev,
-      ...patch,
-      updated_at: nowIso(),
-      completed_at: targetStatus === 'complete'
-        ? (prev.completed_at || nowIso())
-        : (patch.completed_at || null),
+      const next = normalizeTask({
+        ...prev,
+        ...patch,
+        updated_at: nowIso(),
+        completed_at: targetStatus === 'complete'
+          ? (prev.completed_at || nowIso())
+          : (patch.completed_at || null),
+      });
+      tasks[idx] = next;
+      const graph = buildGraph(tasks);
+      if (hasCycle(graph)) throw new Error('invalid_dependencies_cycle');
+      this._write(tasks);
+      return next;
     });
-    tasks[idx] = next;
-    const graph = buildGraph(tasks);
-    if (hasCycle(graph)) throw new Error('invalid_dependencies_cycle');
-    this._write(tasks);
-    return next;
   }
 
   syncFromJob(job) {

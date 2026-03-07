@@ -13,7 +13,7 @@ function relTime(iso) {
   } catch { return iso; }
 }
 
-function HITLCard({ task, agents, onAction }) {
+function HITLCard({ task, agents, onAction, toast }) {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(null);
   const agent = agents.find(a => a.id === task.assigned_to);
@@ -25,7 +25,7 @@ function HITLCard({ task, agents, onAction }) {
     try {
       await apiPost(`/api/hitl/${task.id}/${action}`, { note: note || undefined });
       onAction(task.id, action);
-    } catch (e) { console.error(e); }
+    } catch (e) { toast?.(e.message, 'error'); }
     setLoading(null);
   }
 
@@ -99,7 +99,7 @@ function HITLCard({ task, agents, onAction }) {
   );
 }
 
-export default function HITLTab({ data, lastUpdated }) {
+export default function HITLTab({ data, lastUpdated, toast }) {
   const { hitl_tasks = [], agents = [] } = data || {};
   const [resolved, setResolved] = useState(new Set());
 
@@ -125,7 +125,7 @@ export default function HITLTab({ data, lastUpdated }) {
       )}
 
       {pending.map(t => (
-        <HITLCard key={t.id} task={t} agents={agents} onAction={onAction} />
+        <HITLCard key={t.id} task={t} agents={agents} onAction={onAction} toast={toast} />
       ))}
 
       {resolved.size > 0 && (

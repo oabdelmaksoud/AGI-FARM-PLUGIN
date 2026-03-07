@@ -183,7 +183,7 @@ function GanttChart({ project: p }) {
                 fontSize: '11px', color: isComplete ? 'var(--muted)' : '#fff', width: '140px', flexShrink: 0,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600
               }}>
-                {ms.title.toUpperCase()}
+                {(ms.title || '').toUpperCase()}
               </div>
               <div style={{ flex: 1, position: 'relative', height: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: '1px' }}>
                 <div style={{
@@ -285,12 +285,12 @@ function ProjectCard({ project: p, agents, selected, onClick }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '4px' }}>
             <span style={{ fontWeight: 800, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {p.name.toUpperCase()}
+              {(p.name || '').toUpperCase()}
             </span>
             <HealthIndicator health={health} />
           </div>
           <div style={{ fontSize: '9px', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
-            {p.id} // STATUS: {p.status.toUpperCase()}
+            {p.id} // STATUS: {(p.status || '').toUpperCase()}
           </div>
         </div>
       </div>
@@ -345,7 +345,7 @@ function ProjectDetail({ project: p, agents, tasks, okrs, onClose, onReplan, onE
         <ProgressRing pct={pct} size={90} color={color} />
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: '8px' }}>
-            <span style={{ fontSize: '28px', fontWeight: 800 }}>{p.name.toUpperCase()}</span>
+            <span style={{ fontSize: '28px', fontWeight: 800 }}>{(p.name || '').toUpperCase()}</span>
             <Badge label={p.status} color={STATUS_COLOR[p.status]} />
             <HealthIndicator health={health} />
           </div>
@@ -396,9 +396,9 @@ function ProjectDetail({ project: p, agents, tasks, okrs, onClose, onReplan, onE
               {risks.length > 0 ? (
                 risks.map(r => (
                   <div key={r.id} style={{ padding: '12px', border: '1px solid var(--red)', borderLeftWidth: '4px', marginBottom: '12px', background: 'rgba(255,42,85,0.03)' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>{r.description.toUpperCase()}</div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>{(r.description || '').toUpperCase()}</div>
                     <div style={{ fontSize: '9px', color: 'var(--red)', fontWeight: 800, marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
-                      SEVERITY: {r.severity.toUpperCase()} // DETECTED: {relTime(r.detected_at)}
+                      SEVERITY: {(r.severity || '').toUpperCase()} // DETECTED: {relTime(r.detected_at)}
                     </div>
                   </div>
                 ))
@@ -414,7 +414,7 @@ function ProjectDetail({ project: p, agents, tasks, okrs, onClose, onReplan, onE
                 {(p._activity || []).slice(0, 10).map((a, i) => (
                   <div key={i} style={{ display: 'flex', gap: 12, fontSize: '11px' }}>
                     <span style={{ color: 'var(--muted)', flexShrink: 0, fontFamily: 'var(--font-mono)' }}>[{relTime(a.ts)}]</span>
-                    <span style={{ color: '#fff', fontWeight: 500 }}>{a.text.toUpperCase()}</span>
+                    <span style={{ color: '#fff', fontWeight: 500 }}>{(a.text || '').toUpperCase()}</span>
                   </div>
                 ))}
               </div>
@@ -435,7 +435,7 @@ function ProjectDetail({ project: p, agents, tasks, okrs, onClose, onReplan, onE
                   </div>
                   {list.map(t => (
                     <div key={t.id} style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', marginBottom: '8px', borderRadius: '2px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 600 }}>{t.title.toUpperCase()}</div>
+                      <div style={{ fontSize: '11px', fontWeight: 600 }}>{(t.title || '').toUpperCase()}</div>
                       <div style={{ fontSize: '8px', color: 'var(--muted)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>{t.id}</div>
                     </div>
                   ))}
@@ -446,6 +446,49 @@ function ProjectDetail({ project: p, agents, tasks, okrs, onClose, onReplan, onE
         )}
 
         {section === 'RESOURCES' && <BudgetMeter project={p} />}
+
+        {section === 'OKRS' && (
+          <div>
+            {(p.okr_links || []).length === 0 ? (
+              <div style={{ padding: '40px', border: '1px solid var(--border)', color: 'var(--muted)', fontSize: '11px', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
+                [NULL] NO_OKR_LINKS // PROJECT_UNLINKED
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 12 }}>
+                {(p.okr_links || []).map((link, i) => (
+                  <div key={i} style={{ padding: '16px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
+                      {link.objective || link.title || `OKR #${i + 1}`}
+                    </div>
+                    {link.key_result && (
+                      <div style={{ fontSize: '10px', color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>
+                        KR: {link.key_result}
+                      </div>
+                    )}
+                    {link.contribution && (
+                      <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>
+                        Contribution: {link.contribution}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {p.decisions?.length > 0 && (
+              <div style={{ marginTop: '24px' }}>
+                <div className="section-title">PROJECT_DECISIONS</div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {p.decisions.map((d, i) => (
+                    <div key={i} style={{ padding: '12px', border: '1px solid var(--border)', fontSize: '11px' }}>
+                      <div style={{ fontWeight: 600, color: '#fff' }}>{d.decision}</div>
+                      {d.rationale && <div style={{ color: 'var(--muted)', marginTop: '4px', fontSize: '10px' }}>{d.rationale}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {section === 'LOGS' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
@@ -472,7 +515,6 @@ export default function Projects({ data, lastUpdated, toast }) {
   const [selectedId, setSelectedId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState({ status: 'all', search: '', health: 'all' });
-  const [sortBy, setSortBy] = useState('priority');
   const [submittingIntake, setSubmittingIntake] = useState(false);
   const [intake, setIntake] = useState({ title: '', intent: '', description: '', priority: 'P2', tags: '', project_hint: '', deadline: '', budget_usd: '' });
 
@@ -498,6 +540,38 @@ export default function Projects({ data, lastUpdated, toast }) {
     finally { setSubmittingIntake(false); }
   };
 
+  const handleReplan = async (projectId) => {
+    try {
+      await planProject(projectId);
+      await refreshProjects();
+      toast?.('Replan initiated', 'success');
+    } catch (e) { toast?.(e.message, 'error'); }
+  };
+
+  const handleExecute = async (projectId) => {
+    try {
+      await executeProject(projectId);
+      await refreshProjects();
+      toast?.('Execution started', 'success');
+    } catch (e) { toast?.(e.message, 'error'); }
+  };
+
+  const handleBudgetQuickSave = async (projectId, budget) => {
+    try {
+      await updateProjectBudget(projectId, budget);
+      await refreshProjects();
+      toast?.('Budget updated', 'success');
+    } catch (e) { toast?.(e.message, 'error'); }
+  };
+
+  const handleOkrQuickSave = async (projectId, okrLink) => {
+    try {
+      await updateProjectOkrLink(projectId, okrLink);
+      await refreshProjects();
+      toast?.('OKR link updated', 'success');
+    } catch (e) { toast?.(e.message, 'error'); }
+  };
+
   const enriched = useMemo(() => projectsData.map(p => {
     const pTasks = tasks.filter(t => (p.task_ids || []).includes(t.id));
     const done = pTasks.filter(t => t.status === 'complete').length;
@@ -513,7 +587,7 @@ export default function Projects({ data, lastUpdated, toast }) {
   const filtered = useMemo(() => enriched.filter(p => {
     if (filters.status !== 'all' && p.status !== filters.status) return false;
     if (filters.health !== 'all' && healthScore(p) !== filters.health) return false;
-    if (filters.search && !p.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    if (filters.search && !(p.name || '').toLowerCase().includes(filters.search.toLowerCase())) return false;
     return true;
   }).sort((a, b) => (b.priority_weight || 0) - (a.priority_weight || 0)), [enriched, filters]);
 
@@ -577,14 +651,14 @@ export default function Projects({ data, lastUpdated, toast }) {
         <LastUpdated ts={lastUpdated} />
       </div>
 
-      {enriched.find(p => p.id === selectedId) && (
+      {(() => { const sel = enriched.find(p => p.id === selectedId); return sel ? (
         <ProjectDetail
-          project={enriched.find(p => p.id === selectedId)}
+          project={sel}
           agents={agents} tasks={tasks} okrs={okrs} lastUpdated={lastUpdated}
           onReplan={handleReplan} onExecute={handleExecute} onSaveBudget={handleBudgetQuickSave} onSaveOkr={handleOkrQuickSave}
           onClose={() => setSelectedId(null)}
         />
-      )}
+      ) : null; })()}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 24, opacity: selectedId ? 0.4 : 1, transition: 'opacity 0.3s' }}>
         {filtered.map(p => <ProjectCard key={p.id} project={p} agents={agents} selected={selectedId === p.id} onClick={() => setSelectedId(p.id)} />)}

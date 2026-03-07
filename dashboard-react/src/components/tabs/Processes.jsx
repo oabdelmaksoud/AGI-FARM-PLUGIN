@@ -4,7 +4,7 @@ import LastUpdated from '../LastUpdated';
 const MATURITY_COLOR = { L1: 'var(--red)', L2: 'var(--amber)', L3: 'var(--cyan)', L4: 'var(--green)' };
 
 export default function Processes({ data, lastUpdated }) {
-  const { processes = [], agents = [] } = data;
+  const { processes = [], agents = [] } = data || {};
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState(null);
 

@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { getCsrfToken } from '../lib/api.js';
 
 const POLL_INTERVAL_MS = 10_000; // guaranteed refresh every 10s even if SSE stalls
-const SSE_RECONNECT_MS = 3_000;
+const SSE_RECONNECT_BASE_MS = 3_000;
+const SSE_RECONNECT_MAX_MS = 60_000;
 
 export function useDashboard() {
   const [data,        setData]        = useState(window.INITIAL_DATA || null);
@@ -15,6 +16,7 @@ export function useDashboard() {
   const pollTimer   = useRef(null);
   const reconnTimer = useRef(null);
   const tokenRef    = useRef(null);
+  const reconnDelayRef = useRef(SSE_RECONNECT_BASE_MS);
 
   const applyData = useCallback((d) => {
     if (!d || d.error || d.type === 'keepalive') return;
@@ -47,8 +49,9 @@ export function useDashboard() {
       try {
         tokenRef.current = await getCsrfToken();
       } catch {
-        // Retry after delay
-        reconnTimer.current = setTimeout(connect, SSE_RECONNECT_MS);
+        // Retry with exponential backoff
+        reconnTimer.current = setTimeout(connect, reconnDelayRef.current);
+        reconnDelayRef.current = Math.min(reconnDelayRef.current * 2, SSE_RECONNECT_MAX_MS);
         return;
       }
     }
@@ -59,6 +62,7 @@ export function useDashboard() {
     es.onopen = () => {
       if (!aliveRef.current) return;
       setConnected(true);
+      reconnDelayRef.current = SSE_RECONNECT_BASE_MS; // reset backoff on success
       if (reconnTimer.current) { clearTimeout(reconnTimer.current); reconnTimer.current = null; }
     };
 
@@ -72,7 +76,8 @@ export function useDashboard() {
       setConnected(false);
       try { es.close(); } catch {}
       esRef.current = null;
-      reconnTimer.current = setTimeout(connect, SSE_RECONNECT_MS);
+      reconnTimer.current = setTimeout(connect, reconnDelayRef.current);
+      reconnDelayRef.current = Math.min(reconnDelayRef.current * 2, SSE_RECONNECT_MAX_MS);
     };
   }, [applyData]);
 

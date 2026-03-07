@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import path from 'path';
-import { ensureJsonFile, safeReadJson, safeWriteJson } from './storage.js';
+import { ensureJsonFile, safeReadJson, safeWriteJson, withFileLockSync } from './storage.js';
 
 const DEFAULT_POLICIES = {
   rules: [
@@ -77,41 +77,45 @@ export class PolicyService {
   }
 
   createApproval({ jobId, action, payload, reason }) {
-    const data = safeReadJson(this.approvalsPath, DEFAULT_APPROVALS);
-    const approvals = Array.isArray(data.approvals) ? data.approvals : [];
-    const payloadHash = crypto.createHash('sha256').update(JSON.stringify(payload || {})).digest('hex');
-    const approval = {
-      id: crypto.randomUUID(),
-      jobId,
-      action,
-      payloadHash,
-      status: 'pending',
-      requestedAt: new Date().toISOString(),
-      resolvedAt: null,
-      resolver: null,
-      note: reason || '',
-    };
-    approvals.push(approval);
-    safeWriteJson(this.approvalsPath, { approvals });
-    return approval;
+    return withFileLockSync(this.approvalsPath, () => {
+      const data = safeReadJson(this.approvalsPath, DEFAULT_APPROVALS);
+      const approvals = Array.isArray(data.approvals) ? data.approvals : [];
+      const payloadHash = crypto.createHash('sha256').update(JSON.stringify(payload || {})).digest('hex');
+      const approval = {
+        id: crypto.randomUUID(),
+        jobId,
+        action,
+        payloadHash,
+        status: 'pending',
+        requestedAt: new Date().toISOString(),
+        resolvedAt: null,
+        resolver: null,
+        note: reason || '',
+      };
+      approvals.push(approval);
+      safeWriteJson(this.approvalsPath, { approvals });
+      return approval;
+    });
   }
 
   resolveApproval(id, status, resolver, note) {
-    const data = safeReadJson(this.approvalsPath, DEFAULT_APPROVALS);
-    const approvals = Array.isArray(data.approvals) ? data.approvals : [];
-    const idx = approvals.findIndex((a) => a.id === id);
-    if (idx < 0) return { ok: false, error: 'approval_not_found' };
-    if (approvals[idx].status !== 'pending') return { ok: false, error: 'approval_already_resolved' };
+    return withFileLockSync(this.approvalsPath, () => {
+      const data = safeReadJson(this.approvalsPath, DEFAULT_APPROVALS);
+      const approvals = Array.isArray(data.approvals) ? data.approvals : [];
+      const idx = approvals.findIndex((a) => a.id === id);
+      if (idx < 0) return { ok: false, error: 'approval_not_found' };
+      if (approvals[idx].status !== 'pending') return { ok: false, error: 'approval_already_resolved' };
 
-    approvals[idx] = {
-      ...approvals[idx],
-      status,
-      resolvedAt: new Date().toISOString(),
-      resolver: resolver || 'human',
-      note: note || approvals[idx].note || '',
-    };
-    safeWriteJson(this.approvalsPath, { approvals });
-    return { ok: true, approval: approvals[idx] };
+      approvals[idx] = {
+        ...approvals[idx],
+        status,
+        resolvedAt: new Date().toISOString(),
+        resolver: resolver || 'human',
+        note: note || approvals[idx].note || '',
+      };
+      safeWriteJson(this.approvalsPath, { approvals });
+      return { ok: true, approval: approvals[idx] };
+    });
   }
 
   getJobApprovalState(jobId) {

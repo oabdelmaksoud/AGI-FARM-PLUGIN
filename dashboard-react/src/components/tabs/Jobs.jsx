@@ -17,7 +17,7 @@ function JobStep({ step }) {
   );
 }
 
-export default function Jobs({ data, lastUpdated }) {
+export default function Jobs({ data, lastUpdated, toast }) {
   const { jobs = [], featureFlags = {} } = data || {};
   const [intent, setIntent] = useState('');
   const [priority, setPriority] = useState('P2');
@@ -48,11 +48,11 @@ export default function Jobs({ data, lastUpdated }) {
   }
 
   async function onCancel(id) {
-    try { await cancelJob(id); } catch { }
+    try { await cancelJob(id); toast?.('Job cancelled', 'success'); } catch (e) { toast?.(e.message, 'error'); }
   }
 
   async function onRetry(id) {
-    try { await retryJob(id); } catch { }
+    try { await retryJob(id); toast?.('Job retry queued', 'success'); } catch (e) { toast?.(e.message, 'error'); }
   }
 
   if (disabled) {

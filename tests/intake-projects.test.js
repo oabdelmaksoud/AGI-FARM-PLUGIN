@@ -139,7 +139,9 @@ describe('Intake + Projects APIs', () => {
       expect(timeline.events.length).toBeGreaterThan(0);
 
       // Verify snapshot includes project_defaults
-      const snapshotRes = await fetch(`${baseUrl}/api/data`);
+      const snapshotRes = await fetch(`${baseUrl}/api/data`, {
+        headers: { 'x-agi-farm-csrf': csrf },
+      });
       expect(snapshotRes.status).toBe(200);
       const snapshot = await snapshotRes.json();
       expect(snapshot.project_defaults).toBeTruthy();

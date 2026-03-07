@@ -51,11 +51,11 @@ function ProjectMatrixItem({ project: p }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: color }} />
             <span style={{ fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {p.id.toUpperCase()}
+              {(p.id || '').toUpperCase()}
             </span>
           </div>
           <div style={{ fontSize: '10px', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
-            {p.name.toUpperCase()}
+            {(p.name || '').toUpperCase()}
           </div>
         </div>
         <div style={{ fontSize: '14px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{pct}%</div>
@@ -111,10 +111,10 @@ function AgentPulseRow({ agent: a, tasks, projects }) {
         <span style={{ fontSize: '14px' }}>{a.emoji || '🤖'}</span>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {a.name.toUpperCase()}
+            {(a.name || a.id || '').toUpperCase()}
           </div>
           <div style={{ fontSize: '8px', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
-            STATUS: {a.status?.toUpperCase()}
+            STATUS: {(a.status || '').toUpperCase()}
           </div>
         </div>
       </div>
@@ -122,11 +122,11 @@ function AgentPulseRow({ agent: a, tasks, projects }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         {hitlTask ? (
           <div style={{ fontSize: '10px', color: 'var(--purple)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-            [!] HITL: {hitlTask.title.toUpperCase()}
+            [!] HITL: {(hitlTask.title || '').toUpperCase()}
           </div>
         ) : activeTask ? (
           <div style={{ fontSize: '10px', color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
-            {`> ${activeTask.title.toUpperCase()}`}
+            {`> ${(activeTask.title || '').toUpperCase()}`}
           </div>
         ) : (
           <div style={{ fontSize: '9px', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>IDLE</div>

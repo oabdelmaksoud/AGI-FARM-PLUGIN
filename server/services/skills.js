@@ -1,5 +1,5 @@
 import path from 'path';
-import { ensureJsonFile, safeReadJson, safeWriteJson } from './storage.js';
+import { ensureJsonFile, safeReadJson, safeWriteJson, withFileLockSync } from './storage.js';
 
 const DEFAULT_REGISTRY = {
   skills: [
@@ -38,13 +38,15 @@ export class SkillsService {
   }
 
   setEnabled(skillId, enabled) {
-    const data = safeReadJson(this.filePath, DEFAULT_REGISTRY);
-    const skills = Array.isArray(data.skills) ? data.skills : [];
-    const idx = skills.findIndex((s) => s.id === skillId);
-    if (idx === -1) return { ok: false, error: 'skill_not_found' };
-    skills[idx] = { ...skills[idx], enabled: !!enabled };
-    safeWriteJson(this.filePath, { skills });
-    return { ok: true, skill: skills[idx] };
+    return withFileLockSync(this.filePath, () => {
+      const data = safeReadJson(this.filePath, DEFAULT_REGISTRY);
+      const skills = Array.isArray(data.skills) ? data.skills : [];
+      const idx = skills.findIndex((s) => s.id === skillId);
+      if (idx === -1) return { ok: false, error: 'skill_not_found' };
+      skills[idx] = { ...skills[idx], enabled: !!enabled };
+      safeWriteJson(this.filePath, { skills });
+      return { ok: true, skill: skills[idx] };
+    });
   }
 
   matchSkill(intent, stepKind) {

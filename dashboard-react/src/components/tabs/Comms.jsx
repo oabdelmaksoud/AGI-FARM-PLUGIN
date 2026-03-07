@@ -61,9 +61,9 @@ export default function Comms({ data, lastUpdated, toast }) {
     setSending(true);
     try {
       await apiPost(`/api/comms/${selectedAgent}/send`, { message: composeMsg.trim() });
-      toast('Signal frequencies locked and transmitted', 'success');
+      toast?.('Signal frequencies locked and transmitted', 'success');
       setComposeMsg('');
-    } catch (e) { toast(e.message, 'error'); }
+    } catch (e) { toast?.(e.message, 'error'); }
     setSending(false);
   };
 
@@ -97,7 +97,7 @@ export default function Comms({ data, lastUpdated, toast }) {
                   <div style={{
                     fontSize: 13, fontWeight: 800, color: isActive ? 'var(--cyan)' : 'var(--text)',
                     fontFamily: 'Rajdhani, sans-serif', letterSpacing: '0.02em'
-                  }}>{a.name.toUpperCase()}</div>
+                  }}>{(a.name || '').toUpperCase()}</div>
                   <div style={{ fontSize: 9, color: 'var(--muted)', fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>
                     IN:{inboxCount} // OUT:{outboxCount}
                   </div>
@@ -117,7 +117,7 @@ export default function Comms({ data, lastUpdated, toast }) {
             background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid var(--border)'
           }}>
             <span style={{ fontSize: 24 }}>{agent?.emoji}</span>
-            <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--cyan)', fontFamily: 'Rajdhani, sans-serif', letterSpacing: '0.05em' }}>{agent?.name.toUpperCase()}</span>
+            <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--cyan)', fontFamily: 'Rajdhani, sans-serif', letterSpacing: '0.05em' }}>{(agent?.name || '').toUpperCase()}</span>
           </div>
 
           <div style={{ display: 'flex', gap: 8, background: 'rgba(0,0,0,0.2)', padding: 4, borderRadius: 8, border: '1px solid var(--border)' }}>
@@ -155,7 +155,7 @@ export default function Comms({ data, lastUpdated, toast }) {
         {selectedAgent && (
           <div className="card shadow-glow" style={{ display: 'flex', gap: 12, alignItems: 'flex-end', border: '1px solid var(--border-h)' }}>
             <div style={{ flex: 1 }}>
-              <div className="section-title" style={{ fontSize: 9, marginBottom: 8 }}>ENCRYPT MESSAGE FOR {agent?.name.toUpperCase()}</div>
+              <div className="section-title" style={{ fontSize: 9, marginBottom: 8 }}>ENCRYPT MESSAGE FOR {(agent?.name || '').toUpperCase()}</div>
               <textarea className="input-base" placeholder="AUTHORIZE SIGNAL TRANSMISSION..."
                 value={composeMsg} onChange={e => setComposeMsg(e.target.value)}
                 style={{ width: '100%', minHeight: 80, resize: 'none', background: 'rgba(0,0,0,0.2)', fontSize: 12, padding: 12 }} maxLength={2000} />

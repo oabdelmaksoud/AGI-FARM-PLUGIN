@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import path from 'path';
-import { appendJsonl, ensureJsonFile, safeReadJson, safeWriteJson } from './storage.js';
+import { appendJsonl, ensureJsonFile, safeReadJson, safeWriteJson, withFileLockSync } from './storage.js';
 
 const DEFAULT_MAX_ATTEMPTS = 2;
 const DEFAULT_TIMEOUT_MS = 300000;
@@ -76,27 +76,30 @@ export class JobsService {
   }
 
   create({ title, intent, priority = 'P2', requestedBy = 'human', tags = [], rootTaskId = null, projectId = null }) {
-    const data = this._read();
-    const job = {
-      id: crypto.randomUUID(),
-      title: title || `Job: ${String(intent || '').slice(0, 72)}`,
-      intent: intent || '',
-      status: 'pending',
-      priority,
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
-      requestedBy,
-      rootTaskId,
-      projectId,
-      steps: buildStepsFromIntent(intent || ''),
-      currentStep: 0,
-      error: null,
-      tags: Array.isArray(tags) ? tags : [],
-      policyState: 'none',
-    };
-    data.jobs = Array.isArray(data.jobs) ? data.jobs : [];
-    data.jobs.push(job);
-    this._write(data);
+    const job = withFileLockSync(this.jobsPath, () => {
+      const data = this._read();
+      const j = {
+        id: crypto.randomUUID(),
+        title: title || `Job: ${String(intent || '').slice(0, 72)}`,
+        intent: intent || '',
+        status: 'pending',
+        priority,
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+        requestedBy,
+        rootTaskId,
+        projectId,
+        steps: buildStepsFromIntent(intent || ''),
+        currentStep: 0,
+        error: null,
+        tags: Array.isArray(tags) ? tags : [],
+        policyState: 'none',
+      };
+      data.jobs = Array.isArray(data.jobs) ? data.jobs : [];
+      data.jobs.push(j);
+      this._write(data);
+      return j;
+    });
     try { this.onJobUpdated?.(job, null); } catch { }
     this._logRun(job.id, null, 'job_created', { status: job.status });
     this.audit?.log('job_created', { jobId: job.id });
@@ -104,15 +107,19 @@ export class JobsService {
   }
 
   update(jobId, updater) {
-    const data = this._read();
-    const idx = (data.jobs || []).findIndex((j) => j.id === jobId);
-    if (idx < 0) return null;
-    const prev = data.jobs[idx];
-    const next = updater(data.jobs[idx]);
-    data.jobs[idx] = { ...next, updatedAt: nowIso() };
-    this._write(data);
-    try { this.onJobUpdated?.(data.jobs[idx], prev); } catch { }
-    return data.jobs[idx];
+    const result = withFileLockSync(this.jobsPath, () => {
+      const data = this._read();
+      const idx = (data.jobs || []).findIndex((j) => j.id === jobId);
+      if (idx < 0) return null;
+      const prev = data.jobs[idx];
+      const next = updater(data.jobs[idx]);
+      data.jobs[idx] = { ...next, updatedAt: nowIso() };
+      this._write(data);
+      return { updated: data.jobs[idx], prev };
+    });
+    if (!result) return null;
+    try { this.onJobUpdated?.(result.updated, result.prev); } catch { }
+    return result.updated;
   }
 
   cancel(jobId) {

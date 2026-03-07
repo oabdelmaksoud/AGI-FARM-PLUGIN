@@ -44,7 +44,7 @@ function ActiveTaskSignifier({ task }) {
     <div style={{ borderLeft: '2px solid var(--accent)', paddingLeft: '10px', margin: '4px 0' }}>
       <div style={{ fontSize: '8px', color: 'var(--accent)', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>ACTIVE_PROCESS</div>
       <div style={{ fontSize: '11px', fontWeight: 600, color: '#fff', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {task.title.toUpperCase()}
+        {(task.title || '').toUpperCase()}
       </div>
     </div>
   );
@@ -120,9 +120,9 @@ function AgentCard({ agent: a, tasks, toast, index }) {
     setSending(true);
     try {
       await apiPost(`/api/comms/${a.id}/send`, { message: msg.trim() });
-      toast(`Signal transmitted to ${a.name}`, 'success');
+      toast?.(`Signal transmitted to ${a.name}`, 'success');
       setMsg(''); setMsgOpen(false);
-    } catch (e) { toast(e.message, 'error'); }
+    } catch (e) { toast?.(e.message, 'error'); }
     setSending(false);
   };
 
@@ -136,10 +136,10 @@ function AgentCard({ agent: a, tasks, toast, index }) {
         <div style={{ fontSize: '24px', flexShrink: 0 }}>{a.emoji || '🤖'}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {a.name.toUpperCase()}
+            {(a.name || '').toUpperCase()}
           </div>
           <div style={{ fontSize: '9px', color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
-            {a.role.toUpperCase()} // {a.id}
+            {(a.role || '').toUpperCase()} // {a.id}
           </div>
         </div>
         <WorkloadMeter active={workingCount} total={agentTasks.length} />

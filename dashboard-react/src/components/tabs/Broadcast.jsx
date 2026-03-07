@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { apiPost } from '../../lib/api';
+import LastUpdated from '../LastUpdated';
 
-export default function Broadcast({ data, toast }) {
-  const { broadcast = '' } = data;
+export default function Broadcast({ data, lastUpdated, toast }) {
+  const { broadcast = '' } = data || {};
   const ref = useRef(null);
 
   useEffect(() => {
@@ -17,9 +18,9 @@ export default function Broadcast({ data, toast }) {
     setPosting(true);
     try {
       await apiPost('/api/broadcast', { message: msg.trim() });
-      toast('Broadcast posted', 'success');
+      toast?.('Broadcast posted', 'success');
       setMsg('');
-    } catch (e) { toast(e.message, 'error'); }
+    } catch (e) { toast?.(e.message, 'error'); }
     setPosting(false);
   };
 
@@ -32,6 +33,7 @@ export default function Broadcast({ data, toast }) {
         <input className="input-base" style={{ flex: 1 }} placeholder="Post a broadcast message..." value={msg}
           onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === 'Enter' && handlePost()} maxLength={2000} />
         <button className="btn-primary" onClick={handlePost} disabled={posting || !msg.trim()}>{posting ? 'Posting...' : 'Post'}</button>
+        <LastUpdated ts={lastUpdated} />
       </div>
 
       <div style={{

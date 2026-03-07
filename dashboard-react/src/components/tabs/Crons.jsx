@@ -32,7 +32,7 @@ function StatusDot({ status, errors }) {
   return <span className="dot dot-offline" />;
 }
 
-function CronRow({ job, agents, onTrigger, onToggle }) {
+function CronRow({ job, agents, onTrigger, onToggle, toast }) {
   const [triggering, setTriggering] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [localEnabled, setLocalEnabled] = useState(job.enabled !== false);
@@ -42,17 +42,21 @@ function CronRow({ job, agents, onTrigger, onToggle }) {
 
   async function trigger() {
     setTriggering(true);
-    await apiPost(`/api/cron/${job.id}/trigger`);
-    onTrigger?.(job.id);
+    try {
+      await apiPost(`/api/cron/${job.id}/trigger`);
+      onTrigger?.(job.id);
+    } catch (e) { toast?.(e.message, 'error'); }
     setTimeout(() => setTriggering(false), 2000);
   }
 
   async function toggle() {
     setToggling(true);
-    const res = await apiPost(`/api/cron/${job.id}/toggle`);
-    if (res.ok) setLocalEnabled(res.enabled);
+    try {
+      const res = await apiPost(`/api/cron/${job.id}/toggle`);
+      if (res.ok) setLocalEnabled(res.enabled);
+      onToggle?.(job.id, res.enabled);
+    } catch (e) { toast?.(e.message, 'error'); }
     setToggling(false);
-    onToggle?.(job.id, res.enabled);
   }
 
   return (
@@ -135,7 +139,7 @@ function CronRow({ job, agents, onTrigger, onToggle }) {
   );
 }
 
-export default function Crons({ data, lastUpdated }) {
+export default function Crons({ data, lastUpdated, toast }) {
   const { crons = [], agents = [] } = data || {};
   const [filter, setFilter] = useState('all');
 
@@ -207,7 +211,7 @@ export default function Crons({ data, lastUpdated }) {
               <tr><td colSpan={8} style={{ padding: '20px', color: 'var(--muted)', textAlign: 'center' }}>No cron jobs match filter</td></tr>
             )}
             {filtered.map(j => (
-              <CronRow key={j.id} job={j} agents={agents} />
+              <CronRow key={j.id} job={j} agents={agents} toast={toast} />
             ))}
           </tbody>
         </table>

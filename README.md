@@ -29,14 +29,51 @@
 | 🔄 **Auto-Dispatcher** | Smart task delegation with HITL, backoff & dependencies |
 | 📦 **Portable Bundle** | Export your entire team to GitHub with one command |
 | 🏗️ **ESM Native** | Built for Node 20+ with full ES Module support |
-| 🛡️ **Production Hardened** | Security-audited with CSRF, Origin validation, CSP headers, and timing-safe auth |
+| 🛡️ **Production Hardened** | Security-audited with CSRF, Origin validation, CSP headers, input sanitization, and timing-safe auth |
+| 🔐 **Security Dashboard** | Real-time vulnerability scanning, auto-fix, and security history tracking |
 | 🔄 **Auto-Update** | Detects new releases on GitHub with one-click install from the dashboard |
 | ⚙️ **Feature-Flagged Runtime** | Optional jobs, skills, memory, policy, approvals, and metering modules |
 | 🧪 **103 Automated Tests** | Unit + integration + API smoke coverage with Jest/ESM |
 
 ---
 
-## 🆕 What's New in v1.6.0
+## 🆕 What's New in v1.7.1
+
+### 🔒 Architectural Hardening
+- **Per-file mutex locking** — All service read-modify-write operations (`JobsService`, `ProjectService`, `TaskService`, `PolicyService`, `MeteringService`, `MemoryService`, `SkillsService`) now serialize concurrent writes via `withFileLockSync()`, preventing data loss from race conditions
+- **CSRF token rotation** — Token rotates every 24 hours with 5-minute grace period for active connections; static tokens from env var exempt
+- **Audit log pagination** — `/api/audit` now supports `offset` and `limit` query params with memory-efficient streaming; warns on malformed log lines
+- **Session rate limiting** — `/api/session` endpoint has its own stricter rate limit (20 req/min) to prevent token enumeration
+- **Knowledge/cron file locking** — Dashboard direct file operations (knowledge CRUD, cron toggle) now also use `withFileLockSync()`
+
+### Previous: v1.7.0 — Dashboard Hardening & Security Overhaul
+
+### 🛡️ Dashboard Hardening & Security Overhaul
+- **Deep server-side audit** — 20 issues identified and remediated across data integrity, endpoint security, SSE reliability, and file I/O
+- **SSE exponential backoff** — Reconnection now backs off 3s → 6s → 12s → ... → 60s max, resets on success (prevents server thrashing)
+- **Input sanitization everywhere** — New `sanitizeText()` helper applied to broadcast, knowledge, comms, and approval endpoints; strips control characters
+- **CSRF hardening** — `/api/stream` and `/api/data` now validate CSRF tokens; SSE accepts token via query parameter
+- **Workspace validation** — Server validates workspace directory exists and is writable at startup, exits cleanly on failure
+- **Broadcaster thread-safety** — Fixed Set mutation during iteration in SSE fan-out
+- **Silent failure logging** — `readJson()`/`readMd()` now log warnings on file read failures instead of silently returning empty values
+- **Null safety sweep** — Comprehensive guards across all 20+ dashboard tabs preventing crashes on missing/malformed data
+- **Component prop consistency** — Fixed mismatched prop names between server snapshot and frontend components
+
+### 🔧 5 New Dashboard Tabs + Security Dashboard
+- **Decisions tab** — View and manage policy decisions and approval workflows
+- **Failures tab** — Track and analyze job/task failures with error details
+- **Processes tab** — Monitor running agent processes and system health
+- **R&D tab** — Experiments tracking with status and results visualization
+- **Settings tab** — Configure project defaults and feature flags from the UI
+- **Security Dashboard** — Real-time vulnerability scanning, auto-fix capabilities, and security history
+
+### 📊 Dashboard Data & API Completeness
+- **Missing endpoint coverage** — Added server handlers for all frontend API calls (tasks, projects, jobs, intake, comms, knowledge)
+- **Project enrichment** — Server-side project enrichment with task counts, progress, team agents, and risk indicators
+- **Auto-derived tasks** — Tasks automatically derived from jobs with `rootTaskId` for complete task visibility
+- **Error feedback** — User-facing error messages and loading states across all interactive components
+
+### Previous: v1.6.0 — Agency-Agents Integration
 
 ### 🎭 Agency-Agents Integration: 59 Specialized Personalities
 - **59 battle-tested agent templates** from [@msitarzewski's Agency-Agents](https://github.com/msitarzewski/agency-agents)
@@ -688,13 +725,14 @@ This plugin is designed with defense-in-depth security:
 |-------|-----------|
 | **Network** | Dashboard binds to `127.0.0.1` only — not exposed to LAN or internet |
 | **Origin validation** | `/api/session` gated by Origin/Referer — cross-origin token theft blocked |
-| **CSRF tokens** | All mutation endpoints require timing-safe CSRF token comparison |
+| **CSRF tokens** | All mutation endpoints require timing-safe CSRF token comparison; token rotates every 24h with 5-min grace period |
 | **SSE authentication** | `/api/stream` and `/api/data` require CSRF token — prevents cross-origin data exfiltration |
 | **Security headers** | CSP, X-Frame-Options (DENY), X-Content-Type-Options, Referrer-Policy |
 | **Input validation** | Agent IDs validated via `isSafeId()` regex — blocks path traversal |
-| **Note sanitization** | HITL notes stripped of control chars; CLI flag injection prevented |
-| **Rate limiting** | 120 req/min (read), 30 req/min (mutations) per IP |
-| **File locking** | Cron file writes use mutex to prevent concurrent corruption |
+| **Input sanitization** | All user inputs (notes, messages, knowledge) stripped of control chars via `sanitizeText()`/`sanitizeNote()` |
+| **Rate limiting** | 120 req/min (read), 30 req/min (mutations), 20 req/min (session) per IP |
+| **Startup validation** | Workspace directory validated for existence and write access before server starts |
+| **File locking** | Per-file mutex (`withFileLockSync`) on all service read-modify-write operations — prevents concurrent corruption |
 | **Atomic writes** | All file mutations use `.tmp` → `rename` pattern with in-memory locks |
 | **Shell injection** | Update installer uses `execFile` (not `exec`) to prevent injection |
 | **Credential isolation** | Uses OpenClaw CLI — no API keys stored in plugin |

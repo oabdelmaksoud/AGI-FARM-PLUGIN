@@ -16,10 +16,10 @@ export default function Knowledge({ data, lastUpdated, toast }) {
     try {
       const payload = { ...newEntry, tags: newEntry.tags ? newEntry.tags.split(',').map(t => t.trim()).filter(Boolean) : [] };
       await apiPost('/api/knowledge', payload);
-      toast('Neural integration successful', 'success');
+      toast?.('Neural integration successful', 'success');
       setShowNew(false);
       setNewEntry({ title: '', content: '', category: 'general', tags: '' });
-    } catch (e) { toast(e.message, 'error'); }
+    } catch (e) { toast?.(e.message, 'error'); }
     setSaving(false);
   };
 
@@ -27,8 +27,8 @@ export default function Knowledge({ data, lastUpdated, toast }) {
     if (!confirm('Purge this neural entry?')) return;
     try {
       await apiDelete(`/api/knowledge/${id}`);
-      toast('Entry purged from archive', 'success');
-    } catch (e) { toast(e.message, 'error'); }
+      toast?.('Entry purged from archive', 'success');
+    } catch (e) { toast?.(e.message, 'error'); }
   };
 
   const categories = useMemo(() => {
@@ -126,7 +126,7 @@ export default function Knowledge({ data, lastUpdated, toast }) {
               <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div style={{ fontSize: 10, color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 4, fontFamily: 'JetBrains Mono, monospace' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>AUTHOR:</span><span style={{ color: 'var(--cyan)' }}>{agent?.name.toUpperCase() || 'SYSTEM'}</span>
+                    <span>AUTHOR:</span><span style={{ color: 'var(--cyan)' }}>{(agent?.name || 'SYSTEM').toUpperCase()}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>SIG:</span><span>{entry.source_task || '—'}</span>

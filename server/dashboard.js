@@ -25,7 +25,8 @@ import { MemoryService } from './services/memory.js';
 import { PolicyService } from './services/policy.js';
 import { MeteringService } from './services/metering.js';
 import { WorkerService } from './services/worker.js';
-import { safeWriteJson } from './services/storage.js';
+import { safeWriteJson, withFileLockSync } from './services/storage.js';
+import { SecurityService } from './services/security.js';
 import { UpdateChecker } from './updater.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -68,7 +69,36 @@ function probeGateway() {
   }
   return _gatewayCache.result;
 }
-const CSRF_TOKEN = process.env.AGI_FARM_DASHBOARD_TOKEN || crypto.randomBytes(24).toString('hex');
+// ── CSRF Token with periodic rotation ────────────────────────────────────
+const CSRF_ROTATE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const _csrfState = {
+  current: process.env.AGI_FARM_DASHBOARD_TOKEN || crypto.randomBytes(24).toString('hex'),
+  previous: null,
+  rotatedAt: Date.now(),
+};
+
+function getCsrfToken() {
+  return _csrfState.current;
+}
+
+function rotateCsrfToken() {
+  if (process.env.AGI_FARM_DASHBOARD_TOKEN) return; // static token from env — don't rotate
+  _csrfState.previous = _csrfState.current;
+  _csrfState.current = crypto.randomBytes(24).toString('hex');
+  _csrfState.rotatedAt = Date.now();
+}
+
+function isValidCsrfToken(token) {
+  if (constantTimeEquals(token, _csrfState.current)) return true;
+  // Accept the previous token for a 5-minute grace period after rotation
+  if (_csrfState.previous && (Date.now() - _csrfState.rotatedAt) < 5 * 60 * 1000) {
+    return constantTimeEquals(token, _csrfState.previous);
+  }
+  return false;
+}
+
+// Rotate token periodically
+setInterval(rotateCsrfToken, CSRF_ROTATE_MS);
 const CRON_FILE = path.join(os.homedir(), '.openclaw', 'cron', 'jobs.json');
 
 class SlowDataCache {
@@ -137,7 +167,8 @@ class SlowDataCache {
 function readJson(filePath) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  } catch {
+  } catch (err) {
+    if (err.code !== 'ENOENT') console.warn(`[dashboard] readJson failed: ${filePath} — ${err.message}`);
     return {};
   }
 }
@@ -164,7 +195,8 @@ function asIsoOrNull(value) {
 function readMd(filePath) {
   try {
     return fs.readFileSync(filePath, 'utf-8');
-  } catch {
+  } catch (err) {
+    if (err.code !== 'ENOENT') console.warn(`[dashboard] readMd failed: ${filePath} — ${err.message}`);
     return '';
   }
 }
@@ -316,7 +348,7 @@ function requireCsrf(req, res, next) {
   }
 
   const token = req.header('x-agi-farm-csrf');
-  if (!token || !constantTimeEquals(token, CSRF_TOKEN)) {
+  if (!token || !isValidCsrfToken(token)) {
     res.status(403).json({ error: 'forbidden' });
     return;
   }
@@ -361,18 +393,20 @@ function runOpenclaw(args, timeoutMs = 15000) {
 }
 
 function toggleCronEnabled(id) {
-  const raw = readJson(CRON_FILE);
-  const jobs = asArray(raw.jobs);
-  const idx = jobs.findIndex((j) => j && j.id === id);
-  if (idx === -1) {
-    return { ok: false, status: 404, error: 'cron_not_found' };
-  }
-  const current = jobs[idx].enabled !== false;
-  const next = !current;
-  jobs[idx].enabled = next;
-  const out = { ...asObject(raw), jobs };
-  safeWriteJson(CRON_FILE, out);
-  return { ok: true, enabled: next };
+  return withFileLockSync(CRON_FILE, () => {
+    const raw = readJson(CRON_FILE);
+    const jobs = asArray(raw.jobs);
+    const idx = jobs.findIndex((j) => j && j.id === id);
+    if (idx === -1) {
+      return { ok: false, status: 404, error: 'cron_not_found' };
+    }
+    const current = jobs[idx].enabled !== false;
+    const next = !current;
+    jobs[idx].enabled = next;
+    const out = { ...asObject(raw), jobs };
+    safeWriteJson(CRON_FILE, out);
+    return { ok: true, enabled: next };
+  });
 }
 
 const updateChecker = new UpdateChecker();
@@ -389,6 +423,11 @@ function buildWorkspaceSnapshot(cache, services) {
   const improvementBacklog = asObject(readJson(path.join(WORKSPACE, 'IMPROVEMENT_BACKLOG.json')));
   const sharedKnowledge = asArray(readJson(path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json')));
   const memory = readMd(path.join(WORKSPACE, 'MEMORY.md'));
+  const failures = readMd(path.join(WORKSPACE, 'FAILURES.md'));
+  const decisions = readMd(path.join(WORKSPACE, 'DECISIONS.md'));
+  const processes = extractProcesses(readJson(path.join(WORKSPACE, 'PROCESSES.json')));
+  const securityStatus = readJson(path.join(WORKSPACE, 'SECURITY_STATUS.json'));
+  const benchmarks = asObject(readJson(path.join(WORKSPACE, 'BENCHMARKS.json')));
   const alerts = asArray(readJson(path.join(WORKSPACE, 'ALERTS.json')));
   const projectsStore = readProjectsStore();
   const projectsRaw = asArray(projectsStore.projects);
@@ -508,12 +547,19 @@ function buildWorkspaceSnapshot(cache, services) {
     velocity,
     okrs,
     broadcast,
-    experiments,
+    experiments: asArray(experiments.experiments || experiments),
+    benchmarks,
+    backlog: asArray(improvementBacklog.items || improvementBacklog),
     improvement_backlog: improvementBacklog,
     shared_knowledge: sharedKnowledge,
     knowledge: sharedKnowledge,
     knowledge_count: sharedKnowledge.length,
-    memory_lines: memory.split('\n').length,
+    memory,
+    memory_lines: memory.trim() ? memory.split('\n').length : 0,
+    failures,
+    decisions,
+    processes,
+    security_status: securityStatus,
     crons,
     alerts,
     projects,
@@ -548,12 +594,16 @@ class Broadcaster {
   broadcast(data) {
     const payload = JSON.stringify(data);
     const message = `data: ${payload}\n\n`;
+    const failed = [];
     for (const client of this.clients) {
       try {
         client.write(message);
       } catch {
-        this.clients.delete(client);
+        failed.push(client);
       }
+    }
+    for (const client of failed) {
+      this.clients.delete(client);
     }
   }
 }
@@ -598,6 +648,11 @@ function sanitizeNote(note) {
   let cleaned = note.slice(0, 1000).replace(/[\x00-\x1f\x7f]/g, '');
   if (cleaned.startsWith('-')) cleaned = ' ' + cleaned;
   return cleaned;
+}
+
+function sanitizeText(text, maxLen = 2000) {
+  if (typeof text !== 'string') return '';
+  return text.slice(0, maxLen).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
 }
 
 function requireFeature(name) {
@@ -648,6 +703,7 @@ async function main() {
 
   const apiLimiter = createRateLimiter(60000, 120);
   const actionLimiter = createRateLimiter(60000, 30);
+  const sessionLimiter = createRateLimiter(60000, 20); // stricter limit for token endpoint
   app.use('/api', apiLimiter);
 
   const cache = new SlowDataCache();
@@ -665,8 +721,10 @@ async function main() {
     policy: null,
     metering: null,
     worker: null,
+    security: null,
   };
 
+  services.security = new SecurityService(WORKSPACE);
   services.jobs = new JobsService(WORKSPACE, services.audit);
   services.projects = new ProjectService(WORKSPACE);
   services.tasks = new TaskService(WORKSPACE);
@@ -715,8 +773,8 @@ async function main() {
   });
   services.worker.start();
 
-  app.get('/api/session', (req, res) => {
-    res.json({ csrfToken: CSRF_TOKEN });
+  app.get('/api/session', sessionLimiter, (req, res) => {
+    res.json({ csrfToken: getCsrfToken() });
   });
 
   const reactDist = path.join(__dirname, '..', 'dashboard-react', 'dist');
@@ -736,6 +794,12 @@ async function main() {
   }
 
   app.get('/api/stream', (req, res) => {
+    // CSRF check — EventSource can't send headers, so accept query param
+    const token = req.query.token || req.header('x-agi-farm-csrf');
+    if (!token || !isValidCsrfToken(token)) {
+      res.status(403).json({ error: 'forbidden' });
+      return;
+    }
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -759,7 +823,7 @@ async function main() {
     });
   });
 
-  app.get('/api/data', (req, res) => {
+  app.get('/api/data', requireCsrf, (req, res) => {
     res.json(buildWorkspaceSnapshot(cache, services));
   });
 
@@ -1300,7 +1364,7 @@ async function main() {
   });
 
   app.post('/api/approvals/:id/approve', actionLimiter, validateId, requireCsrf, requireFeature('approvals'), (req, res) => {
-    const note = typeof req.body?.note === 'string' ? req.body.note.slice(0, 300) : '';
+    const note = sanitizeNote(req.body?.note);
     const out = services.policy.resolveApproval(req.params.id, 'approved', 'human', note);
     if (!out.ok) {
       res.status(400).json(out);
@@ -1312,7 +1376,7 @@ async function main() {
   });
 
   app.post('/api/approvals/:id/reject', actionLimiter, validateId, requireCsrf, requireFeature('approvals'), (req, res) => {
-    const note = typeof req.body?.note === 'string' ? req.body.note.slice(0, 300) : '';
+    const note = sanitizeNote(req.body?.note);
     const out = services.policy.resolveApproval(req.params.id, 'rejected', 'human', note);
     if (!out.ok) {
       res.status(400).json(out);
@@ -1325,6 +1389,170 @@ async function main() {
 
   app.get('/api/usage', requireFeature('metering'), (req, res) => {
     res.json(services.metering.getUsage());
+  });
+
+  // ── Broadcast Endpoint ─────────────────────────────────────────────────
+  app.post('/api/broadcast', actionLimiter, requireCsrf, (req, res) => {
+    const message = sanitizeText(req.body?.message, 2000);
+    if (!message.trim()) {
+      res.status(400).json({ error: 'empty_message' });
+      return;
+    }
+    try {
+      const broadcastPath = path.join(WORKSPACE, 'comms', 'broadcast.md');
+      fs.mkdirSync(path.dirname(broadcastPath), { recursive: true });
+      const timestamp = new Date().toISOString();
+      const entry = `\n## [${timestamp}]\n${message}\n`;
+      fs.appendFileSync(broadcastPath, entry, 'utf-8');
+      services.audit.log('broadcast_posted', { length: message.length });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: 'broadcast_failed', message: err.message });
+    }
+  });
+
+  // ── Knowledge Endpoints ────────────────────────────────────────────────
+  app.post('/api/knowledge', actionLimiter, requireCsrf, (req, res) => {
+    const { title, content, category, tags } = req.body || {};
+    if (!content || typeof content !== 'string' || !content.trim()) {
+      res.status(400).json({ error: 'content_required' });
+      return;
+    }
+    try {
+      const knowledgePath = path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json');
+      const entry = withFileLockSync(knowledgePath, () => {
+        const existing = asArray(readJson(knowledgePath));
+        const e = {
+          id: `kn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          title: sanitizeText(title, 200),
+          content: sanitizeText(content, 5000),
+          category: sanitizeText(category, 50) || 'general',
+          tags: Array.isArray(tags) ? tags.map(t => sanitizeText(String(t), 30)).slice(0, 10) : [],
+          added_by: 'human',
+          confidence: 0.95,
+          created_at: new Date().toISOString(),
+        };
+        existing.push(e);
+        safeWriteJson(knowledgePath, existing);
+        return e;
+      });
+      services.audit.log('knowledge_created', { id: entry.id });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true, entry });
+    } catch (err) {
+      res.status(500).json({ error: 'knowledge_create_failed', message: err.message });
+    }
+  });
+
+  app.delete('/api/knowledge/:id', actionLimiter, validateId, requireCsrf, (req, res) => {
+    try {
+      const knowledgePath = path.join(WORKSPACE, 'SHARED_KNOWLEDGE.json');
+      const result = withFileLockSync(knowledgePath, () => {
+        const existing = asArray(readJson(knowledgePath));
+        const idx = existing.findIndex(e => e.id === req.params.id);
+        if (idx === -1) return { found: false };
+        existing.splice(idx, 1);
+        safeWriteJson(knowledgePath, existing);
+        return { found: true };
+      });
+      if (!result.found) {
+        res.status(404).json({ error: 'not_found' });
+        return;
+      }
+      services.audit.log('knowledge_deleted', { id: req.params.id });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: 'knowledge_delete_failed', message: err.message });
+    }
+  });
+
+  // ── Comms Send Endpoint ────────────────────────────────────────────────
+  app.post('/api/comms/:id/send', actionLimiter, validateId, requireCsrf, (req, res) => {
+    const agentId = req.params.id;
+    const message = sanitizeText(req.body?.message, 2000);
+    if (!message.trim()) {
+      res.status(400).json({ error: 'empty_message' });
+      return;
+    }
+    try {
+      const inboxPath = path.join(WORKSPACE, 'comms', 'inboxes', `${agentId}.md`);
+      fs.mkdirSync(path.dirname(inboxPath), { recursive: true });
+      const timestamp = new Date().toISOString();
+      const entry = `\n## [HUMAN → ${agentId.toUpperCase()}] ${timestamp}\n${message}\n`;
+      fs.appendFileSync(inboxPath, entry, 'utf-8');
+      services.audit.log('comms_sent', { agentId, length: message.length });
+      broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: 'comms_send_failed', message: err.message });
+    }
+  });
+
+  // ── Audit Log Endpoint ─────────────────────────────────────────────────
+  app.get('/api/audit', requireCsrf, (req, res) => {
+    const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
+    const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+    try {
+      const auditPath = path.join(WORKSPACE, 'AUDIT_LOG.jsonl');
+      let lines = [];
+      let total = 0;
+      let dropped = 0;
+      try {
+        // Stream the file line-by-line to avoid loading entire file into memory
+        const raw = fs.readFileSync(auditPath, 'utf-8');
+        const allLines = raw.split('\n');
+        for (const l of allLines) {
+          if (!l.trim()) continue;
+          total++;
+          try {
+            lines.push(JSON.parse(l));
+          } catch {
+            dropped++;
+          }
+          // Keep only the last (limit + offset) entries in memory
+          if (lines.length > limit + offset) {
+            lines.shift();
+          }
+        }
+      } catch { /* file doesn't exist yet */ }
+      if (dropped > 0) console.warn(`[dashboard] audit log: ${dropped} malformed lines dropped`);
+      // Paginate: take the last entries, skip offset from the end
+      const sliced = offset > 0 ? lines.slice(-(limit + offset), -offset) : lines.slice(-limit);
+      const entries = sliced.reverse();
+      res.json({ entries, total, offset, limit });
+    } catch (err) {
+      res.status(500).json({ error: 'audit_read_failed', message: err.message });
+    }
+  });
+
+  // ── Security Endpoints ───────────────────────────────────────────────────
+  app.get('/api/security/status', (req, res) => {
+    const status = services.security.getStatus();
+    res.json(status || { grade: null, score: null, findings: { critical: 0, high: 0, medium: 0, low: 0, info: 0 }, status: 'NO_DATA', notes: 'No security scan has been run yet.' });
+  });
+
+  app.get('/api/security/history', (req, res) => {
+    res.json({ history: services.security.getHistory() });
+  });
+
+  app.post('/api/security/scan', actionLimiter, requireCsrf, async (req, res) => {
+    try {
+      const result = await services.security.runScan({ fix: req.body?.fix === true });
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: 'scan_failed', message: err.message });
+    }
+  });
+
+  app.post('/api/security/fix', actionLimiter, requireCsrf, async (req, res) => {
+    try {
+      const result = await services.security.autoFix();
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: 'fix_failed', message: err.message });
+    }
   });
 
   // ── Update Check Endpoints ─────────────────────────────────────────────────
@@ -1379,6 +1607,15 @@ async function main() {
   setInterval(() => {
     broadcaster.broadcast(buildWorkspaceSnapshot(cache, services));
   }, FALLBACK_MS);
+
+  // Validate workspace directory exists (create if missing)
+  try {
+    fs.mkdirSync(WORKSPACE, { recursive: true });
+    fs.accessSync(WORKSPACE, fs.constants.R_OK | fs.constants.W_OK);
+  } catch (err) {
+    console.error(`[dashboard] Workspace not accessible: ${WORKSPACE} — ${err.message}`);
+    process.exit(1);
+  }
 
   app.listen(PORT, HOST, () => {
     console.log(`[dashboard] AGI Farm Dashboard running at http://${HOST}:${PORT}`);

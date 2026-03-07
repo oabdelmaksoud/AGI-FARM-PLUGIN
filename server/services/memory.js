@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import path from 'path';
-import { ensureJsonFile, safeReadJson, safeWriteJson } from './storage.js';
+import { ensureJsonFile, safeReadJson, safeWriteJson, withFileLockSync } from './storage.js';
 
 const DEFAULT_INDEX = { entries: [] };
 
@@ -31,12 +31,15 @@ export class MemoryService {
       hash: entry.hash || crypto.createHash('sha256').update(`${entry.summary || ''}:${entry.sourcePath || ''}`).digest('hex'),
     };
 
-    const idx = entries.findIndex((e) => e.id === id || e.hash === normalized.hash);
-    if (idx >= 0) entries[idx] = { ...entries[idx], ...normalized };
-    else entries.push(normalized);
-
-    safeWriteJson(this.filePath, { entries });
-    return normalized;
+    return withFileLockSync(this.filePath, () => {
+      const freshData = safeReadJson(this.filePath, DEFAULT_INDEX);
+      const freshEntries = Array.isArray(freshData.entries) ? freshData.entries : [];
+      const idx2 = freshEntries.findIndex((e) => e.id === id || e.hash === normalized.hash);
+      if (idx2 >= 0) freshEntries[idx2] = { ...freshEntries[idx2], ...normalized };
+      else freshEntries.push(normalized);
+      safeWriteJson(this.filePath, { entries: freshEntries });
+      return normalized;
+    });
   }
 
   search({ q = '', tags = [] } = {}) {

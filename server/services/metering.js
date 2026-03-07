@@ -1,5 +1,5 @@
 import path from 'path';
-import { ensureJsonFile, safeReadJson, safeWriteJson } from './storage.js';
+import { ensureJsonFile, safeReadJson, safeWriteJson, withFileLockSync } from './storage.js';
 
 const DEFAULT_METERING = {
   records: [],
@@ -15,45 +15,47 @@ export class MeteringService {
   }
 
   addRecord(record) {
-    const data = safeReadJson(this.filePath, DEFAULT_METERING);
-    const row = {
-      jobId: record.jobId || 'unknown',
-      agentId: record.agentId || 'unknown',
-      model: record.model || 'unknown',
-      tokensIn: Number(record.tokensIn || 0),
-      tokensOut: Number(record.tokensOut || 0),
-      durationMs: Number(record.durationMs || 0),
-      estimatedCostUsd: Number(record.estimatedCostUsd || 0),
-      timestamp: record.timestamp || new Date().toISOString(),
-    };
+    return withFileLockSync(this.filePath, () => {
+      const data = safeReadJson(this.filePath, DEFAULT_METERING);
+      const row = {
+        jobId: record.jobId || 'unknown',
+        agentId: record.agentId || 'unknown',
+        model: record.model || 'unknown',
+        tokensIn: Number(record.tokensIn || 0),
+        tokensOut: Number(record.tokensOut || 0),
+        durationMs: Number(record.durationMs || 0),
+        estimatedCostUsd: Number(record.estimatedCostUsd || 0),
+        timestamp: record.timestamp || new Date().toISOString(),
+      };
 
-    data.records = Array.isArray(data.records) ? data.records : [];
-    data.records.push(row);
-    data.records = data.records.slice(-5000);
+      data.records = Array.isArray(data.records) ? data.records : [];
+      data.records.push(row);
+      data.records = data.records.slice(-5000);
 
-    const bump = (bucket, key) => {
-      if (!bucket[key]) bucket[key] = { spent: 0, calls: 0, tokensIn: 0, tokensOut: 0, durationMs: 0 };
-      bucket[key].spent += row.estimatedCostUsd;
-      bucket[key].calls += 1;
-      bucket[key].tokensIn += row.tokensIn;
-      bucket[key].tokensOut += row.tokensOut;
-      bucket[key].durationMs += row.durationMs;
-    };
+      const bump = (bucket, key) => {
+        if (!bucket[key]) bucket[key] = { spent: 0, calls: 0, tokensIn: 0, tokensOut: 0, durationMs: 0 };
+        bucket[key].spent += row.estimatedCostUsd;
+        bucket[key].calls += 1;
+        bucket[key].tokensIn += row.tokensIn;
+        bucket[key].tokensOut += row.tokensOut;
+        bucket[key].durationMs += row.durationMs;
+      };
 
-    data.perAgent = data.perAgent || {};
-    data.perModel = data.perModel || {};
-    data.totals = data.totals || { tokensIn: 0, tokensOut: 0, durationMs: 0, estimatedCostUsd: 0 };
+      data.perAgent = data.perAgent || {};
+      data.perModel = data.perModel || {};
+      data.totals = data.totals || { tokensIn: 0, tokensOut: 0, durationMs: 0, estimatedCostUsd: 0 };
 
-    bump(data.perAgent, row.agentId);
-    bump(data.perModel, row.model);
+      bump(data.perAgent, row.agentId);
+      bump(data.perModel, row.model);
 
-    data.totals.tokensIn += row.tokensIn;
-    data.totals.tokensOut += row.tokensOut;
-    data.totals.durationMs += row.durationMs;
-    data.totals.estimatedCostUsd += row.estimatedCostUsd;
+      data.totals.tokensIn += row.tokensIn;
+      data.totals.tokensOut += row.tokensOut;
+      data.totals.durationMs += row.durationMs;
+      data.totals.estimatedCostUsd += row.estimatedCostUsd;
 
-    safeWriteJson(this.filePath, data);
-    return row;
+      safeWriteJson(this.filePath, data);
+      return row;
+    });
   }
 
   getUsage() {
