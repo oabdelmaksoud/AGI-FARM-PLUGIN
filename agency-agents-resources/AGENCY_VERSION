@@ -1,0 +1,31 @@
+# Agency-Agents Version Tracking
+#
+# This file tracks which version of the Agency-Agents repository
+# was last integrated into AGI Farm.
+
+REPOSITORY: https://github.com/msitarzewski/agency-agents
+COMMIT: cb8e568bdaa4e9e44e5932e63f66169d631bbc40
+DATE: 2026-03-07
+UPDATED: 2026-03-07T05:00:00.000Z
+INTEGRATED_VERSION: v1.6.0
+
+# 59 agents integrated across 11 categories
+# - Engineering (7)
+# - Design (7)
+# - Marketing (8)
+# - Product (3)
+# - Project Management (5)
+# - Testing (7)
+# - Support (6)
+# - Spatial Computing (6)
+# - Specialized (7)
+# - Strategy (3)
+
+# To update to latest version:
+#   node scripts/update-agency-agents.js
+#
+# To check for updates without applying:
+#   node scripts/update-agency-agents.js --dry-run
+#
+# To force update even if no changes:
+#   node scripts/update-agency-agents.js --force
