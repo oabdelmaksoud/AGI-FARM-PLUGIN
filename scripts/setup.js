@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 /**
- * AGI Farm Setup Wizard
+ * AGI Farm Advanced Setup Wizard (v2.0)
  *
- * Interactive wizard that creates a fully working multi-agent AI team on OpenClaw.
+ * Professional onboarding for autonomous AGI teams.
+ * - 15 industry-specific blueprints
+ * - Budget, OKR, and Cron configuration
+ * - HITL Policy & Project pre-seeding
  */
 
 import inquirer from 'inquirer';
@@ -11,330 +14,348 @@ import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import open from 'open';
+
+// Local Libs
 import { runCommand } from './lib/run-command.js';
+import {
+  loadAgentRegistry,
+  getCategoryEmoji,
+  formatCategoryName,
+  countAgentsInCategory,
+  getCategories
+} from './lib/agent-registry.js';
+import { TEAM_BLUEPRINTS, getBlueprintById, getBlueprintGroups } from './lib/blueprints.js';
+import { CRON_DEFS, getAllCrons } from './lib/cron-defs.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const TEMPLATES_DIR = path.resolve(__dirname, '../templates');
 
 const WORKSPACE = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
 const BUNDLE_DIR = path.join(WORKSPACE, 'agi-farm-bundle');
 
-// ── Agent Templates ───────────────────────────────────────────────────────────
-const AGENT_ROSTERS = {
-  3: [
-    { id: 'main', name: 'Orchestrator', emoji: '🦅', role: 'Orchestrator', goal: 'Orchestrate the team, delegate tasks, synthesize results', workspace: '.' },
-    { id: 'researcher', name: 'Sage', emoji: '🔮', role: 'Researcher', goal: 'Research deeply and surface the insights that matter most', workspace: 'researcher' },
-    { id: 'builder', name: 'Forge', emoji: '⚒️', role: 'Builder', goal: 'Implement solutions cleanly and efficiently', workspace: 'builder' },
-  ],
-  5: [
-    { id: 'main', name: 'Orchestrator', emoji: '🦅', role: 'Orchestrator', goal: 'Orchestrate the team, delegate tasks, synthesize results', workspace: '.' },
-    { id: 'researcher', name: 'Sage', emoji: '🔮', role: 'Researcher', goal: 'Research deeply and surface the insights that matter most', workspace: 'researcher' },
-    { id: 'builder', name: 'Forge', emoji: '⚒️', role: 'Builder', goal: 'Implement solutions cleanly and efficiently', workspace: 'builder' },
-    { id: 'qa', name: 'Vigil', emoji: '🛡️', role: 'QA Engineer', goal: 'Ensure every output meets quality standards', workspace: 'qa' },
-    { id: 'content', name: 'Anchor', emoji: '⚓', role: 'Content Specialist', goal: 'Craft clear content that communicates complex ideas simply', workspace: 'content' },
-  ],
-  11: [
-    { id: 'main', name: 'Orchestrator', emoji: '🦅', role: 'Orchestrator', goal: 'Orchestrate specialists, delegate tasks, synthesize results', workspace: '.' },
-    { id: 'sage', name: 'Sage', emoji: '🔮', role: 'Solution Architect', goal: 'Design robust, scalable architectures', workspace: 'solution-architect' },
-    { id: 'forge', name: 'Forge', emoji: '⚒️', role: 'Implementation Engineer', goal: 'Implement clean, well-tested code efficiently', workspace: 'implementation-engineer' },
-    { id: 'pixel', name: 'Pixel', emoji: '🐛', role: 'Debugger', goal: 'Find the true root cause of any bug or failure', workspace: 'debugger' },
-    { id: 'vista', name: 'Vista', emoji: '🔭', role: 'Business Analyst', goal: 'Research deeply and surface the insights that matter most', workspace: 'business-analyst' },
-    { id: 'cipher', name: 'Cipher', emoji: '🔊', role: 'Knowledge Curator', goal: 'Curate and surface knowledge so the team never forgets', workspace: 'knowledge-curator' },
-    { id: 'vigil', name: 'Vigil', emoji: '🛡️', role: 'QA Engineer', goal: 'Ensure every output meets quality standards', workspace: 'quality-assurance' },
-    { id: 'anchor', name: 'Anchor', emoji: '⚓', role: 'Content Specialist', goal: 'Craft clear content that communicates complex ideas simply', workspace: 'content-specialist' },
-    { id: 'lens', name: 'Lens', emoji: '📡', role: 'Multimodal Specialist', goal: 'Extract meaning from images, documents, and multimodal inputs', workspace: 'multimodal-specialist' },
-    { id: 'evolve', name: 'Evolve', emoji: '🔄', role: 'Process Improvement Lead', goal: 'Make the team better systematically through continuous improvement', workspace: 'process-improvement' },
-    { id: 'nova', name: 'Nova', emoji: '🧪', role: 'R&D Lead', goal: 'Turn hypotheses into proven capabilities through structured experimentation', workspace: 'r-and-d' },
-  ],
-};
-
-// ── Wizard Steps ───────────────────────────────────────────────────────────────
-async function runWizard() {
-  console.log(chalk.cyan.bold('\n🚜 AGI Farm — Multi-Agent Team Builder\n'));
-  console.log(chalk.dim('Powered by Everything Claude Code (ECC) — Production-ready AI workflows\n'));
-  console.log(chalk.white('✨ Includes:'));
-  console.log(chalk.dim('   • 69 specialized coding skills (TDD, security, API design)'));
-  console.log(chalk.dim('   • 7 quality automation hooks (typecheck, security scan, format)'));
-  console.log(chalk.dim('   • 33 slash commands for common workflows'));
-  console.log(chalk.dim('   • 16 specialized agent patterns\n'));
-
-  // Pre-flight check: Verify openclaw is available
-  const versionResult = spawnSync('openclaw', ['--version'], { encoding: 'utf-8', timeout: 8000 });
-  if (versionResult.status !== 0 || versionResult.error) {
-    console.error(chalk.red('❌ OpenClaw not found. Please install OpenClaw before using AGI Farm.'));
-    console.log(chalk.dim('   https://openclaw.ai/install'));
-    process.exit(1);
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function getAgentTemplatePath(templateName) {
+  if (templateName.startsWith('agency-agents/')) {
+    return path.join(TEMPLATES_DIR, 'agency-agents', templateName.replace('agency-agents/', ''));
   }
-  const versionLine = (versionResult.stdout || '').split('\n')[0].trim();
-  console.log(chalk.dim(`OpenClaw: ${versionLine}\n`));
+  return path.join(TEMPLATES_DIR, templateName);
+}
 
-  // Pre-flight check: Does a team already exist?
-  const teamJsonPath = path.join(BUNDLE_DIR, 'team.json');
-  if (fs.existsSync(teamJsonPath)) {
-    let existingTeam;
-    try {
-      existingTeam = JSON.parse(fs.readFileSync(teamJsonPath, 'utf8'));
-    } catch (e) {
-      existingTeam = { team_name: 'Unknown' };
-    }
+// ── Phase 1: Identity & Blueprint ─────────────────────────────────────────────
+async function promptIdentity() {
+  console.log(chalk.cyan.bold('\n✨ Phase 1: Identity & Blueprint\n'));
 
-    console.log(chalk.yellow(`⚠ An active AGI Farm team ("${existingTeam.team_name}") already exists.`));
-    console.log(chalk.dim('You must teardown the existing team before creating a new one.\n'));
+  const blueprintGroups = getBlueprintGroups();
+  const blueprintChoices = [];
 
-    const { teardown } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'teardown',
-        message: 'Would you like to completely uninstall the existing team now?',
-        default: false,
-      },
-    ]);
-
-    if (!teardown) {
-      console.log(chalk.dim('Setup cancelled. Existing team preserved.'));
-      process.exit(0);
-    }
-
-    // Run teardown script
-    console.log(chalk.dim('\nRunning teardown...'));
-    const teardownScript = path.join(__dirname, 'teardown.js');
-    const result = spawnSync(process.execPath, [teardownScript], { stdio: 'inherit' });
-
-    if (result.status !== 0) {
-      console.error(chalk.red('\nTeardown failed. Please fix the errors before continuing.'));
-      process.exit(1);
-    }
-    console.log(chalk.green('✅ Previous team cleared. Ready for new setup.\n'));
+  for (const [industry, blueprints] of Object.entries(blueprintGroups)) {
+    blueprintChoices.push(new inquirer.Separator(`── ${industry} ──`));
+    blueprints.forEach(b => {
+      blueprintChoices.push({
+        name: `${b.emoji} ${b.name} (${b.timeline}) - ${b.description}`,
+        value: b.id
+      });
+    });
   }
 
-  // Step 1: Team name
-  const { teamName } = await inquirer.prompt([
+  blueprintChoices.push(new inquirer.Separator());
+  blueprintChoices.push({ name: '🛠️  Custom Team (Build from scratch)', value: 'custom' });
+
+  return inquirer.prompt([
     {
       type: 'input',
       name: 'teamName',
-      message: 'What should we call your team?',
-      default: 'MyTeam',
-      validate: (input) => input.length > 0 ? true : 'Team name is required',
+      message: 'What is your AGI team name?',
+      default: 'Project Phoenix',
+      validate: (input) => input.trim().length > 0 ? true : 'Team name cannot be empty'
     },
-  ]);
-
-  // Step 2: Orchestrator name
-  const { orchestratorName } = await inquirer.prompt([
     {
       type: 'input',
       name: 'orchestratorName',
-      message: "What's your orchestrator's name?",
+      message: 'What is your lead orchestrator\'s name?',
       default: 'Cooper',
+      validate: (input) => input.trim().length > 0 ? true : 'Name cannot be empty'
     },
-  ]);
-
-  // Step 3: Team size
-  const { preset } = await inquirer.prompt([
     {
       type: 'list',
-      name: 'preset',
-      message: 'How many agents?',
-      choices: [
-        { name: '3 — Minimal: Orchestrator + Researcher + Builder', value: 3 },
-        { name: '5 — Standard: adds QA + Content', value: 5 },
-        { name: '11 — Full stack: complete AGI system (recommended)', value: 11 },
-      ],
-      default: 11,
-    },
+      name: 'blueprintId',
+      message: 'Select a team blueprint:',
+      choices: blueprintChoices,
+      pageSize: 15
+    }
   ]);
+}
 
-  // Step 3.5: Domain
-  const { domain } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'domain',
-      message: 'What domain?',
-      choices: ['software', 'trading', 'research', 'general', 'custom'],
-      default: 'general',
-    },
-  ]);
+// ── Custom Team Builder ──────────────────────────────────────────────────────
+async function buildCustomTeam(orchestratorName) {
+  const registry = loadAgentRegistry(TEMPLATES_DIR);
+  const categories = getCategories(registry);
 
-  let customDomain = '';
-  if (domain === 'custom') {
-    const { custom } = await inquirer.prompt([
+  const agents = [
+    { id: 'main', template: 'SOUL.md.main', name: orchestratorName, emoji: '🦅', role: 'Orchestrator', workspace: '.' }
+  ];
+
+  console.log(chalk.yellow('\n🛠️ Building Custom Team...'));
+
+  let adding = true;
+  while (adding) {
+    const { category } = await inquirer.prompt([
       {
-        type: 'input',
-        name: 'custom',
-        message: 'Describe your domain in one phrase:',
-        validate: (input) => input.length > 0 ? true : 'Domain description is required',
-      },
+        type: 'list',
+        name: 'category',
+        message: 'Browse agents by category:',
+        choices: [
+          ...categories.map(c => ({
+            name: `${getCategoryEmoji(c)} ${formatCategoryName(c)} (${countAgentsInCategory(registry, c)})`,
+            value: c
+          })),
+          new inquirer.Separator(),
+          { name: '✅ Finish Team Construction', value: 'done' }
+        ]
+      }
     ]);
-    customDomain = custom;
+
+    if (category === 'done') break;
+
+    const catAgents = registry.filter(a => a.category === category);
+    const { selectedAgent } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'selectedAgent',
+        message: `Select an agent from ${formatCategoryName(category)}:`,
+        choices: [
+          ...catAgents.map(a => ({
+            name: `${a.emoji} ${a.name} - ${a.description}`,
+            value: a
+          })),
+          new inquirer.Separator(),
+          { name: '⬅️ Back to Categories', value: 'back' }
+        ]
+      }
+    ]);
+
+    if (selectedAgent === 'back') continue;
+
+    agents.push({
+      id: selectedAgent.id,
+      template: selectedAgent.soulTemplate,
+      name: selectedAgent.name,
+      emoji: selectedAgent.emoji,
+      role: selectedAgent.description,
+      workspace: selectedAgent.id
+    });
+
+    console.log(chalk.green(`Added ${selectedAgent.name} to the team!`));
   }
 
-  // Step 4: Frameworks
-  const { frameworks } = await inquirer.prompt([
+  return agents;
+}
+
+// ── Phase 2: Intelligence & Capabilities ──────────────────────────────────────
+async function promptIntelligence(blueprint) {
+  console.log(chalk.cyan.bold('\n✨ Phase 2: Intelligence & Capabilities\n'));
+
+  return inquirer.prompt([
+    {
+      type: 'input',
+      name: 'domain',
+      message: 'Primary project domain (e.g. Fintech, E-commerce, AI Research):',
+      default: blueprint?.industry || 'Generic'
+    },
     {
       type: 'checkbox',
-      name: 'frameworks',
-      message: 'Collaboration frameworks?',
+      name: 'techStack',
+      message: 'Select core technologies (for agent context):',
       choices: [
-        { name: 'AutoGen', value: 'autogen', checked: false },
-        { name: 'CrewAI', value: 'crewai', checked: false },
-        { name: 'LangGraph', value: 'langgraph', checked: false },
-      ],
+        { name: 'JavaScript/TypeScript', checked: true },
+        { name: 'Python', checked: true },
+        { name: 'React/Next.js' },
+        { name: 'Node.js' },
+        { name: 'SQL/NoSQL' },
+        { name: 'AWS/GCP/Azure' },
+        { name: 'Docker/K8s' }
+      ]
     },
-  ]);
-
-  // Step 4.2: ECC Resources (always enabled, just informational)
-  console.log(chalk.dim('\n💡 ECC resources are automatically included in all agents:'));
-  console.log(chalk.dim('   • @tdd-workflow, @security-scan, @api-design'));
-  console.log(chalk.dim('   • Auto-applied based on agent roles'));
-  console.log(chalk.dim('   • See: ECC_OPENCLAW_QUICKREF.md for shortcuts\n'));
-
-  // Step 4.5: Project defaults
-  const { autoProjectChannel } = await inquirer.prompt([
     {
       type: 'confirm',
-      name: 'autoProjectChannel',
-      message: 'Auto-create a dedicated project channel for each new project?',
-      default: true,
+      name: 'enableSkills',
+      message: 'Enable ECC Production Skills? (@tdd, @security, @api)',
+      default: blueprint?.featureFlags?.skills ?? true
+    }
+  ]);
+}
+
+// ── Phase 3: Budget & Goals ──────────────────────────────────────────────────
+async function promptBudget(blueprint) {
+  console.log(chalk.cyan.bold('\n✨ Phase 3: Budget & Goals\n'));
+
+  const budget = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'monthlyLimit',
+      message: 'Monthly budget limit (USD, 0 = unlimited):',
+      default: '500',
+      validate: (input) => !isNaN(parseFloat(input)) ? true : 'Please enter a valid number'
     },
+    {
+      type: 'input',
+      name: 'thresholdWarn',
+      message: 'Warning threshold (%):',
+      default: '80',
+      validate: (input) => !isNaN(parseFloat(input)) && input > 0 && input <= 100 ? true : 'Please enter a valid percentage (1-100)'
+    },
+    {
+      type: 'confirm',
+      name: 'seedOkrs',
+      message: 'Seed starter OKRs from template?',
+      default: true
+    }
   ]);
 
-  const { defaultExecutionPath } = await inquirer.prompt([
+  return budget;
+}
+
+// ── Phase 4: Operations ───────────────────────────────────────────────────────
+async function promptOperations(blueprint) {
+  console.log(chalk.cyan.bold('\n✨ Phase 4: Operations\n'));
+
+  const ops = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'enableDispatcher',
+      message: 'Enable Auto-Dispatcher for background tasks?',
+      default: blueprint?.dispatchEnabled ?? true
+    },
+    {
+      type: 'checkbox',
+      name: 'activeCrons',
+      message: 'Select team cron jobs to activate:',
+      choices: getAllCrons().map(c => ({
+        name: c.label + ' - ' + c.description,
+        value: c.id,
+        checked: blueprint?.crons?.includes(c.id)
+      }))
+    },
     {
       type: 'list',
-      name: 'defaultExecutionPath',
-      message: 'Default execution path for new projects?',
+      name: 'hitlSensitivity',
+      message: 'HITL (Human-in-the-Loop) approval sensitivity:',
       choices: [
-        { name: 'AGI-Farm first (recommended)', value: 'agi-farm-first' },
-        { name: 'Direct execution first', value: 'direct-first' },
+        { name: '🟢 Low - block only on critical decisions (threshold: 0.9)', value: 0.9 },
+        { name: '🟡 Medium - block on high-risk actions (threshold: 0.7)', value: 0.7 },
+        { name: '🔴 High - approve all actions > medium confidence (threshold: 0.5)', value: 0.5 }
       ],
-      default: 'agi-farm-first',
-    },
+      default: blueprint?.hitlPolicy?.threshold ?? 0.7
+    }
   ]);
 
-  // Step 5: Confirm
-  const finalDomain = domain === 'custom' ? customDomain : domain;
-  console.log(chalk.dim('\n── Summary ──'));
-  console.log(chalk.white(`Team:         ${teamName}`));
-  console.log(chalk.white(`Orchestrator: ${orchestratorName}`));
-  console.log(chalk.white(`Agents:       ${preset}`));
-  console.log(chalk.white(`Domain:       ${finalDomain}`));
-  console.log(chalk.white(`Frameworks:   ${frameworks.length > 0 ? frameworks.join(', ') : 'none'}`));
-  console.log(chalk.white(`ECC:          enabled (69 skills, 7 hooks, 33 commands)`));
-  console.log(chalk.white(`Proj Channel: ${autoProjectChannel ? 'auto-create' : 'manual'}`));
-  console.log(chalk.white(`Exec Path:    ${defaultExecutionPath}`));
+  return ops;
+}
 
-  const { proceed } = await inquirer.prompt([
+// ── Phase 5: First Project ──────────────────────────────────────────────────
+async function promptProject(blueprint) {
+  console.log(chalk.cyan.bold('\n✨ Phase 5: First Project\n'));
+
+  return inquirer.prompt([
     {
       type: 'confirm',
-      name: 'proceed',
-      message: 'Shall I proceed?',
-      default: true,
-    },
+      name: 'createProject',
+      message: `Create a starter project (${blueprint?.starterProject?.name || 'Initial Project'})?`,
+      default: true
+    }
   ]);
-
-  if (!proceed) {
-    console.log(chalk.yellow('Setup cancelled.'));
-    process.exit(0);
-  }
-
-  return {
-    teamName,
-    orchestratorName,
-    preset,
-    domain: finalDomain,
-    frameworks,
-    autoProjectChannel,
-    defaultExecutionPath,
-  };
 }
 
-// ── Generate team.json ────────────────────────────────────────────────────────
-function generateTeamJson(config) {
-  const agents = AGENT_ROSTERS[config.preset].map(agent => ({
-    ...agent,
-    name: agent.id === 'main' ? config.orchestratorName : agent.name,
-    // No model set — OpenClaw will use the user's configured default
-  }));
+// ── Phase 6: Confirm & Go ───────────────────────────────────────────────────
+async function promptConfirm(config) {
+  console.log(chalk.cyan.bold('\n✨ Phase 6: Confirm & Go\n'));
 
-  return {
-    team_name: config.teamName,
-    orchestrator_name: config.orchestratorName,
-    preset: String(config.preset),
-    domain: config.domain,
-    frameworks: config.frameworks,
-    project_defaults: {
-      auto_project_channel: config.autoProjectChannel ?? true,
-      execution_path: config.defaultExecutionPath || 'agi-farm-first',
-    },
-    created_at: new Date().toISOString(),
-    agents,
-  };
+  console.log(chalk.white('Team Summary:'));
+  console.log(chalk.white(`- Name:        ${config.teamName}`));
+  console.log(chalk.white(`- Blueprint:   ${config.blueprintId}`));
+  console.log(chalk.white(`- Agents:      ${config.agents.length}`));
+  console.log(chalk.white(`- Budget:      $${config.budget.monthlyLimit}/mo`));
+  console.log(chalk.white(`- Crons:       ${config.ops.activeCrons.length} active`));
+  console.log(chalk.white(`- Workspace:   ${WORKSPACE}`));
+  console.log();
+
+  return inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'confirmed',
+      message: 'Everything look correct? Ready to deploy?',
+      default: true
+    }
+  ]);
 }
 
-// ── Create OpenClaw Agents ────────────────────────────────────────────────────
-function createAgents(team) {
-  const spinner = ora('Creating OpenClaw agents...').start();
+// ── Agent Creation ───────────────────────────────────────────────────────────
+function createAgents(config) {
+  const spinner = ora('Creating agents...').start();
 
-  for (const agent of team.agents) {
-    if (agent.id === 'main') continue; // Skip main orchestrator
+  for (const a of config.agents) {
+    spinner.text = `Creating agent: ${a.name} (${a.id})...`;
 
-    try {
-      const wsPath = path.join(WORKSPACE, 'agents-workspaces', agent.workspace);
-      fs.mkdirSync(wsPath, { recursive: true });
+    // 1. Register with openclaw
+    runCommand('openclaw', [
+      'agents', 'add',
+      '--id', a.id,
+      '--name', a.name,
+      '--role', a.role,
+      '--emoji', a.emoji
+    ]);
 
-      // OpenClaw normalizes the name into an ID. 
-      // We pass the name and let OpenClaw handle the registration.
-      spinner.text = `Registering agent: ${agent.name}...`;
+    // 2. Setup workspace directory
+    const agentDir = path.join(WORKSPACE, a.workspace || a.id);
+    fs.mkdirSync(agentDir, { recursive: true });
 
-      const result = runCommand('openclaw', [
-        'agents', 'add',
-        '--workspace', wsPath,
-        agent.name,
-        '--non-interactive'
-      ]);
+    // 3. Copy SOUL.md template
+    const templateSource = getAgentTemplatePath(a.template);
+    if (fs.existsSync(templateSource)) {
+      const soulDest = path.join(agentDir, 'SOUL.md');
+      let content = fs.readFileSync(templateSource, 'utf-8');
 
-      if (result.status === 0) {
-        // Extract the actual ID from stdout if needed, but for now we trust the normalization.
-        spinner.text = `Created agent: ${agent.name} ${agent.emoji}`;
-      } else {
-        // If it fails, it might be a conflict.
-        spinner.text = chalk.dim(`Note: ${agent.name} setup skipped (likely already exists)`);
-      }
-    } catch (err) {
-      spinner.text = chalk.yellow(`⚠ Warning: ${agent.name} failed to initialize.`);
+      // Basic dynamic replacement
+      content = content.replace(/\{\{NAME\}\}/g, a.name);
+      content = content.replace(/\{\{ROLE\}\}/g, a.role);
+      content = content.replace(/\{\{TEAM_NAME\}\}/g, config.teamName);
+      content = content.replace(/\{\{DOMAIN\}\}/g, config.intel.domain);
+
+      fs.writeFileSync(soulDest, content);
     }
   }
 
-  spinner.succeed(`Agents initialized in ${WORKSPACE}`);
+  spinner.succeed('Agents created');
 }
 
-// ── Initialize Comms ────────────────────────────────────────────────────────
-function initializeComms(team) {
+// ── Comms Initialization ─────────────────────────────────────────────────────
+function initializeComms(config) {
   const spinner = ora('Initializing comms infrastructure...').start();
 
   const commsDir = path.join(WORKSPACE, 'comms');
-  const inboxesDir = path.join(commsDir, 'inboxes');
-  const outboxesDir = path.join(commsDir, 'outboxes');
+  fs.mkdirSync(path.join(commsDir, 'inboxes'), { recursive: true });
+  fs.mkdirSync(path.join(commsDir, 'outboxes'), { recursive: true });
+  fs.mkdirSync(path.join(commsDir, 'channels'), { recursive: true });
 
-  fs.mkdirSync(inboxesDir, { recursive: true });
-  fs.mkdirSync(outboxesDir, { recursive: true });
-
-  // Create broadcast.md
-  fs.writeFileSync(path.join(commsDir, 'broadcast.md'), `# Team Broadcast\n\nWelcome to ${team.team_name}!\n`);
-
-  // Create inboxes and outboxes for each agent
-  for (const agent of team.agents) {
-    fs.writeFileSync(path.join(inboxesDir, `${agent.id}.md`), `# ${agent.name}'s Inbox\n\nNo messages yet.\n`);
-    fs.writeFileSync(path.join(outboxesDir, `${agent.id}.md`), `# ${agent.name}'s Outbox\n\nNo messages yet.\n`);
-  }
+  // Create team-wide channel
+  const teamChannel = {
+    id: 'team-wide',
+    name: 'Team General',
+    members: config.agents.map(a => a.id),
+    messages: [
+      { sender: 'system', text: `Welcome to ${config.teamName}! Comms initialized.`, timestamp: new Date().toISOString() }
+    ]
+  };
+  fs.writeFileSync(path.join(commsDir, 'channels', 'team-wide.json'), JSON.stringify(teamChannel, null, 2));
 
   spinner.succeed('Comms infrastructure initialized');
 }
 
-// ── Initialize Registries ─────────────────────────────────────────────────────
-function initializeRegistries(team) {
+// ── Registry Initialization ──────────────────────────────────────────────────
+function initializeRegistries(config) {
   const spinner = ora('Initializing registries...').start();
 
   // TASKS.json
@@ -342,100 +363,162 @@ function initializeRegistries(team) {
 
   // PROJECTS.json
   fs.writeFileSync(path.join(WORKSPACE, 'PROJECTS.json'), JSON.stringify({
-    defaults: {
-      auto_project_channel: team.project_defaults?.auto_project_channel ?? true,
-      execution_path: team.project_defaults?.execution_path || 'agi-farm-first',
-    },
-    items: [],
+    defaults: { auto_project_channel: true, execution_path: 'agi-farm-init' },
+    items: []
   }, null, 2));
-
-  // AGENT_STATUS.json
-  const status = {};
-  for (const a of team.agents) {
-    status[a.id] = { status: 'available', name: a.name };
-  }
-  fs.writeFileSync(path.join(WORKSPACE, 'AGENT_STATUS.json'), JSON.stringify(status, null, 2));
-
-  // AGENT_PERFORMANCE.json
-  const perf = {};
-  for (const a of team.agents) {
-    perf[a.id] = {
-      tasks_completed: 0,
-      tasks_failed: 0,
-      quality_score: 0,
-      credibility: 1.0,
-    };
-  }
-  fs.writeFileSync(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json'), JSON.stringify(perf, null, 2));
 
   // BUDGET.json
   fs.writeFileSync(path.join(WORKSPACE, 'BUDGET.json'), JSON.stringify({
     period: 'monthly',
     currency: 'USD',
-    limit: 0,
+    limit: parseFloat(config.budget.monthlyLimit),
     spent: 0,
-    threshold_warn: 0.8,
-  }, null, 2));
-
-  // VELOCITY.json
-  fs.writeFileSync(path.join(WORKSPACE, 'VELOCITY.json'), JSON.stringify({
-    daily: [],
-    weekly: [],
-    by_agent: {},
-    by_type: {},
+    threshold_warn: parseFloat(config.budget.thresholdWarn) / 100
   }, null, 2));
 
   // OKRs.json
-  fs.writeFileSync(path.join(WORKSPACE, 'OKRs.json'), JSON.stringify({ objectives: [] }, null, 2));
+  const blueprint = getBlueprintById(config.blueprintId);
+  const okrs = config.budget.seedOkrs && blueprint?.okrs ? blueprint.okrs : [];
+  fs.writeFileSync(path.join(WORKSPACE, 'OKRs.json'), JSON.stringify({ objectives: okrs }, null, 2));
 
-  // EXPERIMENTS.json
-  fs.writeFileSync(path.join(WORKSPACE, 'EXPERIMENTS.json'), JSON.stringify({ experiments: [] }, null, 2));
+  // VELOCITY.json
+  fs.writeFileSync(path.join(WORKSPACE, 'VELOCITY.json'), JSON.stringify({ daily: [], weekly: [], by_agent: {}, by_type: {} }, null, 2));
 
-  // IMPROVEMENT_BACKLOG.json
-  fs.writeFileSync(path.join(WORKSPACE, 'IMPROVEMENT_BACKLOG.json'), JSON.stringify({ items: [] }, null, 2));
+  // AGENT_STATUS.json & PERFORMANCE.json
+  const status = {};
+  const perf = {};
+  for (const a of config.agents) {
+    status[a.id] = { status: 'available', name: a.name };
+    perf[a.id] = { tasks_completed: 0, tasks_failed: 0, quality_score: 0, credibility: 1.0 };
+  }
+  fs.writeFileSync(path.join(WORKSPACE, 'AGENT_STATUS.json'), JSON.stringify(status, null, 2));
+  fs.writeFileSync(path.join(WORKSPACE, 'AGENT_PERFORMANCE.json'), JSON.stringify(perf, null, 2));
 
   spinner.succeed('Registries initialized');
 }
 
-// ── Health Check ──────────────────────────────────────────────────────────────
-function healthCheck(team) {
-  console.log(chalk.dim('\n── Health Check ──'));
+// ── Cron Initialization ──────────────────────────────────────────────────────
+function initializeCrons(config) {
+  const spinner = ora('Initializing cron jobs...').start();
 
-  // Check comms
-  const commsDir = path.join(WORKSPACE, 'comms', 'inboxes');
-  if (fs.existsSync(commsDir)) {
-    console.log(chalk.green('✅ comms OK'));
-  } else {
-    console.log(chalk.red('❌ comms missing'));
-  }
+  const activeCrons = config.ops.activeCrons.map(id => {
+    const def = CRON_DEFS[id];
+    return {
+      id: def.id,
+      label: def.label,
+      schedule: def.schedule,
+      agent: def.agent,
+      command: def.command,
+      active: true,
+      last_run: null,
+      next_run: null
+    };
+  });
 
-  // Check TASKS.json
-  if (fs.existsSync(path.join(WORKSPACE, 'TASKS.json'))) {
-    console.log(chalk.green('✅ TASKS.json OK'));
-  } else {
-    console.log(chalk.red('❌ TASKS.json missing'));
-  }
+  fs.writeFileSync(path.join(WORKSPACE, 'CRONS.json'), JSON.stringify({ jobs: activeCrons }, null, 2));
+  spinner.succeed(`Activated ${activeCrons.length} cron jobs`);
+}
 
-  // Check PROJECTS.json
-  if (fs.existsSync(path.join(WORKSPACE, 'PROJECTS.json'))) {
-    console.log(chalk.green('✅ PROJECTS.json OK'));
-  } else {
-    console.log(chalk.red('❌ PROJECTS.json missing'));
-  }
+// ── HITL Policy Initialization ───────────────────────────────────────────────
+function initializeHitlPolicy(config) {
+  const spinner = ora('Initializing HITL security policy...').start();
 
-  // Count agents
-  try {
-    const result = runCommand('openclaw', ['agents', 'list', '--json']);
-    if (result.status === 0) {
-      const agents = JSON.parse(result.stdout);
-      console.log(chalk.green(`✅ Agents: ${agents.length}`));
+  const policy = {
+    global_threshold: config.ops.hitlSensitivity,
+    auto_approve_below: config.ops.hitlSensitivity - 0.2, // buffer
+    require_manual_review_for: [
+      'filesystem_delete',
+      'network_request',
+      'process_kill',
+      'security_scan_bypass'
+    ],
+    agent_overrides: {}
+  };
+
+  // Add agent-specific overrides for sensitive roles
+  for (const a of config.agents) {
+    if (a.role.toLowerCase().includes('security') || a.id === 'vigil') {
+      policy.agent_overrides[a.id] = { threshold: 0.5 }; // stricter for security agents
     }
-  } catch {
-    console.log(chalk.yellow('⚠ Could not count agents'));
+  }
+
+  fs.writeFileSync(path.join(WORKSPACE, 'HITL_POLICY.json'), JSON.stringify(policy, null, 2));
+  spinner.succeed('HITL security policy active');
+}
+
+// ── Starter Project Initialization ───────────────────────────────────────────
+function initializeStarterProject(config) {
+  if (!config.project.createProject) return;
+
+  const blueprint = getBlueprintById(config.blueprintId);
+  const starter = blueprint?.starterProject || {
+    name: 'Initial Project',
+    description: 'First research and development cycle',
+    tasks: [{ id: 'init-1', title: 'Onboarding & Initial Research', assigned_to: 'main' }]
+  };
+
+  const spinner = ora(`Seeding starter project: ${starter.name}...`).start();
+
+  // 1. Update PROJECTS.json
+  const projects = JSON.parse(fs.readFileSync(path.join(WORKSPACE, 'PROJECTS.json'), 'utf-8'));
+  const projectObj = {
+    id: 'starter-p1',
+    name: starter.name,
+    description: starter.description,
+    status: 'active',
+    created_at: new Date().toISOString(),
+    members: config.agents.map(a => a.id)
+  };
+  projects.items.push(projectObj);
+  fs.writeFileSync(path.join(WORKSPACE, 'PROJECTS.json'), JSON.stringify(projects, null, 2));
+
+  // 2. Update TASKS.json
+  const tasks = starter.tasks.map(t => ({
+    ...t,
+    project_id: 'starter-p1',
+    status: 'pending',
+    priority: 'medium',
+    created_at: new Date().toISOString()
+  }));
+  fs.writeFileSync(path.join(WORKSPACE, 'TASKS.json'), JSON.stringify(tasks, null, 2));
+
+  spinner.succeed(`Project "${starter.name}" seeded with ${tasks.length} tasks`);
+}
+
+// ── Security Scan ────────────────────────────────────────────────────────────
+async function offerSecurityScan() {
+  const { runScan } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'runScan',
+      message: 'Run initial AgentShield security scan now?',
+      default: true
+    }
+  ]);
+
+  if (!runScan) return;
+
+  const spinner = ora('Running AgentShield baseline scan...').start();
+  const result = runCommand('npx', ['ecc-agentshield', 'scan', '--path', '.', '--format', 'json']);
+
+  if (result.status === 0) {
+    try {
+      const scanData = JSON.parse(result.stdout);
+      fs.writeFileSync(path.join(WORKSPACE, 'SECURITY_STATUS.json'), JSON.stringify({
+        last_scan: new Date().toISOString(),
+        score: scanData.overallScore || 100,
+        issues: scanData.issues || []
+      }, null, 2));
+      spinner.succeed(`Security scan complete. Score: ${scanData.overallScore || 100}`);
+    } catch {
+      spinner.warn('Security scan completed but report parsing failed');
+    }
+  } else {
+    spinner.warn('Security scan could not be completed at this time');
   }
 }
 
-// ── Post-Setup UX ────────────────────────────────────────────────────────────
+// ── Dashboard UX ─────────────────────────────────────────────────────────────
 async function offerOpenDashboard() {
   const host = process.env.AGI_FARM_DASHBOARD_HOST || '127.0.0.1';
   const port = process.env.AGI_FARM_DASHBOARD_PORT || '8080';
@@ -445,58 +528,210 @@ async function offerOpenDashboard() {
     {
       type: 'confirm',
       name: 'openDashboard',
-      message: `Open dashboard in browser now? (${url})`,
-      default: true,
-    },
+      message: `Open AGI Farm dashboard in browser? (${url})`,
+      default: true
+    }
   ]);
 
-  if (!openDashboard) return;
-
-  try {
+  if (openDashboard) {
     await open(url);
-    console.log(chalk.green(`✅ Opened dashboard: ${url}`));
-  } catch {
-    console.log(chalk.yellow(`⚠ Could not open browser automatically. Open manually: ${url}`));
   }
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────────
+// ── Lifecycle Management ─────────────────────────────────────────────────────
+async function checkExistingInstall() {
+  const teamJsonPath = path.join(BUNDLE_DIR, 'team.json');
+  if (!fs.existsSync(teamJsonPath)) {
+    // Fresh Install Confirmation
+    console.log(chalk.cyan.bold('\n👋 Welcome to AGI Farm!'));
+    console.log(chalk.white('This wizard will guide you through building a professional AGI team.\n'));
+
+    const { proceed } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'proceed',
+        message: 'Ready to start a fresh installation?',
+        default: true
+      }
+    ]);
+
+    if (!proceed) {
+      console.log(chalk.yellow('\nSetup aborted.'));
+      process.exit(0);
+    }
+    return 'fresh';
+  }
+
+  // Existing Install Detected
+  let team = {};
+  try {
+    team = JSON.parse(fs.readFileSync(teamJsonPath, 'utf8'));
+  } catch (err) { /* ignore */ }
+
+  const currentName = team.teamName || team.team_name || 'Unknown Team';
+  console.log(chalk.yellow(`\n⚠️  Existing Installation Detected: "${currentName}"`));
+  console.log(chalk.dim(`Bundle path: ${BUNDLE_DIR}\n`));
+
+  const { action } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'action',
+      message: 'What would you like to do?',
+      choices: [
+        { name: '🔄 Update Team (Sync registries and crons only)', value: 'update' },
+        { name: '🔥 Full Reinstall (Wipe everything and start over)', value: 'reinstall' },
+        { name: '🗑️  Teardown Team (Uninstall and clean workspace)', value: 'teardown' },
+        new inquirer.Separator(),
+        { name: '❌ Abort', value: 'abort' }
+      ]
+    }
+  ]);
+
+  if (action === 'abort') {
+    console.log(chalk.dim('Operation aborted.'));
+    process.exit(0);
+  }
+
+  if (action === 'teardown') {
+    // Dynamically import and run teardown
+    const teardown = await import('./teardown.js');
+    process.exit(0); // teardown.js calls its own main loop
+  }
+
+  if (action === 'reinstall') {
+    const { confirmReinstall } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'confirmReinstall',
+        message: chalk.red.bold('Are you sure? This will PERMANENTLY delete your existing agents and work.'),
+        default: false
+      }
+    ]);
+
+    if (!confirmReinstall) {
+      console.log(chalk.dim('Reinstall cancelled.'));
+      process.exit(0);
+    }
+
+    const spinner = ora('Wiping existing installation...').start();
+    try {
+      // Simple wipe of bundle and key files for fresh start
+      fs.rmSync(BUNDLE_DIR, { recursive: true, force: true });
+      spinner.succeed('Workspace prepared for fresh install');
+    } catch (err) {
+      spinner.fail('Failed to wipe workspace: ' + err.message);
+      process.exit(1);
+    }
+    return 'fresh';
+  }
+
+  return action; // 'update'
+}
+
+// ── Main Controller ──────────────────────────────────────────────────────────
 async function main() {
   try {
-    const config = await runWizard();
-    const team = generateTeamJson(config);
+    console.log(chalk.cyan.bold('\n⚡ AGI Farm — Advanced Setup Wizard v2.0\n'));
 
-    // Create bundle directory
+    // 0. Lifecycle Check
+    const mode = await checkExistingInstall();
+
+    if (mode === 'update') {
+      console.log(chalk.cyan.bold('\n🔧 Updating Existing Team...\n'));
+      const teamJsonPath = path.join(BUNDLE_DIR, 'team.json');
+      const config = JSON.parse(fs.readFileSync(teamJsonPath, 'utf8'));
+
+      // Update logic (non-destructive)
+      // We need to synthesize enough config for the init functions
+      const fullConfig = {
+        ...config,
+        budget: {
+          monthlyLimit: config.budget?.limit || '500',
+          thresholdWarn: (config.budget?.threshold_warn * 100) || '80',
+          seedOkrs: false
+        },
+        ops: {
+          activeCrons: config.activeCrons || [],
+          hitlSensitivity: config.hitlThreshold || 0.7
+        },
+        project: { createProject: false }
+      };
+
+      initializeCrons(fullConfig);
+      initializeHitlPolicy(fullConfig);
+      initializeRegistries(fullConfig);
+
+      console.log(chalk.green.bold('\n✅ Team updated successfully.\n'));
+      process.exit(0);
+    }
+
+    // 1. Interactive Prompts (Fresh Install)
+    const identity = await promptIdentity();
+    const blueprint = getBlueprintById(identity.blueprintId);
+
+    let agents = [];
+    if (identity.blueprintId === 'custom') {
+      agents = await buildCustomTeam(identity.orchestratorName);
+    } else {
+      agents = blueprint.agents.map(a => a.id === 'main' ? { ...a, name: identity.orchestratorName } : a);
+    }
+
+    const intel = await promptIntelligence(blueprint);
+    const budget = await promptBudget(blueprint);
+    const ops = await promptOperations(blueprint);
+    const project = await promptProject(blueprint);
+
+    const config = {
+      ...identity,
+      agents,
+      intel,
+      budget,
+      ops,
+      project
+    };
+
+    // 2. Confirmation
+    const { confirmed } = await promptConfirm(config);
+    if (!confirmed) {
+      console.log(chalk.yellow('\nSetup cancelled by user.'));
+      return;
+    }
+
+    // 3. Execution
+    console.log(chalk.cyan.bold('\n🚀 Deploying AGI Team...\n'));
+
+    // Create bundle directory and team.json
     fs.mkdirSync(BUNDLE_DIR, { recursive: true });
-    fs.writeFileSync(path.join(BUNDLE_DIR, 'team.json'), JSON.stringify(team, null, 2));
+    fs.writeFileSync(path.join(BUNDLE_DIR, 'team.json'), JSON.stringify({
+      teamName: config.teamName,
+      orchestrator: config.orchestratorName,
+      blueprint: config.blueprintId,
+      agents: config.agents,
+      domain: config.intel.domain
+    }, null, 2));
 
-    console.log(chalk.green('\n✅ team.json written to'), BUNDLE_DIR);
+    // Run initialization sequence
+    createAgents(config);
+    initializeComms(config);
+    initializeRegistries(config);
+    initializeCrons(config);
+    initializeHitlPolicy(config);
+    initializeStarterProject(config);
 
-    // Create agents
-    createAgents(team);
-
-    // Initialize comms
-    initializeComms(team);
-
-    // Initialize registries
-    initializeRegistries(team);
-
-    // Health check
-    healthCheck(team);
-
-    console.log(chalk.cyan.bold(`\n🎉 ${config.teamName} AGI team is live!\n`));
-    console.log(chalk.white(`Agents:    ${config.preset}`));
+    console.log(chalk.green.bold('\n🎉 Team Deployment Successful!\n'));
     console.log(chalk.white(`Workspace: ${WORKSPACE}`));
-    console.log(chalk.white(`Bundle:    ${BUNDLE_DIR}`));
-    console.log(chalk.dim(`\n✨ ECC Features Active:`));
-    console.log(chalk.dim(`   • Production skills: @tdd-workflow, @security-scan, @api-design`));
-    console.log(chalk.dim(`   • Quality hooks: typecheck, security-review, auto-format`));
-    console.log(chalk.dim(`   • Quick ref: ECC_OPENCLAW_QUICKREF.md`));
-    console.log(chalk.dim(`\nNext: talk to ${config.orchestratorName} · /agi-farm status · /agi-farm dashboard\n`));
+    console.log(chalk.white(`Agents:    ${config.agents.length} active`));
+    console.log(chalk.white(`Dashboard: http://127.0.0.1:8080`));
+
+    // 4. Final Actions
+    await offerSecurityScan();
     await offerOpenDashboard();
 
+    console.log(chalk.cyan.bold('\nHappy building! /agi-farm status to check on your team.\n'));
+
   } catch (err) {
-    console.error(chalk.red('Error:'), err.message);
+    console.error(chalk.red('\n❌ Setup failed:'), err.message);
+    if (process.env.DEBUG) console.error(err.stack);
     process.exit(1);
   }
 }

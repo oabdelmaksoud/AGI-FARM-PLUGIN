@@ -2,7 +2,7 @@
   "id": "agi-farm",
   "kind": "team-orchestration",
   "name": "AGI Farm — Multi-Agent Team Builder",
-  "version": "1.10.0",
+  "version": "2.0.0",
   "description": "Bootstrap complete multi-agent AI teams with auto-dispatcher, live dashboard, and infrastructure. Includes interactive wizard, SOUL.md generation, comms setup, cron registration, and React + SSE ops room.",
   "author": "oabdelmaksoud",
   "homepage": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN",
@@ -139,6 +139,13 @@
     "hooks/pr-logger",
     "hooks/git-push-reminder",
     "hooks/build-analyzer"
+  ],
+  "tools": [
+    {
+      "name": "hire_specialist",
+      "description": "Autonomously hire and provision a new specialized agent to the team.",
+      "executable": "./skills/agi-farm/tools/hire_specialist.js"
+    }
   ],
   "commands": [
     {

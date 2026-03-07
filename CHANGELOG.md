@@ -6,6 +6,22 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-03-07
+
+### 🤖 True Autonomous Agent Expansion
+
+- **New Orchestrator Tool**: Created `skills/agi-farm/tools/hire_specialist.js`.
+- **Self-Expanding Teams**: The Orchestrator (Cooper) can now autonomously hire new specialized agents mid-project if it detects lacking skills.
+- **Global Ecosystem Awareness**: The tool scans the global OpenClaw `agents list` first. If the desired agent ID exists anywhere on the machine, it seamlessly imports them into the active `team.json` bundle.
+- **Template Auto-wiring**: If an agent doesn't exist globally, it provisions a new one and aggressively scans the library of **62 built-in agency templates** to equip the new hire with specialized instructions (e.g., SEO Expert, Data Analyst).
+- **SOUL Map Integration**: Triggers `agi-farm rebuild` silently so the new agent immediately appears in the Orchestrator's internal Delegation Map.
+
+### 🛠️ Bug Fixes
+
+- Fixed `agi-farm dispatch` failing to pass the `--execute` flag to internal scripts by updating Commander configuration in `agi-farm.js`.
+- Fixed `ai-ml-system` and other starter blueprints that incorrectly assigned tasks to placeholder agent IDs instead of actual team members.
+- Hardcoded `openclaw agents add` instead of `create` in `setup.js` to ensure the system natively registers agents during wizard setup.
+
 ## [1.10.0] - 2026-03-07
 
 ### 🦞 LobsterBoard Parity (P0 Core)

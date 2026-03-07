@@ -1,18 +1,11 @@
 {
   "name": "agi-farm",
-  "version": "1.10.0",
+  "version": "2.0.0",
   "description": "Multi-agent AI team builder for OpenClaw — bootstrap complete teams with auto-dispatcher, dashboard, and infrastructure",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "agi-farm": "scripts/setup.js",
-    "agi-farm-teardown": "scripts/teardown.js",
-    "agi-farm-status": "scripts/status.js",
-    "agi-farm-dashboard": "scripts/dashboard.js",
-    "agi-farm-dispatch": "scripts/dispatch.js",
-    "agi-farm-export": "scripts/export.js",
-    "agi-farm-rebuild": "scripts/rebuild.js",
-    "agi-farm-launchagent": "scripts/install-launchagent.js"
+    "agi-farm": "scripts/agi-farm.js"
   },
   "license": "MIT",
   "author": "oabdelmaksoud",
@@ -69,7 +62,8 @@
     "validate": "node scripts/validate-config.js",
     "lint": "eslint src --ext .ts,.js",
     "sync:lobsterboard": "node scripts/sync-lobsterboard-upstream.js",
-    "sync:lobsterboard:check": "node scripts/sync-lobsterboard-upstream.js --dry-run"
+    "sync:lobsterboard:check": "node scripts/sync-lobsterboard-upstream.js --dry-run",
+    "setup": "node scripts/setup.js"
   },
   "keywords": [
     "openclaw",
@@ -97,7 +91,8 @@
     "express": "^4.21.2",
     "inquirer": "^12.4.1",
     "open": "^10.1.0",
-    "ora": "^8.1.1"
+    "ora": "^8.1.1",
+    "systeminformation": "^5.31.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

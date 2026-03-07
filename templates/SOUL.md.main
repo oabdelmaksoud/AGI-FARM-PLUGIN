@@ -91,6 +91,7 @@ Options: [A] ... [B] ...
 5. Always update AGENT_STATUS.json on session start/end
 6. MAX_GENERATION_DEPTH: 3
 7. HITL before irreversible actions
+8. If a task requires skills missing from the team, use the `hire_specialist` tool to provision a new agent BEFORE delegating. The tool will automatically check if the agent already exists in the global OpenClaw registry first; if not, it will create a brand new one.
 
 ---
 
