@@ -37,9 +37,47 @@
 
 ---
 
-## 🆕 What's New in v1.7.2
+## 🆕 What's New in v1.8.0
 
-### ✨ Enhanced Wizard with Workflow Templates + Agent Browser
+### 🎨 Complete Dashboard Redesign — Day Theme (Minimalism 3.0 + Glassmorphism 2.0)
+
+The AGI Farm dashboard has been **completely redesigned** with a modern, light-mode UI. Every single one of the 26 tabs has been rewritten from scratch with a premium day-themed aesthetic.
+
+#### ✨ Design System
+- **Off-white/pearl backgrounds** (`#F8FAFC` slate palette) with glassmorphism cards and subtle depth shadows
+- **Premium typography** — Inter for UI, JetBrains Mono for technical values
+- **Accent palette** — Indigo primary, Emerald mint for success, Amber for warnings, Violet for AI/HITL, Red for errors
+- **Hover-lift animations**, smooth fade-in transitions, and pill-shaped status badges throughout
+- **100% light mode** — All dark `#050505`/`#000`/`rgba(0,0,0)` backgrounds purged from every file
+
+#### 📋 All 26 Tabs Redesigned
+
+| Pillar | Tabs |
+|--------|------|
+| **Agent Intelligence** | Overview, Agents, Tasks, HITL, Alerts, Velocity, Budget |
+| **Project Oversight** | Projects, OKRs, Approvals, Knowledge, Comms |
+| **System** | Security, Jobs & Crons, Processes, Policies, Skills, Usage, Memory, Failures, Decisions, Audit Log, Settings, R&D |
+
+#### 🏗️ Key Changes
+- **Projects tab** — Full rewrite with light progress rings, health badges, tabbed detail view (Overview / Timeline / Tasks / Budget / OKRs / Logs), light Gantt chart and burndown chart
+- **HITL tab** — Soft-purple glass cards with clear Approve/Reject actions and status banner
+- **Velocity tab** — KPI cards + area chart + success rate trend line
+- **Approvals tab** — Card layout matching HITL with optional notes field
+- **Settings tab** — Toggle switches, budget limit inputs, workspace info grid
+- **Crons tab** — Status-dot rows with Run / Pause / Resume action buttons
+- **Knowledge tab** — Masonry card grid with tag pills and expand-to-read
+- **Comms tab** — Agent list sidebar with Inbox / Outbox panels
+- **OKRs tab** — Objective cards with animated KR progress bars
+- **R&D tab** — Light experiment table, benchmark leaderboard, and evolution pipeline backlog
+
+#### 🧹 Legacy Cleanup
+- Deleted `TopBar.jsx` and `Sidebar.jsx` (unused dark-theme stubs)
+- Removed all cyberpunk/neon language (`SYSTEM_LIVE`, `ENCRYPTED`, `VECTOR_ID`, `NEURAL`, etc.)
+- All chart grid lines and tooltips updated to light theme
+
+---
+
+### Previous: v1.7.2 — Enhanced Wizard with Workflow Templates + Agent Browser
 - **4 workflow templates** — Pre-built teams for common use cases: Startup MVP (5 agents), Marketing Campaign (5 agents), Enterprise Feature (6 agents), Quality-First (4 agents)
 - **Agent browser** — Browse and select from all **91 agents** across 11 categories (AGI Farm + ECC + Agency-Agents)
 - **Auto-template copying** — SOUL.md templates automatically copied to agent workspaces during setup
