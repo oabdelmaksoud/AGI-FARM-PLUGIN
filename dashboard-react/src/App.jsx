@@ -19,75 +19,58 @@ const Budget = lazy(() => import('./components/tabs/Budget'));
 const OKRs = lazy(() => import('./components/tabs/OKRs'));
 const Knowledge = lazy(() => import('./components/tabs/Knowledge'));
 const Comms = lazy(() => import('./components/tabs/Comms'));
-const RD = lazy(() => import('./components/tabs/RD'));
-const Broadcast = lazy(() => import('./components/tabs/Broadcast'));
 const Memory = lazy(() => import('./components/tabs/Memory'));
 const Processes = lazy(() => import('./components/tabs/Processes'));
 const Failures = lazy(() => import('./components/tabs/Failures'));
 const Decisions = lazy(() => import('./components/tabs/Decisions'));
 const Security = lazy(() => import('./components/tabs/Security'));
-const Skills = lazy(() => import('./components/tabs/Skills'));
 const Policies = lazy(() => import('./components/tabs/Policies'));
 const AuditLog = lazy(() => import('./components/tabs/AuditLog'));
 const Settings = lazy(() => import('./components/tabs/Settings'));
-
-const TABS = [
-  'Overview', 'Agents', 'Tasks', 'Projects',
-  'Jobs', 'Approvals', 'Usage',
-  'Crons', 'HITL', 'Alerts',
-  'Velocity', 'Budget', 'OKRs',
-  'Knowledge', 'Memory', 'Comms',
-  'Security', 'Skills', 'Policies', 'Audit',
-  'Processes', 'Failures', 'Decisions',
-  'R&D', 'Broadcast', 'Settings',
-];
 
 const TAB_COMPONENTS = {
   'Overview': Overview,
   'Agents': Agents,
   'Tasks': Tasks,
-  'Projects': Projects,
-  'Jobs': Jobs,
-  'Approvals': Approvals,
-  'Usage': Usage,
-  'Crons': Crons,
   'HITL': HITLTab,
   'Alerts': AlertsTab,
   'Velocity': Velocity,
   'Budget': Budget,
+  'Projects': Projects,
   'OKRs': OKRs,
+  'Approvals': Approvals,
   'Knowledge': Knowledge,
-  'Memory': Memory,
   'Comms': Comms,
   'Security': Security,
-  'Skills': Skills,
-  'Policies': Policies,
-  'Audit': AuditLog,
+  'Crons': Crons,
   'Processes': Processes,
+  'Memory': Memory,
   'Failures': Failures,
   'Decisions': Decisions,
-  'R&D': RD,
-  'Broadcast': Broadcast,
+  'Jobs': Jobs,
+  'Usage': Usage,
+  'Policies': Policies,
   'Settings': Settings,
+  'Audit': AuditLog,
 };
 
 function Connecting() {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      height: 'calc(100vh - 100px)', gap: 16
+      height: '100%', gap: 16, color: 'var(--text-dim)'
     }}>
-      <span style={{ fontSize: 32 }}>🦅</span>
-      <div style={{ color: 'var(--cyan)', fontSize: 14, fontWeight: 600 }}>Connecting to Ops Room…</div>
-      <div style={{ color: 'var(--muted)', fontSize: 11 }}>Waiting for SSE push from dashboard.js</div>
+      <span style={{ fontSize: 48, filter: 'grayscale(0.4)' }}>🦅</span>
+      <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>Connecting to Ops Room…</div>
+      <div style={{ fontSize: 13, color: 'var(--muted)' }}>Waiting for SSE stream from dashboard server</div>
     </div>
   );
 }
 
 function TabLoading() {
   return (
-    <div className="card" style={{ color: 'var(--muted)' }}>
-      Loading tab...
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px' }}>
+      <div style={{ fontSize: 13, color: 'var(--muted)' }}>Loading…</div>
     </div>
   );
 }
@@ -99,7 +82,6 @@ export default function App() {
 
   const tabProps = { data, lastUpdated, toast };
 
-  // Badge counts for nav tabs
   const badges = data ? {
     'HITL': (data.hitl_tasks || []).length,
     'Alerts': (data.alerts || []).length,
@@ -110,16 +92,30 @@ export default function App() {
   const ActiveTab = useMemo(() => TAB_COMPONENTS[activeTab] || Overview, [activeTab]);
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      {/* Top App Bar */}
       <Header data={data} connected={connected} lastUpdated={lastUpdated} updateCount={updateCount} toast={toast} />
-      <Nav tabs={TABS} active={activeTab} onChange={setActiveTab} badges={badges} />
-      <main style={{ padding: 16 }}>
-        {!data ? <Connecting /> : (
-          <Suspense fallback={<TabLoading />}>
-            <ActiveTab {...tabProps} />
-          </Suspense>
-        )}
-      </main>
+
+      {/* Body: Sidebar + Content */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <Nav active={activeTab} onChange={setActiveTab} badges={badges} />
+
+        {/* Main Content Area */}
+        <main style={{
+          flex: 1, overflowY: 'auto',
+          padding: '40px 48px',
+          background: 'var(--bg)',
+        }}>
+          {!data ? <Connecting /> : (
+            <div className="fade-in">
+              <Suspense fallback={<TabLoading />}>
+                <ActiveTab {...tabProps} />
+              </Suspense>
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
+

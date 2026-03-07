@@ -1,26 +1,37 @@
 import { useState, useEffect } from 'react';
 import { apiPost } from '../lib/api';
+import { Wifi, WifiOff, RefreshCw, ArrowUpCircle } from 'lucide-react';
 
 function Clock() {
   const [t, setT] = useState(new Date());
   useEffect(() => { const id = setInterval(() => setT(new Date()), 1000); return () => clearInterval(id); }, []);
   return (
-    <span style={{ color: 'var(--muted)', fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
-      {t.toLocaleTimeString([], { hour12: false })}
+    <span style={{ color: 'var(--text-dim)', fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 500 }}>
+      {t.toLocaleTimeString([], { hour12: true })}
     </span>
   );
 }
 
-export default function Header({ data, connected, lastUpdated, updateCount, toast }) {
+function KPIChip({ label, value, color }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+      padding: '6px 14px', borderRadius: 10, background: '#F8FAFC', border: '1px solid var(--border)',
+    }}>
+      <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
+      <span style={{ fontSize: 14, fontWeight: 700, color: color || 'var(--text)', marginTop: 1 }}>{value}</span>
+    </div>
+  );
+}
+
+export default function Header({ data, connected, lastUpdated, toast }) {
   const agents = data?.agents || [];
   const tc = data?.task_counts || {};
   const budget = data?.budget || {};
   const livedata = data || {};
 
   const gatewayOnline = connected && (livedata.gateway_online !== false);
-  const statusLabel = !connected ? 'OFFLINE' : !gatewayOnline ? 'GATEWAY_DISCONNECT' : 'SYSTEM_LIVE';
-  const statusColor = !connected ? 'var(--red)' : !gatewayOnline ? 'var(--amber)' : 'var(--mint)';
-  const dotColor = !connected ? 'var(--red)' : !gatewayOnline ? 'var(--amber)' : 'var(--mint)';
+  const isLive = connected && gatewayOnline;
 
   const updateInfo = data?.update_info;
   const [dismissed, setDismissed] = useState(() => sessionStorage.getItem('update-dismissed') === 'true');
@@ -31,50 +42,67 @@ export default function Header({ data, connected, lastUpdated, updateCount, toas
     setUpdating(true);
     try {
       const result = await apiPost('/api/update-install');
-      if (result.success) {
-        toast?.('UPDATE_INSTALLED // RESTART_REQUIRED', 'success');
-      } else {
-        toast?.(result.error || 'UPDATE_FAILED', 'error');
-      }
+      if (result.success) toast?.('Update installed — please restart', 'success');
+      else toast?.(result.error || 'Update failed', 'error');
     } catch (e) { toast?.(e.message, 'error'); }
     setUpdating(false);
   };
 
+  const activeAgents = agents.filter(a => a.status !== 'available').length;
+  const totalAgents = agents.length;
+  const hitlCount = tc.needs_human_decision ?? 0;
+  const dailySpend = (budget.current?.daily_usd ?? 0).toFixed(2);
+
   return (
     <>
       <header style={{
-        height: '52px', borderBottom: '1px solid var(--border)', background: '#050505',
-        display: 'flex', alignItems: 'center', padding: '0 24px', gap: 24,
-        position: 'sticky', top: 0, zIndex: 100,
+        height: 60, borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)',
+        display: 'flex', alignItems: 'center', padding: '0 32px', gap: 20,
+        position: 'sticky', top: 0, zIndex: 200, backdropFilter: 'blur(20px)',
+        boxShadow: 'var(--shadow-sm)', flexShrink: 0,
       }}>
-        {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: '180px' }}>
-          <span style={{ fontSize: '18px' }}>🦅</span>
-          <span style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '0.05em', color: '#fff' }}>
-            AGI_FARM_OS <span style={{ color: 'var(--muted)', fontWeight: 400 }}>// v1.4.0</span>
+        {/* Status Dot */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {isLive
+            ? <Wifi size={14} color="var(--mint)" />
+            : <WifiOff size={14} color="var(--red)" />
+          }
+          <span style={{
+            fontSize: 11, fontWeight: 600,
+            color: isLive ? 'var(--mint)' : 'var(--red)',
+          }}>
+            {isLive ? 'Connected' : !connected ? 'Offline' : 'Gateway Down'}
           </span>
         </div>
 
-        {/* Status Indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor }} />
-          <span style={{ fontSize: '9px', fontWeight: 800, color: statusColor, fontFamily: 'var(--font-mono)' }}>{statusLabel}</span>
-        </div>
+        <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
 
-        <div style={{ width: '1px', height: '16px', background: 'var(--border-light)' }} />
-
-        {/* Global Stats */}
-        <Stat label="FLEET" value={`${agents.filter(a => a.status === 'available').length}/${agents.length}`} color="var(--accent)" />
-        <Stat label="HITL" value={tc.needs_human_decision ?? 0} color={tc.needs_human_decision > 0 ? 'var(--purple)' : 'var(--muted)'} />
-        <Stat label="DAILY_SPEND" value={`$${(budget.current?.daily_usd ?? 0).toFixed(2)}`} color="var(--mint)" />
+        {/* KPIs */}
+        <KPIChip
+          label="Active Agents"
+          value={`${activeAgents} / ${totalAgents}`}
+          color="var(--accent)"
+        />
+        <KPIChip
+          label="HITL Queue"
+          value={hitlCount}
+          color={hitlCount > 0 ? 'var(--purple)' : 'var(--text-dim)'}
+        />
+        <KPIChip
+          label="Daily Spend"
+          value={`$${dailySpend}`}
+          color="var(--mint)"
+        />
 
         <div style={{ flex: 1 }} />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        {/* Right side */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {lastUpdated && (
-            <span style={{ fontSize: '9px', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
-              SYNC: {lastUpdated.toLocaleTimeString([], { hour12: false })}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--muted)', fontSize: 11 }}>
+              <RefreshCw size={11} />
+              <span>Updated {lastUpdated.toLocaleTimeString([], { hour12: true })}</span>
+            </div>
           )}
           <Clock />
         </div>
@@ -82,19 +110,25 @@ export default function Header({ data, connected, lastUpdated, updateCount, toas
 
       {showBanner && (
         <div style={{
-          background: 'var(--accent)', color: '#000', padding: '8px 24px',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 800
+          background: 'var(--accent)', color: '#fff', padding: '8px 32px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          fontSize: '12px', fontWeight: 600,
         }}>
-          <span>UPDATE_AVAILABLE: v{updateInfo.currentVersion} → v{updateInfo.latestVersion}</span>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <button
-              onClick={handleUpdate}
-              disabled={updating}
-              style={{ background: '#000', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: '2px', cursor: 'pointer', fontSize: '10px', fontWeight: 900 }}
-            >
-              {updating ? 'INSTALLING...' : 'INSTALL_NOW'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ArrowUpCircle size={14} />
+            <span>Update available: v{updateInfo.currentVersion} → v{updateInfo.latestVersion}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button onClick={handleUpdate} disabled={updating} style={{
+              background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)',
+              padding: '4px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 11, fontWeight: 700,
+            }}>
+              {updating ? 'Installing…' : 'Install Now'}
             </button>
-            <button onClick={() => { setDismissed(true); sessionStorage.setItem('update-dismissed', 'true'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>✕</button>
+            <button onClick={() => { setDismissed(true); sessionStorage.setItem('update-dismissed', 'true'); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 16 }}>
+              ✕
+            </button>
           </div>
         </div>
       )}
@@ -102,11 +136,3 @@ export default function Header({ data, connected, lastUpdated, updateCount, toas
   );
 }
 
-function Stat({ label, value, color }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <div style={{ fontSize: '8px', color: 'var(--muted)', fontWeight: 800 }}>{label}</div>
-      <div style={{ fontSize: '12px', fontWeight: 700, color, fontFamily: 'var(--font-mono)' }}>{value}</div>
-    </div>
-  );
-}
