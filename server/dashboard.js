@@ -138,7 +138,8 @@ class SlowDataCache {
 function readJson(filePath) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  } catch {
+  } catch (err) {
+    if (err.code !== 'ENOENT') console.warn(`[dashboard] readJson failed: ${filePath} — ${err.message}`);
     return {};
   }
 }
@@ -165,7 +166,8 @@ function asIsoOrNull(value) {
 function readMd(filePath) {
   try {
     return fs.readFileSync(filePath, 'utf-8');
-  } catch {
+  } catch (err) {
+    if (err.code !== 'ENOENT') console.warn(`[dashboard] readMd failed: ${filePath} — ${err.message}`);
     return '';
   }
 }
@@ -561,12 +563,16 @@ class Broadcaster {
   broadcast(data) {
     const payload = JSON.stringify(data);
     const message = `data: ${payload}\n\n`;
+    const failed = [];
     for (const client of this.clients) {
       try {
         client.write(message);
       } catch {
-        this.clients.delete(client);
+        failed.push(client);
       }
+    }
+    for (const client of failed) {
+      this.clients.delete(client);
     }
   }
 }
@@ -751,6 +757,12 @@ async function main() {
   }
 
   app.get('/api/stream', (req, res) => {
+    // CSRF check — EventSource can't send headers, so accept query param
+    const token = req.query.token || req.header('x-agi-farm-csrf');
+    if (!token || !constantTimeEquals(token, CSRF_TOKEN)) {
+      res.status(403).json({ error: 'forbidden' });
+      return;
+    }
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -774,7 +786,7 @@ async function main() {
     });
   });
 
-  app.get('/api/data', (req, res) => {
+  app.get('/api/data', requireCsrf, (req, res) => {
     res.json(buildWorkspaceSnapshot(cache, services));
   });
 

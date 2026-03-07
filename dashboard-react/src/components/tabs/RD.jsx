@@ -1,4 +1,6 @@
-export default function RD({ data }) {
+import LastUpdated from '../LastUpdated';
+
+export default function RD({ data, lastUpdated }) {
   const { experiments = [], backlog = [] } = data || {};
   const benchmarks = data?.benchmarks || {};
   const evaluations = benchmarks?.evaluations || [];
@@ -11,6 +13,7 @@ export default function RD({ data }) {
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
           <div className="section-title" style={{ marginBottom: 0 }}>NEURAL EXPERIMENTATION LAB</div>
           <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--cyan)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>ACTIVE_CYCLES: {experiments.length}</span>
+          <LastUpdated ts={lastUpdated} />
         </div>
 
         {experiments.length === 0 ? (
