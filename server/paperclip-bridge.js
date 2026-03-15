@@ -20,16 +20,17 @@ function mapAgiFarmRole(role) {
   // Direct match
   const direct = PAPERCLIP_ROLES.find(r => lower === r);
   if (direct) return direct;
-  // Keyword mapping
-  if (lower.includes('orchestrat') || lower.includes('lead') || lower.includes('ceo')) return 'ceo';
-  if (lower.includes('secur') || lower.includes('qa') || lower.includes('test') || lower.includes('vigil')) return 'qa';
+  // Domain-specific keywords checked BEFORE generic ones like "lead"
   if (lower.includes('devops') || lower.includes('infra') || lower.includes('ops')) return 'devops';
-  if (lower.includes('research') || lower.includes('data') || lower.includes('analys')) return 'researcher';
+  if (lower.includes('secur') || lower.includes('qa') || lower.includes('test') || lower.includes('vigil')) return 'qa';
   if (lower.includes('design') || lower.includes('ui') || lower.includes('ux')) return 'designer';
   if (lower.includes('product') || lower.includes('project') || lower.includes('manag')) return 'pm';
   if (lower.includes('market') || lower.includes('growth') || lower.includes('content')) return 'cmo';
   if (lower.includes('financ') || lower.includes('budget') || lower.includes('cost')) return 'cfo';
   if (lower.includes('tech') || lower.includes('architect') || lower.includes('cto')) return 'cto';
+  if (lower.includes('research') || lower.includes('data') || lower.includes('analys')) return 'researcher';
+  // Generic leadership keywords last — only match if no domain keyword matched
+  if (lower.includes('orchestrat') || lower.includes('lead') || lower.includes('ceo')) return 'ceo';
   // Default: most agents are engineers
   return 'engineer';
 }
@@ -243,4 +244,5 @@ export class PaperclipBridge {
   }
 }
 
+export { mapAgiFarmRole };
 export default PaperclipBridge;
