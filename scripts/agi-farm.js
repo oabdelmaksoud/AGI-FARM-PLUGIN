@@ -48,7 +48,7 @@ function routeSubcommand(commandName, description, scriptOverride = null) {
 routeSubcommand('setup', 'Launch the Advanced Setup Wizard to build a new AGI team');
 routeSubcommand('teardown', 'Safely stop and remove an existing AGI team and workspace');
 routeSubcommand('status', 'Check real-time status, agent health, and project progress');
-routeSubcommand('dashboard', 'Start the AGI Farm Live Ops Dashboard (Web UI)');
+routeSubcommand('dashboard', 'Start the Paperclip dashboard (Web UI)', 'paperclip');
 routeSubcommand('dispatch', 'Process the task queue and orchestrate agent assignments');
 routeSubcommand('export', 'Bundle the workspace and team configuration for GitHub export');
 routeSubcommand('rebuild', 'Regenerate SOUL.md files and re-sync components from templates');

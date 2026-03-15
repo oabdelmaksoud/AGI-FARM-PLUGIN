@@ -2,8 +2,8 @@
   "id": "agi-farm",
   "kind": "team-orchestration",
   "name": "AGI Farm — Multi-Agent Team Builder",
-  "version": "2.0.0",
-  "description": "Bootstrap complete multi-agent AI teams with auto-dispatcher, live dashboard, and infrastructure. Includes interactive wizard, SOUL.md generation, comms setup, cron registration, and React + SSE ops room.",
+  "version": "3.0.0",
+  "description": "Bootstrap complete multi-agent AI teams with Paperclip dashboard, auto-dispatcher, and infrastructure. Includes interactive wizard, SOUL.md generation, comms setup, cron registration, and OpenClaw gateway integration.",
   "author": "oabdelmaksoud",
   "homepage": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN",
   "openclawVersion": ">=1.0.0",
@@ -15,22 +15,28 @@
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "dashboardPort": {
+      "paperclipPort": {
         "type": "number",
-        "default": 8080,
+        "default": 3100,
         "minimum": 1024,
         "maximum": 65535,
-        "description": "Port for the live ops dashboard (SSE + React)"
+        "description": "Port for the Paperclip dashboard server"
       },
-      "dashboardHost": {
+      "paperclipHost": {
         "type": "string",
         "default": "127.0.0.1",
-        "description": "Bind address for the dashboard server"
+        "description": "Bind address for the Paperclip server"
       },
-      "autoStartDashboard": {
+      "autoStartPaperclip": {
         "type": "boolean",
         "default": true,
-        "description": "Automatically start the dashboard when plugin loads"
+        "description": "Automatically start Paperclip when plugin loads"
+      },
+      "paperclipDeploymentMode": {
+        "type": "string",
+        "enum": ["local_trusted", "authenticated"],
+        "default": "local_trusted",
+        "description": "Paperclip deployment mode (local_trusted for dev, authenticated for production)"
       },
       "workspacePath": {
         "type": "string",
@@ -64,32 +70,26 @@
         "type": "boolean",
         "default": true,
         "description": "Enable policy engine for runtime actions"
-      },
-      "featureMetering": {
-        "type": "boolean",
-        "default": true,
-        "description": "Enable usage metering APIs and dashboard data"
-      },
-      "featureApprovals": {
-        "type": "boolean",
-        "default": true,
-        "description": "Enable approval workflows for policy-gated actions"
       }
     },
     "required": []
   },
   "uiHints": {
-    "dashboardPort": {
-      "label": "Dashboard Port",
-      "description": "Port for the live ops dashboard (SSE + React)"
+    "paperclipPort": {
+      "label": "Paperclip Port",
+      "description": "Port for the Paperclip dashboard server"
     },
-    "dashboardHost": {
-      "label": "Dashboard Host",
-      "description": "Bind address for the dashboard server"
+    "paperclipHost": {
+      "label": "Paperclip Host",
+      "description": "Bind address for the Paperclip server"
     },
-    "autoStartDashboard": {
-      "label": "Auto-Start Dashboard",
-      "description": "Automatically start the dashboard when OpenClaw loads"
+    "autoStartPaperclip": {
+      "label": "Auto-Start Paperclip",
+      "description": "Automatically start Paperclip when OpenClaw loads"
+    },
+    "paperclipDeploymentMode": {
+      "label": "Deployment Mode",
+      "description": "Paperclip deployment mode"
     },
     "workspacePath": {
       "label": "Workspace Path",
@@ -118,14 +118,6 @@
     "featurePolicy": {
       "label": "Feature: Policy",
       "description": "Enable policy engine for runtime actions"
-    },
-    "featureMetering": {
-      "label": "Feature: Metering",
-      "description": "Enable usage metering APIs and dashboard data"
-    },
-    "featureApprovals": {
-      "label": "Feature: Approvals",
-      "description": "Enable approval workflows for policy-gated actions"
     }
   },
   "skills": [
@@ -170,8 +162,8 @@
     },
     {
       "name": "agi-farm dashboard",
-      "description": "Launch live ops room dashboard (React + SSE)",
-      "handler": "./scripts/dashboard.js"
+      "description": "Launch Paperclip dashboard for team management",
+      "handler": "./scripts/paperclip.js"
     },
     {
       "name": "agi-farm dispatch",

@@ -1,7 +1,7 @@
 {
   "name": "agi-farm",
-  "version": "2.0.0",
-  "description": "Multi-agent AI team builder for OpenClaw — bootstrap complete teams with auto-dispatcher, dashboard, and infrastructure",
+  "version": "3.0.0",
+  "description": "Multi-agent AI team builder for OpenClaw — bootstrap complete teams with Paperclip dashboard, auto-dispatcher, and infrastructure",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
@@ -19,7 +19,7 @@
   },
   "files": [
     "dist",
-    "dashboard-dist",
+    "paperclip",
     "openclaw.plugin.json",
     "server",
     "scripts",
@@ -47,10 +47,8 @@
     }
   },
   "scripts": {
-    "build:dashboard": "cd dashboard-react && npm run build",
-    "build:all": "npm run build && npm run build:dashboard && rm -rf dashboard-dist && cp -r dashboard-react/dist dashboard-dist",
-    "prepublishOnly": "npm run build:all",
     "postinstall": "node scripts/validate-config.js",
+    "setup:paperclip": "cd paperclip && pnpm install",
     "prebuild": "rm -rf dist tsconfig.tsbuildinfo",
     "build": "tsc",
     "dev": "tsc --watch",
@@ -58,11 +56,9 @@
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "test:install": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand tests/install-*.test.js",
     "test:install:real-openclaw": "bash scripts/test-install-smoke.sh",
-    "start-dashboard": "node server/dashboard.js",
+    "start-dashboard": "node scripts/paperclip.js",
     "validate": "node scripts/validate-config.js",
     "lint": "eslint src --ext .ts,.js",
-    "sync:lobsterboard": "node scripts/sync-lobsterboard-upstream.js",
-    "sync:lobsterboard:check": "node scripts/sync-lobsterboard-upstream.js --dry-run",
     "setup": "node scripts/setup.js"
   },
   "keywords": [
@@ -75,29 +71,24 @@
     "agentic-workflow",
     "team-management",
     "auto-dispatcher",
+    "paperclip",
     "dashboard",
     "cli-wizard",
     "agi",
-    "collaborative-ai",
-    "crewai",
-    "langgraph",
-    "autogen"
+    "collaborative-ai"
   ],
   "dependencies": {
     "chalk": "^5.4.1",
-    "chokidar": "^4.0.1",
     "commander": "^13.1.0",
     "ejs": "^3.1.10",
-    "express": "^4.21.2",
     "inquirer": "^12.4.1",
     "open": "^10.1.0",
     "ora": "^8.1.1",
-    "systeminformation": "^5.31.3"
+    "tsx": "^4.19.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
     "@types/ejs": "^3.1.5",
-    "@types/express": "^5.0.0",
     "@types/inquirer": "^9.0.8",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.13.4",

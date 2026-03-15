@@ -51,37 +51,36 @@ describe('AGIFarmExtension', () => {
   });
 
   test('onLoad sets context and logs', async () => {
-    const ext = createExtension({ autoStartDashboard: false });
+    const ext = createExtension({ autoStartPaperclip: false });
     const context = { logger: mockLogger, config: {} };
     await ext.onLoad(context);
     expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('[agi-farm] Plugin loaded'));
-    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('dashboardPort='));
+    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('port='));
   });
 
-  test('onUnload is safe when no dashboard is running', async () => {
-    const ext = createExtension({ autoStartDashboard: false });
+  test('onUnload is safe when no Paperclip is running', async () => {
+    const ext = createExtension({ autoStartPaperclip: false });
     await ext.onLoad({ logger: mockLogger, config: {} });
-    // Should not throw
     await ext.onUnload();
   });
 
   test('isDashboardRunning returns false when not started', () => {
-    const ext = createExtension({ autoStartDashboard: false });
+    const ext = createExtension({ autoStartPaperclip: false });
     expect(ext.isDashboardRunning()).toBe(false);
   });
 
   test('getDashboardUrl returns correct URL', () => {
-    const ext = createExtension({ dashboardPort: 9090, dashboardHost: '0.0.0.0' });
+    const ext = createExtension({ paperclipPort: 9090, paperclipHost: '0.0.0.0' });
     expect(ext.getDashboardUrl()).toBe('http://0.0.0.0:9090');
   });
 
-  test('default config uses port 8080 and 127.0.0.1', () => {
+  test('default config uses port 3100 and 127.0.0.1', () => {
     const ext = createExtension({});
-    expect(ext.getDashboardUrl()).toBe('http://127.0.0.1:8080');
+    expect(ext.getDashboardUrl()).toBe('http://127.0.0.1:3100');
   });
 
   test('partial config merges with defaults', () => {
-    const ext = createExtension({ dashboardPort: 3000 });
+    const ext = createExtension({ paperclipPort: 3000 });
     expect(ext.getDashboardUrl()).toBe('http://127.0.0.1:3000');
   });
 });

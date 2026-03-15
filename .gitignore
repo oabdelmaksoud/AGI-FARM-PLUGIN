@@ -28,7 +28,7 @@ npm-debug.log*
 # Test
 coverage/
 
-# Dashboard React build (included in repo for convenience)
-# dashboard-react/dist/  # uncomment to exclude
-dashboard-react/node_modules/
+# Paperclip (submodule — managed by git submodule)
+paperclip/node_modules/
+
 *.tgz

@@ -45,7 +45,7 @@ describe('install path: npm global', () => {
     });
     expect(installed.status).toBe(0);
 
-    const requiredBins = ['agi-farm', 'agi-farm-status', 'agi-farm-dashboard', 'agi-farm-dispatch'];
+    const requiredBins = ['agi-farm', 'agi-farm-status', 'agi-farm-dispatch'];
     for (const bin of requiredBins) {
       expect(fs.existsSync(binPath(prefix, bin))).toBe(true);
     }

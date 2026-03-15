@@ -1,0 +1,182 @@
+/**
+ * Paperclip Bridge — Maps AGI Farm concepts to Paperclip REST API.
+ *
+ * Provides helpers for:
+ * - Creating companies (teams) and agents
+ * - Syncing AGI Farm workspace data into Paperclip
+ * - Querying Paperclip for dashboard state
+ */
+
+const DEFAULT_BASE_URL = 'http://127.0.0.1:3100';
+
+/**
+ * Paperclip API client for AGI Farm integration.
+ */
+export class PaperclipBridge {
+  #baseUrl;
+
+  constructor(baseUrl = DEFAULT_BASE_URL) {
+    this.#baseUrl = baseUrl.replace(/\/$/, '');
+  }
+
+  /**
+   * Wait until Paperclip server is healthy (up to timeoutMs).
+   */
+  async waitForReady(timeoutMs = 30_000) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const res = await fetch(`${this.#baseUrl}/api/health`, {
+          signal: AbortSignal.timeout(2000),
+        });
+        if (res.ok) return true;
+      } catch {
+        // not ready yet
+      }
+      await new Promise(r => setTimeout(r, 500));
+    }
+    throw new Error(`Paperclip not ready after ${timeoutMs}ms`);
+  }
+
+  /**
+   * Create a Paperclip company from AGI Farm team config.
+   * @returns {Promise<{id: string, name: string}>}
+   */
+  async createCompany(teamName, description = '') {
+    const res = await fetch(`${this.#baseUrl}/api/companies`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: teamName,
+        description: description || `AGI Farm team: ${teamName}`,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Failed to create company: ${res.status} ${body}`);
+    }
+
+    return res.json();
+  }
+
+  /**
+   * List all companies.
+   * @returns {Promise<Array>}
+   */
+  async listCompanies() {
+    const res = await fetch(`${this.#baseUrl}/api/companies`);
+    if (!res.ok) throw new Error(`Failed to list companies: ${res.status}`);
+    return res.json();
+  }
+
+  /**
+   * Create a Paperclip agent (hire) from AGI Farm agent definition.
+   * @param {string} companyId
+   * @param {object} agentDef - { name, role, id, emoji }
+   * @param {object} openclawConfig - OpenClaw gateway connection config
+   * @returns {Promise<object>}
+   */
+  async createAgent(companyId, agentDef, openclawConfig = {}) {
+    const payload = {
+      name: agentDef.name,
+      role: agentDef.role || agentDef.description || 'Agent',
+      title: agentDef.emoji ? `${agentDef.emoji} ${agentDef.name}` : agentDef.name,
+      adapterType: 'openclaw_gateway',
+      adapterConfig: {
+        url: openclawConfig.gatewayUrl || 'ws://localhost:8765',
+        clientId: agentDef.id,
+        clientMode: 'agent',
+        role: agentDef.role || 'worker',
+        autoPairOnFirstConnect: true,
+        ...openclawConfig,
+      },
+      instructions: agentDef.instructions || '',
+    };
+
+    const res = await fetch(`${this.#baseUrl}/api/companies/${companyId}/agents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Failed to create agent "${agentDef.name}": ${res.status} ${body}`);
+    }
+
+    return res.json();
+  }
+
+  /**
+   * List agents for a company.
+   */
+  async listAgents(companyId) {
+    const res = await fetch(`${this.#baseUrl}/api/companies/${companyId}/agents`);
+    if (!res.ok) throw new Error(`Failed to list agents: ${res.status}`);
+    return res.json();
+  }
+
+  /**
+   * Create an issue (task) in Paperclip for a company.
+   */
+  async createIssue(companyId, issueDef) {
+    const res = await fetch(`${this.#baseUrl}/api/companies/${companyId}/issues`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(issueDef),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Failed to create issue: ${res.status} ${body}`);
+    }
+
+    return res.json();
+  }
+
+  /**
+   * Sync an entire AGI Farm team config into Paperclip.
+   * Creates company + all agents.
+   * @param {object} teamConfig - Full team config from setup wizard
+   * @param {object} openclawConfig - Optional OpenClaw gateway settings
+   * @returns {Promise<{company: object, agents: Array}>}
+   */
+  async syncTeam(teamConfig, openclawConfig = {}) {
+    // Create company
+    const company = await this.createCompany(
+      teamConfig.teamName,
+      `Blueprint: ${teamConfig.blueprintId || 'custom'} | Domain: ${teamConfig.intel?.domain || 'General'}`
+    );
+
+    // Create each agent
+    const agents = [];
+    for (const agentDef of teamConfig.agents) {
+      const agent = await this.createAgent(company.id, agentDef, openclawConfig);
+      agents.push(agent);
+    }
+
+    // Create starter project tasks as issues
+    if (teamConfig.project?.createProject && teamConfig.starterTasks) {
+      for (const task of teamConfig.starterTasks) {
+        await this.createIssue(company.id, {
+          title: task.title,
+          description: task.description || '',
+          assigneeAgentId: task.assigned_to,
+          priority: task.priority || 'medium',
+        });
+      }
+    }
+
+    return { company, agents };
+  }
+
+  /**
+   * Get Paperclip dashboard URL.
+   */
+  getDashboardUrl() {
+    return this.#baseUrl;
+  }
+}
+
+export default PaperclipBridge;

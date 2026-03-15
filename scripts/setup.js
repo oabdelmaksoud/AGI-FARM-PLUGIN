@@ -28,6 +28,7 @@ import {
 } from './lib/agent-registry.js';
 import { TEAM_BLUEPRINTS, getBlueprintById, getBlueprintGroups } from './lib/blueprints.js';
 import { CRON_DEFS, getAllCrons } from './lib/cron-defs.js';
+import { PaperclipBridge } from '../server/paperclip-bridge.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -518,17 +519,43 @@ async function offerSecurityScan() {
   }
 }
 
+// ── Paperclip Sync ───────────────────────────────────────────────────────────
+async function syncToPaperclip(config) {
+  const host = process.env.PAPERCLIP_HOST || '127.0.0.1';
+  const port = process.env.PAPERCLIP_PORT || process.env.PORT || '3100';
+  const baseUrl = `http://${host}:${port}`;
+  const bridge = new PaperclipBridge(baseUrl);
+
+  const spinner = ora('Syncing team to Paperclip dashboard...').start();
+
+  try {
+    await bridge.waitForReady(15_000);
+  } catch {
+    spinner.warn('Paperclip server not running — skipping sync. Start it with: agi-farm dashboard');
+    return null;
+  }
+
+  try {
+    const result = await bridge.syncTeam(config);
+    spinner.succeed(`Team synced to Paperclip (company: ${result.company.id}, ${result.agents.length} agents)`);
+    return result;
+  } catch (err) {
+    spinner.warn(`Paperclip sync failed: ${err.message}. You can sync later with: agi-farm dashboard`);
+    return null;
+  }
+}
+
 // ── Dashboard UX ─────────────────────────────────────────────────────────────
 async function offerOpenDashboard() {
-  const host = process.env.AGI_FARM_DASHBOARD_HOST || '127.0.0.1';
-  const port = process.env.AGI_FARM_DASHBOARD_PORT || '8080';
+  const host = process.env.PAPERCLIP_HOST || '127.0.0.1';
+  const port = process.env.PAPERCLIP_PORT || process.env.PORT || '3100';
   const url = `http://${host}:${port}`;
 
   const { openDashboard } = await inquirer.prompt([
     {
       type: 'confirm',
       name: 'openDashboard',
-      message: `Open AGI Farm dashboard in browser? (${url})`,
+      message: `Open Paperclip dashboard in browser? (${url})`,
       default: true
     }
   ]);
@@ -718,10 +745,14 @@ async function main() {
     initializeHitlPolicy(config);
     initializeStarterProject(config);
 
-    console.log(chalk.green.bold('\n🎉 Team Deployment Successful!\n'));
-    console.log(chalk.white(`Workspace: ${WORKSPACE}`));
-    console.log(chalk.white(`Agents:    ${config.agents.length} active`));
-    console.log(chalk.white(`Dashboard: http://127.0.0.1:8080`));
+    // Sync to Paperclip dashboard
+    await syncToPaperclip(config);
+
+    const paperclipPort = process.env.PAPERCLIP_PORT || process.env.PORT || '3100';
+    console.log(chalk.green.bold('\n Team Deployment Successful!\n'));
+    console.log(chalk.white(`Workspace:  ${WORKSPACE}`));
+    console.log(chalk.white(`Agents:     ${config.agents.length} active`));
+    console.log(chalk.white(`Dashboard:  http://127.0.0.1:${paperclipPort} (Paperclip)`));
 
     // 4. Final Actions
     await offerSecurityScan();
