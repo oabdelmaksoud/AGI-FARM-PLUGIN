@@ -161,8 +161,24 @@ export class PaperclipBridge {
   }
 
   /**
+   * Update an existing agent (PATCH /api/agents/:id).
+   */
+  async updateAgent(agentId, patch) {
+    const res = await fetch(`${this.#baseUrl}/api/agents/${agentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Failed to update agent ${agentId}: ${res.status} ${body}`);
+    }
+    return res.json();
+  }
+
+  /**
    * Sync an entire AGI Farm team config into Paperclip.
-   * Creates company + all agents.
+   * Creates company + all agents with org hierarchy wired.
    * @param {object} teamConfig - Full team config from setup wizard
    * @param {object} openclawConfig - Optional OpenClaw gateway settings
    * @returns {Promise<{company: object, agents: Array}>}
@@ -174,11 +190,34 @@ export class PaperclipBridge {
       `Blueprint: ${teamConfig.blueprintId || 'custom'} | Domain: ${teamConfig.intel?.domain || 'General'}`
     );
 
+    // Create CEO/lead agent first (root of org chart)
+    const agentDefs = [...teamConfig.agents];
+    const ceoIdx = agentDefs.findIndex(a => {
+      const role = mapAgiFarmRole(a.role || a.description);
+      return role === 'ceo';
+    });
+    // If a CEO exists, move it to the front so it's created first
+    if (ceoIdx > 0) {
+      const [ceo] = agentDefs.splice(ceoIdx, 1);
+      agentDefs.unshift(ceo);
+    }
+
     // Create each agent
     const agents = [];
-    for (const agentDef of teamConfig.agents) {
+    let rootAgentId = null;
+    for (const agentDef of agentDefs) {
       const agent = await this.createAgent(company.id, agentDef, openclawConfig);
       agents.push(agent);
+      if (!rootAgentId) {
+        rootAgentId = agent.id; // First agent is the root (CEO or first defined)
+      }
+    }
+
+    // Wire org hierarchy: all non-root agents report to the root agent
+    for (const agent of agents) {
+      if (agent.id !== rootAgentId) {
+        await this.updateAgent(agent.id, { reportsTo: rootAgentId });
+      }
     }
 
     // Create starter project tasks as issues
