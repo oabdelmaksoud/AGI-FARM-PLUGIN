@@ -9,6 +9,31 @@
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:3100';
 
+const PAPERCLIP_ROLES = [
+  'ceo', 'cto', 'cmo', 'cfo', 'engineer', 'designer',
+  'pm', 'qa', 'devops', 'researcher', 'general',
+];
+
+function mapAgiFarmRole(role) {
+  if (!role) return 'general';
+  const lower = role.toLowerCase();
+  // Direct match
+  const direct = PAPERCLIP_ROLES.find(r => lower === r);
+  if (direct) return direct;
+  // Keyword mapping
+  if (lower.includes('orchestrat') || lower.includes('lead') || lower.includes('ceo')) return 'ceo';
+  if (lower.includes('secur') || lower.includes('qa') || lower.includes('test') || lower.includes('vigil')) return 'qa';
+  if (lower.includes('devops') || lower.includes('infra') || lower.includes('ops')) return 'devops';
+  if (lower.includes('research') || lower.includes('data') || lower.includes('analys')) return 'researcher';
+  if (lower.includes('design') || lower.includes('ui') || lower.includes('ux')) return 'designer';
+  if (lower.includes('product') || lower.includes('project') || lower.includes('manag')) return 'pm';
+  if (lower.includes('market') || lower.includes('growth') || lower.includes('content')) return 'cmo';
+  if (lower.includes('financ') || lower.includes('budget') || lower.includes('cost')) return 'cfo';
+  if (lower.includes('tech') || lower.includes('architect') || lower.includes('cto')) return 'cto';
+  // Default: most agents are engineers
+  return 'engineer';
+}
+
 /**
  * Paperclip API client for AGI Farm integration.
  */
@@ -80,7 +105,7 @@ export class PaperclipBridge {
   async createAgent(companyId, agentDef, openclawConfig = {}) {
     const payload = {
       name: agentDef.name,
-      role: agentDef.role || agentDef.description || 'Agent',
+      role: mapAgiFarmRole(agentDef.role || agentDef.description),
       title: agentDef.emoji ? `${agentDef.emoji} ${agentDef.name}` : agentDef.name,
       adapterType: 'openclaw_gateway',
       adapterConfig: {
