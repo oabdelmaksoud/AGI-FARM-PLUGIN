@@ -642,7 +642,7 @@ describe('createProject', () => {
     expect(body.name).toBe('MVP');
     expect(body.description).toBe('Build the MVP');
     expect(body.leadAgentId).toBe('agent-1');
-    expect(body.status).toBe('active');
+    expect(body.status).toBe('planned');
   });
 
   test('uses defaults for optional fields', async () => {
@@ -651,7 +651,7 @@ describe('createProject', () => {
     await bridge.createProject('comp-1', { name: 'X' });
     const body = JSON.parse(fetchCalls[0].opts.body);
     expect(body.description).toBe('');
-    expect(body.status).toBe('active');
+    expect(body.status).toBe('planned');
   });
 
   test('throws on API error', async () => {
@@ -787,7 +787,7 @@ describe('addIssueComment', () => {
     await bridge.addIssueComment('iss-1', 'Task completed', 'agent-1');
     expect(fetchCalls[0].url).toBe('http://127.0.0.1:3100/api/issues/iss-1/comments');
     const body = JSON.parse(fetchCalls[0].opts.body);
-    expect(body.content).toBe('Task completed');
+    expect(body.body).toBe('Task completed');
     expect(body.authorAgentId).toBe('agent-1');
   });
 

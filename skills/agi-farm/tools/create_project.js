@@ -71,7 +71,7 @@ try {
       id: project.id,
       name: project_name,
       description,
-      status: 'active',
+      status: 'planned',
       created_at: new Date().toISOString(),
       paperclip_id: project.id,
     });

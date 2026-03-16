@@ -30,51 +30,61 @@ export async function resolveCompany(bridge, options = {}) {
 
   const teamJsonPath = path.join(workspace, 'agi-farm-bundle', 'team.json');
 
-  if (!fs.existsSync(teamJsonPath)) {
-    throw new Error('No active AGI Farm team found. Run `agi-farm setup` first.');
+  // Load team.json if it exists (optional — tools work without it)
+  let team = null;
+  if (fs.existsSync(teamJsonPath)) {
+    team = JSON.parse(fs.readFileSync(teamJsonPath, 'utf-8'));
   }
 
-  const team = JSON.parse(fs.readFileSync(teamJsonPath, 'utf-8'));
   const companies = await bridge.listCompanies();
 
-  // 1. Match by team name
-  let company = companies.find(c => c.name === team.team_name);
+  // Filter to active companies first, fall back to all
+  const activeCompanies = companies.filter(c => c.status === 'active');
+  const candidates = activeCompanies.length > 0 ? activeCompanies : companies;
 
-  // 2. Match by stored paperclip_company_id
-  if (!company && team.paperclip_company_id) {
-    company = companies.find(c => c.id === team.paperclip_company_id);
+  let company = null;
+
+  if (team) {
+    // 1. Match by team name
+    company = candidates.find(c => c.name === team.team_name);
+
+    // 2. Match by stored paperclip_company_id
+    if (!company && team.paperclip_company_id) {
+      company = candidates.find(c => c.id === team.paperclip_company_id);
+    }
   }
 
-  // 3. Fall back to first company
-  if (!company && companies.length > 0) {
-    company = companies[0];
+  // 3. Fall back to first active company (works with or without team.json)
+  if (!company && candidates.length > 0) {
+    company = candidates[0];
   }
 
-  // 4. Auto-create if no companies exist
+  // 4. Auto-create if no companies exist at all
   if (!company) {
-    const teamName = team.team_name || 'AGI Farm Team';
+    const teamName = (team && team.team_name) || 'AGI Farm Team';
     company = await bridge.createCompany(
       teamName,
       `Auto-created for AGI Farm team: ${teamName}`
     );
 
-    // Register agents if available
-    if (team.agents && team.agents.length > 0) {
+    // Register agents if team.json has them
+    if (team && team.agents && team.agents.length > 0) {
       const syncResult = await bridge.syncTeam({
         teamName,
         agents: team.agents,
         intel: { domain: team.domain || 'General' },
       });
-      // Store company ID for next time
       team.paperclip_company_id = company.id;
       fs.writeFileSync(teamJsonPath, JSON.stringify(team, null, 2));
 
       return { company: syncResult.company || company, team, agents: syncResult.agents };
     }
 
-    team.paperclip_company_id = company.id;
-    fs.writeFileSync(teamJsonPath, JSON.stringify(team, null, 2));
+    if (team) {
+      team.paperclip_company_id = company.id;
+      fs.writeFileSync(teamJsonPath, JSON.stringify(team, null, 2));
+    }
   }
 
-  return { company, team };
+  return { company, team: team || { team_name: company.name } };
 }

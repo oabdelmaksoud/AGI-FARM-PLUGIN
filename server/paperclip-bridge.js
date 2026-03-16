@@ -252,7 +252,7 @@ export class PaperclipBridge {
         name: projectDef.name,
         description: projectDef.description || '',
         leadAgentId: projectDef.leadAgentId || undefined,
-        status: projectDef.status || 'active',
+        status: projectDef.status || 'planned',
         color: projectDef.color || undefined,
       }),
     });
@@ -369,7 +369,7 @@ export class PaperclipBridge {
     const res = await fetch(`${this.#baseUrl}/api/issues/${issueId}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, authorAgentId }),
+      body: JSON.stringify({ body: content, authorAgentId }),
     });
     if (!res.ok) {
       const body = await res.text();

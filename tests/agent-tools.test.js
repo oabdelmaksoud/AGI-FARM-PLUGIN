@@ -730,7 +730,7 @@ describe('Edge cases', () => {
 
     const body = JSON.parse(fetchCalls[fetchCalls.length - 1].opts.body);
     expect(body.leadAgentId).toBeUndefined();
-    expect(body.status).toBe('active');
+    expect(body.status).toBe('planned');
   });
 
   test('List issues with no filters returns all', async () => {
@@ -772,7 +772,7 @@ describe('Edge cases', () => {
     await bridge.addIssueComment('iss-1', 'Progress update');
 
     const body = JSON.parse(fetchCalls[0].opts.body);
-    expect(body.content).toBe('Progress update');
+    expect(body.body).toBe('Progress update');
     expect(body.authorAgentId).toBeUndefined();
   });
 });
