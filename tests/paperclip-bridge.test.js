@@ -619,3 +619,181 @@ describe('syncTeam', () => {
     ).rejects.toThrow('Failed to create agent "B": 429');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 10. createProject
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('createProject', () => {
+  test('sends correct POST and returns project', async () => {
+    const fakeProject = { id: 'proj-1', name: 'MVP', status: 'active' };
+    installFetch(() => mockResponse(fakeProject));
+
+    const bridge = new PaperclipBridge();
+    const result = await bridge.createProject('comp-1', {
+      name: 'MVP',
+      description: 'Build the MVP',
+      leadAgentId: 'agent-1',
+    });
+
+    expect(result).toEqual(fakeProject);
+    expect(fetchCalls[0].url).toBe('http://127.0.0.1:3100/api/companies/comp-1/projects');
+    const body = JSON.parse(fetchCalls[0].opts.body);
+    expect(body.name).toBe('MVP');
+    expect(body.description).toBe('Build the MVP');
+    expect(body.leadAgentId).toBe('agent-1');
+    expect(body.status).toBe('active');
+  });
+
+  test('uses defaults for optional fields', async () => {
+    installFetch(() => mockResponse({ id: 'p1' }));
+    const bridge = new PaperclipBridge();
+    await bridge.createProject('comp-1', { name: 'X' });
+    const body = JSON.parse(fetchCalls[0].opts.body);
+    expect(body.description).toBe('');
+    expect(body.status).toBe('active');
+  });
+
+  test('throws on API error', async () => {
+    installFetch(() => mockResponse({ error: 'bad' }, { ok: false, status: 422 }));
+    const bridge = new PaperclipBridge();
+    await expect(bridge.createProject('c', { name: 'X' })).rejects.toThrow('Failed to create project "X": 422');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 11. listProjects
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('listProjects', () => {
+  test('returns array of projects', async () => {
+    installFetch(() => mockResponse([{ id: 'p1' }, { id: 'p2' }]));
+    const bridge = new PaperclipBridge();
+    const result = await bridge.listProjects('comp-1');
+    expect(result).toHaveLength(2);
+    expect(fetchCalls[0].url).toBe('http://127.0.0.1:3100/api/companies/comp-1/projects');
+  });
+
+  test('throws on failure', async () => {
+    installFetch(() => mockResponse(null, { ok: false, status: 500 }));
+    const bridge = new PaperclipBridge();
+    await expect(bridge.listProjects('c')).rejects.toThrow('Failed to list projects: 500');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 12. getProject / updateProject
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('getProject', () => {
+  test('returns project details', async () => {
+    installFetch(() => mockResponse({ id: 'p1', name: 'MVP', status: 'active' }));
+    const bridge = new PaperclipBridge();
+    const result = await bridge.getProject('p1');
+    expect(result.name).toBe('MVP');
+    expect(fetchCalls[0].url).toBe('http://127.0.0.1:3100/api/projects/p1');
+  });
+
+  test('throws on not found', async () => {
+    installFetch(() => mockResponse(null, { ok: false, status: 404 }));
+    const bridge = new PaperclipBridge();
+    await expect(bridge.getProject('nope')).rejects.toThrow('Failed to get project nope: 404');
+  });
+});
+
+describe('updateProject', () => {
+  test('sends PATCH with correct payload', async () => {
+    installFetch(() => mockResponse({ id: 'p1', status: 'completed' }));
+    const bridge = new PaperclipBridge();
+    const result = await bridge.updateProject('p1', { status: 'completed' });
+    expect(result.status).toBe('completed');
+    expect(fetchCalls[0].url).toBe('http://127.0.0.1:3100/api/projects/p1');
+    expect(fetchCalls[0].opts.method).toBe('PATCH');
+  });
+
+  test('throws on failure', async () => {
+    installFetch(() => mockResponse(null, { ok: false, status: 400 }));
+    const bridge = new PaperclipBridge();
+    await expect(bridge.updateProject('p1', {})).rejects.toThrow('Failed to update project p1: 400');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 13. listIssues with filters
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('listIssues', () => {
+  test('calls correct URL without filters', async () => {
+    installFetch(() => mockResponse([]));
+    const bridge = new PaperclipBridge();
+    await bridge.listIssues('comp-1');
+    expect(fetchCalls[0].url).toBe('http://127.0.0.1:3100/api/companies/comp-1/issues');
+  });
+
+  test('applies query string filters', async () => {
+    installFetch(() => mockResponse([]));
+    const bridge = new PaperclipBridge();
+    await bridge.listIssues('comp-1', { projectId: 'p1', status: 'todo' });
+    expect(fetchCalls[0].url).toContain('projectId=p1');
+    expect(fetchCalls[0].url).toContain('status=todo');
+  });
+
+  test('throws on failure', async () => {
+    installFetch(() => mockResponse(null, { ok: false, status: 500 }));
+    const bridge = new PaperclipBridge();
+    await expect(bridge.listIssues('c')).rejects.toThrow('Failed to list issues: 500');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 14. getIssue / updateIssue
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('getIssue', () => {
+  test('returns issue details', async () => {
+    installFetch(() => mockResponse({ id: 'iss-1', title: 'Fix bug', status: 'todo' }));
+    const bridge = new PaperclipBridge();
+    const result = await bridge.getIssue('iss-1');
+    expect(result.title).toBe('Fix bug');
+    expect(fetchCalls[0].url).toBe('http://127.0.0.1:3100/api/issues/iss-1');
+  });
+});
+
+describe('updateIssue', () => {
+  test('sends PATCH with correct payload', async () => {
+    installFetch(() => mockResponse({ id: 'iss-1', status: 'done' }));
+    const bridge = new PaperclipBridge();
+    const result = await bridge.updateIssue('iss-1', { status: 'done' });
+    expect(result.status).toBe('done');
+    expect(fetchCalls[0].opts.method).toBe('PATCH');
+    expect(fetchCalls[0].url).toBe('http://127.0.0.1:3100/api/issues/iss-1');
+  });
+
+  test('throws on failure', async () => {
+    installFetch(() => mockResponse(null, { ok: false, status: 404 }));
+    const bridge = new PaperclipBridge();
+    await expect(bridge.updateIssue('x', {})).rejects.toThrow('Failed to update issue x: 404');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 15. addIssueComment
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('addIssueComment', () => {
+  test('sends correct POST', async () => {
+    installFetch(() => mockResponse({ id: 'comment-1' }));
+    const bridge = new PaperclipBridge();
+    await bridge.addIssueComment('iss-1', 'Task completed', 'agent-1');
+    expect(fetchCalls[0].url).toBe('http://127.0.0.1:3100/api/issues/iss-1/comments');
+    const body = JSON.parse(fetchCalls[0].opts.body);
+    expect(body.content).toBe('Task completed');
+    expect(body.authorAgentId).toBe('agent-1');
+  });
+
+  test('throws on failure', async () => {
+    installFetch(() => mockResponse(null, { ok: false, status: 500 }));
+    const bridge = new PaperclipBridge();
+    await expect(bridge.addIssueComment('x', 'test')).rejects.toThrow('Failed to add comment to issue x: 500');
+  });
+});

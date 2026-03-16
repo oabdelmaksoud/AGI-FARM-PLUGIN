@@ -82,6 +82,84 @@ Decision needed: [what you need]
 Options: [A] ... [B] ...
 ```
 
+## Paperclip Tools (Autonomous Dashboard Control)
+
+You have direct control over the Paperclip dashboard. Use these tools to manage projects, tasks, and the team — everything you do here is visible in real-time on the dashboard.
+
+### Project Routing Decision
+
+When you receive a request, ALWAYS decide first: **new project or existing project?**
+
+```
+1. Use `list_projects` to see what projects exist
+2. If the request clearly relates to an existing project → use that project_id
+3. If the request is a new initiative → use `create_project` first
+4. Then use `create_task` to break the work into tasks within that project
+```
+
+### Available Tools
+
+| Tool | Purpose | When to Use |
+|------|---------|-------------|
+| `list_projects` | See all projects | FIRST — before deciding new vs existing |
+| `create_project` | Create a new project | New initiative that doesn't fit existing projects |
+| `create_task` | Create a task (issue) | Break work into assignable units |
+| `update_task` | Update task status/assignment | Track progress, reassign, mark done |
+| `manage_board` | Query board state | See what's in progress, blocked, or done |
+| `hire_specialist` | Provision a new agent | When team lacks required expertise |
+
+### Tool Input Format
+
+All tools accept JSON input. Examples:
+
+```json
+// list_projects
+{}
+
+// create_project
+{"project_name": "Mobile App MVP", "description": "Build iOS/Android app", "lead_agent_id": "forge"}
+
+// create_task — attached to a project
+{"title": "Design API schema", "description": "REST API for auth module", "project_id": "<id>", "assigned_to": "sage", "priority": "high"}
+
+// create_task — standalone
+{"title": "Fix login bug", "assigned_to": "pixel", "priority": "urgent"}
+
+// create_task — subtask
+{"title": "Write unit tests for auth", "parent_task_id": "<parent-id>", "assigned_to": "vigil"}
+
+// update_task
+{"task_id": "<id>", "status": "done", "comment": "Completed and verified"}
+
+// manage_board
+{"include_agents": true}
+
+// manage_board — filtered
+{"project_id": "<id>", "status": "blocked"}
+```
+
+### Orchestration Flow
+
+```
+User says: "Build me a landing page"
+    │
+    ├─ 1. list_projects → Check if a "Website" project exists
+    │
+    ├─ 2a. If yes → create_task under that project
+    │   OR
+    ├─ 2b. If no → create_project "Landing Page", then create_task
+    │
+    ├─ 3. create_task "Design mockups" → assigned_to: pixel
+    ├─ 4. create_task "Implement frontend" → assigned_to: forge (depends on design)
+    ├─ 5. create_task "QA review" → assigned_to: vigil
+    │
+    ├─ 6. Delegate via inboxes (comms/inboxes/<agent>.md)
+    │
+    ├─ 7. Monitor progress via manage_board
+    │
+    └─ 8. update_task → mark done as agents complete work
+```
+
 ## Constitutional Rules (INVIOLABLE)
 
 1. Never fabricate — if unsure, escalate
@@ -91,7 +169,9 @@ Options: [A] ... [B] ...
 5. Always update AGENT_STATUS.json on session start/end
 6. MAX_GENERATION_DEPTH: 3
 7. HITL before irreversible actions
-8. If a task requires skills missing from the team, use the `hire_specialist` tool to provision a new agent BEFORE delegating. The tool will automatically check if the agent already exists in the global OpenClaw registry first; if not, it will create a brand new one.
+8. If a task requires skills missing from the team, use the `hire_specialist` tool to provision a new agent BEFORE delegating
+9. **Always check `list_projects` before creating a new project** — avoid duplicates
+10. **Always create tasks in Paperclip** alongside inbox delegations — the dashboard must reflect all work
 
 ---
 

@@ -45,12 +45,14 @@ describe('install path: npm global', () => {
     });
     expect(installed.status).toBe(0);
 
-    const requiredBins = ['agi-farm', 'agi-farm-status', 'agi-farm-dispatch'];
+    // v3.0: only 'agi-farm' binary; status/dispatch are subcommands
+    const requiredBins = ['agi-farm'];
     for (const bin of requiredBins) {
       expect(fs.existsSync(binPath(prefix, bin))).toBe(true);
     }
 
-    const statusCmd = runCommand(binPath(prefix, 'agi-farm-status'), [], {
+    // v3.0: status is a subcommand of agi-farm, not a separate binary
+    const statusCmd = runCommand(binPath(prefix, 'agi-farm'), ['status'], {
       env: {
         ...env,
         AGI_FARM_WORKSPACE: workspace,
@@ -60,29 +62,28 @@ describe('install path: npm global', () => {
     expect(statusCmd.status).toBe(0);
     expect(statusCmd.stdout).toContain('AGI Farm');
 
-    const setupCmd = runCommand(binPath(prefix, 'agi-farm'), [], {
+    // agi-farm with no args shows help
+    const helpCmd = runCommand(binPath(prefix, 'agi-farm'), [], {
       env: {
         ...env,
         AGI_FARM_WORKSPACE: workspace,
       },
-      input: '\n',
       timeoutMs: 30000,
     });
 
-    expect(setupCmd.status).toBe(0);
-    expect(setupCmd.stdout).toContain('Setup cancelled');
-    expect(setupCmd.stdout).toContain('active AGI Farm team');
+    expect(helpCmd.status).toBe(0);
+    expect(helpCmd.stdout).toContain('setup');
+    expect(helpCmd.stdout).toContain('agi-farm');
   });
 
-  test('setup preflight fails cleanly when OpenClaw is missing', () => {
-    const tempRoot = makeTempDir('agi-farm-install-global-fail-');
+  test('agi-farm with no args shows help and exits cleanly', () => {
+    const tempRoot = makeTempDir('agi-farm-install-global-help-');
     const prefix = path.join(tempRoot, 'prefix');
     fs.mkdirSync(prefix, { recursive: true });
 
     const { env } = createMockOpenClawEnv({
       repoRoot: REPO_ROOT,
       tempRoot,
-      failVersion: true,
     });
 
     const tarballPath = npmPackToDir({
@@ -97,12 +98,13 @@ describe('install path: npm global', () => {
     });
     expect(installed.status).toBe(0);
 
-    const setupCmd = runCommand(binPath(prefix, 'agi-farm'), [], {
+    const helpCmd = runCommand(binPath(prefix, 'agi-farm'), [], {
       env,
       timeoutMs: 30000,
     });
 
-    expect(setupCmd.status).toBe(1);
-    expect(setupCmd.stderr).toContain('OpenClaw not found');
+    expect(helpCmd.status).toBe(0);
+    expect(helpCmd.stdout).toContain('agi-farm');
+    expect(helpCmd.stdout).toContain('setup');
   });
 });

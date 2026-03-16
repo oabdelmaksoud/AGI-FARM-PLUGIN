@@ -236,6 +236,148 @@ export class PaperclipBridge {
     return { company, agents };
   }
 
+  // ── Project Management ─────────────────────────────────────────────────────
+
+  /**
+   * Create a project in Paperclip.
+   * @param {string} companyId
+   * @param {object} projectDef - { name, description, leadAgentId?, status?, color? }
+   * @returns {Promise<object>}
+   */
+  async createProject(companyId, projectDef) {
+    const res = await fetch(`${this.#baseUrl}/api/companies/${companyId}/projects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: projectDef.name,
+        description: projectDef.description || '',
+        leadAgentId: projectDef.leadAgentId || undefined,
+        status: projectDef.status || 'active',
+        color: projectDef.color || undefined,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Failed to create project "${projectDef.name}": ${res.status} ${body}`);
+    }
+
+    return res.json();
+  }
+
+  /**
+   * List projects for a company.
+   * @param {string} companyId
+   * @returns {Promise<Array>}
+   */
+  async listProjects(companyId) {
+    const res = await fetch(`${this.#baseUrl}/api/companies/${companyId}/projects`);
+    if (!res.ok) throw new Error(`Failed to list projects: ${res.status}`);
+    return res.json();
+  }
+
+  /**
+   * Get project details by ID.
+   * @param {string} projectId
+   * @returns {Promise<object>}
+   */
+  async getProject(projectId) {
+    const res = await fetch(`${this.#baseUrl}/api/projects/${projectId}`);
+    if (!res.ok) throw new Error(`Failed to get project ${projectId}: ${res.status}`);
+    return res.json();
+  }
+
+  /**
+   * Update a project.
+   * @param {string} projectId
+   * @param {object} patch - Fields to update
+   * @returns {Promise<object>}
+   */
+  async updateProject(projectId, patch) {
+    const res = await fetch(`${this.#baseUrl}/api/projects/${projectId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Failed to update project ${projectId}: ${res.status} ${body}`);
+    }
+    return res.json();
+  }
+
+  // ── Issue/Task Management ─────────────────────────────────────────────────
+
+  /**
+   * List issues for a company with optional filters.
+   * @param {string} companyId
+   * @param {object} filters - { projectId?, status?, assigneeAgentId?, priority? }
+   * @returns {Promise<Array>}
+   */
+  async listIssues(companyId, filters = {}) {
+    const params = new URLSearchParams();
+    if (filters.projectId) params.set('projectId', filters.projectId);
+    if (filters.status) params.set('status', filters.status);
+    if (filters.assigneeAgentId) params.set('assigneeAgentId', filters.assigneeAgentId);
+    if (filters.priority) params.set('priority', filters.priority);
+
+    const qs = params.toString();
+    const url = `${this.#baseUrl}/api/companies/${companyId}/issues${qs ? `?${qs}` : ''}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to list issues: ${res.status}`);
+    return res.json();
+  }
+
+  /**
+   * Get issue details by ID.
+   * @param {string} issueId
+   * @returns {Promise<object>}
+   */
+  async getIssue(issueId) {
+    const res = await fetch(`${this.#baseUrl}/api/issues/${issueId}`);
+    if (!res.ok) throw new Error(`Failed to get issue ${issueId}: ${res.status}`);
+    return res.json();
+  }
+
+  /**
+   * Update an issue (PATCH /api/issues/:id).
+   * @param {string} issueId
+   * @param {object} patch - Fields to update (status, assigneeAgentId, priority, etc.)
+   * @returns {Promise<object>}
+   */
+  async updateIssue(issueId, patch) {
+    const res = await fetch(`${this.#baseUrl}/api/issues/${issueId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Failed to update issue ${issueId}: ${res.status} ${body}`);
+    }
+    return res.json();
+  }
+
+  /**
+   * Add a comment to an issue.
+   * @param {string} issueId
+   * @param {string} content - Comment text
+   * @param {string} authorAgentId - The agent posting the comment
+   * @returns {Promise<object>}
+   */
+  async addIssueComment(issueId, content, authorAgentId) {
+    const res = await fetch(`${this.#baseUrl}/api/issues/${issueId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, authorAgentId }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Failed to add comment to issue ${issueId}: ${res.status} ${body}`);
+    }
+    return res.json();
+  }
+
   /**
    * Get Paperclip dashboard URL.
    */
