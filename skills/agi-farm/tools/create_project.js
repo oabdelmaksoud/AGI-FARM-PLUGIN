@@ -3,8 +3,7 @@
  * AGI Farm — Create Project Tool
  *
  * Allows the Orchestrator to create a new project in Paperclip.
- * The Orchestrator decides whether user work belongs to a new project
- * or an existing one, then uses this tool for new projects.
+ * Auto-creates company if none exists yet.
  *
  * Input (JSON):
  *   - project_name (required): Name of the project
@@ -21,6 +20,7 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import { PaperclipBridge } from '../../../server/paperclip-bridge.js';
+import { resolveCompany } from './lib/resolve-company.js';
 
 let input = {};
 try {
@@ -37,28 +37,12 @@ if (!project_name || !description) {
   process.exit(1);
 }
 
-const workspace = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
-const teamJsonPath = path.join(workspace, 'agi-farm-bundle', 'team.json');
-
-if (!fs.existsSync(teamJsonPath)) {
-  console.error(JSON.stringify({ error: 'No active AGI Farm team found.' }));
-  process.exit(1);
-}
-
-const team = JSON.parse(fs.readFileSync(teamJsonPath, 'utf-8'));
 const paperclipPort = process.env.PAPERCLIP_PORT || '3100';
 const paperclipHost = process.env.PAPERCLIP_HOST || '127.0.0.1';
 const bridge = new PaperclipBridge(`http://${paperclipHost}:${paperclipPort}`);
 
 try {
-  // Find the company ID from the team config
-  const companies = await bridge.listCompanies();
-  const company = companies.find(c => c.name === team.team_name) || companies[0];
-
-  if (!company) {
-    console.error(JSON.stringify({ error: 'No company found in Paperclip. Run agi-farm setup first.' }));
-    process.exit(1);
-  }
+  const { company } = await resolveCompany(bridge);
 
   // Resolve lead agent if specified
   let leadAgentId;
@@ -79,6 +63,7 @@ try {
   });
 
   // Also update local PROJECTS.json
+  const workspace = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
   const projectsPath = path.join(workspace, 'PROJECTS.json');
   if (fs.existsSync(projectsPath)) {
     const projects = JSON.parse(fs.readFileSync(projectsPath, 'utf-8'));

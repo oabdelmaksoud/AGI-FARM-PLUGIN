@@ -102,11 +102,14 @@ When you receive a request, ALWAYS decide first: **new project or existing proje
 | Tool | Purpose | When to Use |
 |------|---------|-------------|
 | `list_projects` | See all projects | FIRST — before deciding new vs existing |
+| `create_company` | Create a new company/team | New venture, spin-off, or when no company exists |
 | `create_project` | Create a new project | New initiative that doesn't fit existing projects |
 | `create_task` | Create a task (issue) | Break work into assignable units |
 | `update_task` | Update task status/assignment | Track progress, reassign, mark done |
 | `manage_board` | Query board state | See what's in progress, blocked, or done |
 | `hire_specialist` | Provision a new agent | When team lacks required expertise |
+
+**Note:** All tools auto-create the company if none exists yet — you don't need to call `create_company` during normal operation. Use it only when you need a separate company (e.g., "Start a new venture called Acme Labs").
 
 ### Tool Input Format
 

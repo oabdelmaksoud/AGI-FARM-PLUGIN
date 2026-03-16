@@ -21,6 +21,7 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import { PaperclipBridge } from '../../../server/paperclip-bridge.js';
+import { resolveCompany } from './lib/resolve-company.js';
 
 let input = {};
 try {
@@ -54,15 +55,6 @@ if (priority && !VALID_PRIORITIES.includes(priority)) {
   process.exit(1);
 }
 
-const workspace = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
-const teamJsonPath = path.join(workspace, 'agi-farm-bundle', 'team.json');
-
-if (!fs.existsSync(teamJsonPath)) {
-  console.error(JSON.stringify({ error: 'No active AGI Farm team found.' }));
-  process.exit(1);
-}
-
-const team = JSON.parse(fs.readFileSync(teamJsonPath, 'utf-8'));
 const paperclipPort = process.env.PAPERCLIP_PORT || '3100';
 const paperclipHost = process.env.PAPERCLIP_HOST || '127.0.0.1';
 const bridge = new PaperclipBridge(`http://${paperclipHost}:${paperclipPort}`);
@@ -75,19 +67,16 @@ try {
 
   // Resolve agent name → Paperclip agent ID if reassigning
   if (assigned_to) {
-    const companies = await bridge.listCompanies();
-    const company = companies.find(c => c.name === team.team_name) || companies[0];
-    if (company) {
-      const agents = await bridge.listAgents(company.id);
-      const agent = agents.find(a =>
-        a.name.toLowerCase() === assigned_to.toLowerCase() ||
-        a.adapterConfig?.clientId === assigned_to
-      );
-      if (agent) {
-        patch.assigneeAgentId = agent.id;
-      } else {
-        console.log(JSON.stringify({ log: `Warning: Agent "${assigned_to}" not found. Skipping reassignment.` }));
-      }
+    const { company } = await resolveCompany(bridge);
+    const agents = await bridge.listAgents(company.id);
+    const agent = agents.find(a =>
+      a.name.toLowerCase() === assigned_to.toLowerCase() ||
+      a.adapterConfig?.clientId === assigned_to
+    );
+    if (agent) {
+      patch.assigneeAgentId = agent.id;
+    } else {
+      console.log(JSON.stringify({ log: `Warning: Agent "${assigned_to}" not found. Skipping reassignment.` }));
     }
   }
 
@@ -100,6 +89,7 @@ try {
   }
 
   // Update local TASKS.json
+  const workspace = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
   const tasksPath = path.join(workspace, 'TASKS.json');
   if (fs.existsSync(tasksPath)) {
     const tasks = JSON.parse(fs.readFileSync(tasksPath, 'utf-8'));

@@ -2,9 +2,8 @@
 /**
  * AGI Farm — Create Task Tool
  *
- * Allows the Orchestrator to create tasks (issues) in Paperclip and
- * optionally assign them to agents. Tasks can belong to a project or
- * be standalone.
+ * Allows the Orchestrator to create tasks (issues) in Paperclip.
+ * Auto-creates company if none exists yet.
  *
  * Input (JSON):
  *   - title (required): Task title
@@ -23,6 +22,7 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import { PaperclipBridge } from '../../../server/paperclip-bridge.js';
+import { resolveCompany } from './lib/resolve-company.js';
 
 let input = {};
 try {
@@ -42,27 +42,12 @@ if (!title) {
 const VALID_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 const resolvedPriority = VALID_PRIORITIES.includes(priority) ? priority : 'medium';
 
-const workspace = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
-const teamJsonPath = path.join(workspace, 'agi-farm-bundle', 'team.json');
-
-if (!fs.existsSync(teamJsonPath)) {
-  console.error(JSON.stringify({ error: 'No active AGI Farm team found.' }));
-  process.exit(1);
-}
-
-const team = JSON.parse(fs.readFileSync(teamJsonPath, 'utf-8'));
 const paperclipPort = process.env.PAPERCLIP_PORT || '3100';
 const paperclipHost = process.env.PAPERCLIP_HOST || '127.0.0.1';
 const bridge = new PaperclipBridge(`http://${paperclipHost}:${paperclipPort}`);
 
 try {
-  const companies = await bridge.listCompanies();
-  const company = companies.find(c => c.name === team.team_name) || companies[0];
-
-  if (!company) {
-    console.error(JSON.stringify({ error: 'No company found in Paperclip. Run agi-farm setup first.' }));
-    process.exit(1);
-  }
+  const { company } = await resolveCompany(bridge);
 
   // Resolve agent name → Paperclip agent ID
   let assigneeAgentId;
@@ -92,6 +77,7 @@ try {
   const issue = await bridge.createIssue(company.id, issueDef);
 
   // Also update local TASKS.json
+  const workspace = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
   const tasksPath = path.join(workspace, 'TASKS.json');
   if (fs.existsSync(tasksPath)) {
     const tasks = JSON.parse(fs.readFileSync(tasksPath, 'utf-8'));

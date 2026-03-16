@@ -3,16 +3,13 @@
  * AGI Farm — Manage Board Tool
  *
  * Allows the Orchestrator to query the current state of all tasks,
- * filter by project/agent/status, and get a high-level overview
- * of what's happening across the team.
- *
- * This is the Orchestrator's "dashboard view" — it checks Paperclip
- * to decide what needs attention, what's blocked, and what's done.
+ * filter by project/agent/status, and get a high-level overview.
+ * Auto-creates company if none exists.
  *
  * Input (JSON):
  *   - project_id (optional): Filter tasks by project
  *   - assigned_to (optional): Filter tasks by agent
- *   - status (optional): Filter by status (backlog, todo, in_progress, blocked, done, cancelled)
+ *   - status (optional): Filter by status
  *   - include_agents (optional): Also return agent statuses (default: false)
  *
  * Output (JSON):
@@ -22,10 +19,8 @@
  *   - stats: { total, backlog, todo, in_progress, blocked, done }
  */
 
-import os from 'os';
-import path from 'path';
-import fs from 'fs';
 import { PaperclipBridge } from '../../../server/paperclip-bridge.js';
+import { resolveCompany } from './lib/resolve-company.js';
 
 let input = {};
 try {
@@ -35,27 +30,12 @@ try {
   process.exit(1);
 }
 
-const workspace = process.env.AGI_FARM_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
-const teamJsonPath = path.join(workspace, 'agi-farm-bundle', 'team.json');
-
-if (!fs.existsSync(teamJsonPath)) {
-  console.error(JSON.stringify({ error: 'No active AGI Farm team found.' }));
-  process.exit(1);
-}
-
-const team = JSON.parse(fs.readFileSync(teamJsonPath, 'utf-8'));
 const paperclipPort = process.env.PAPERCLIP_PORT || '3100';
 const paperclipHost = process.env.PAPERCLIP_HOST || '127.0.0.1';
 const bridge = new PaperclipBridge(`http://${paperclipHost}:${paperclipPort}`);
 
 try {
-  const companies = await bridge.listCompanies();
-  const company = companies.find(c => c.name === team.team_name) || companies[0];
-
-  if (!company) {
-    console.error(JSON.stringify({ error: 'No company found in Paperclip.' }));
-    process.exit(1);
-  }
+  const { company } = await resolveCompany(bridge);
 
   // Build filters
   const filters = {};

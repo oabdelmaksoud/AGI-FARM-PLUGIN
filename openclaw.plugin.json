@@ -2,7 +2,7 @@
   "id": "agi-farm",
   "kind": "team-orchestration",
   "name": "AGI Farm — Multi-Agent Team Builder",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Bootstrap complete multi-agent AI teams with Paperclip dashboard, auto-dispatcher, and infrastructure. Includes interactive wizard, SOUL.md generation, comms setup, cron registration, and OpenClaw gateway integration.",
   "author": "oabdelmaksoud",
   "homepage": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN",
@@ -137,6 +137,36 @@
       "name": "hire_specialist",
       "description": "Autonomously hire and provision a new specialized agent to the team.",
       "executable": "./skills/agi-farm/tools/hire_specialist.js"
+    },
+    {
+      "name": "create_company",
+      "description": "Create a new company/team in Paperclip dashboard. Use when starting a new venture or when no company exists.",
+      "executable": "./skills/agi-farm/tools/create_company.js"
+    },
+    {
+      "name": "create_project",
+      "description": "Create a new project in Paperclip. Auto-creates company if none exists.",
+      "executable": "./skills/agi-farm/tools/create_project.js"
+    },
+    {
+      "name": "create_task",
+      "description": "Create a task (issue) in Paperclip and assign to an agent. Auto-creates company if none exists.",
+      "executable": "./skills/agi-farm/tools/create_task.js"
+    },
+    {
+      "name": "update_task",
+      "description": "Update task status, reassign, change priority, or add comments in Paperclip.",
+      "executable": "./skills/agi-farm/tools/update_task.js"
+    },
+    {
+      "name": "list_projects",
+      "description": "List all projects in Paperclip. Use before creating a new project to avoid duplicates.",
+      "executable": "./skills/agi-farm/tools/list_projects.js"
+    },
+    {
+      "name": "manage_board",
+      "description": "Query board state — see tasks by status, agent, or project. Get stats and overview.",
+      "executable": "./skills/agi-farm/tools/manage_board.js"
     }
   ],
   "commands": [
