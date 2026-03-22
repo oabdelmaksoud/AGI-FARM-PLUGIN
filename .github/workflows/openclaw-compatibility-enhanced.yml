@@ -123,6 +123,8 @@ jobs:
           fi
 
           VERSION="${VERSION#v}"
+          # Remove revision suffixes like -1, -2 which are common in GitHub tags but not on npm
+          VERSION=$(echo "$VERSION" | sed 's/-[0-9]*$//')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Testing against OpenClaw $VERSION (${{ matrix.description }})"
 

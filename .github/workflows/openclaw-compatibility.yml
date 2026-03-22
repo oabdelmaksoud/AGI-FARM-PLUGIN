@@ -55,6 +55,8 @@ jobs:
             VERSION=$(curl -s https://api.github.com/repos/openclaw/openclaw/releases | jq -r '.[1].tag_name')
           fi
           VERSION="${VERSION#v}"
+          # Remove revision suffixes like -1, -2 which are common in GitHub tags but not on npm
+          VERSION=$(echo "$VERSION" | sed 's/-[0-9]*$//')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Testing against OpenClaw $VERSION"
 
@@ -69,6 +71,7 @@ jobs:
           openclaw --version
 
       - name: Initialize OpenClaw workspace
+        if: steps.install-openclaw.outcome == 'success'
         run: |
           # Create test workspace
           mkdir -p ~/.openclaw/workspace
@@ -99,6 +102,7 @@ jobs:
           echo "✓ Plugin loaded successfully"
 
       - name: Test basic plugin commands
+        if: always() && steps.install-openclaw.outcome != 'skipped'
         run: |
           # Test wizard can run (non-interactive)
           echo "Testing wizard..."
@@ -114,12 +118,14 @@ jobs:
           echo "✓ All commands executable"
 
       - name: Test plugin validation script
+        if: always() && steps.install-openclaw.outcome != 'skipped'
         run: |
           # Run validation script
           node scripts/validate-config.js
           echo "✓ Validation passed"
 
       - name: Test OpenClaw CLI integration
+        if: steps.install-openclaw.outcome == 'success'
         run: |
           # Test that plugin can interact with OpenClaw CLI
           openclaw agents list --json > /tmp/agents.json
