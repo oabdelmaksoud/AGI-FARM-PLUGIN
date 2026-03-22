@@ -6,6 +6,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [3.3.3] - 2026-03-22
+
+### 🛠️ Bug Fixes
+
+- **Detection Visibility**: Fixed a bug where the OpenClaw environment check message was not visible in some terminals due to synchronous process blocking.
+
 ## [3.3.2] - 2026-03-22
 
 ### 🚀 Enhancements

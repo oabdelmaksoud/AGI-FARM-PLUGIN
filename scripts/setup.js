@@ -47,15 +47,16 @@ function getAgentTemplatePath(templateName) {
 
 // ── Environment Checks ───────────────────────────────────────────────────────
 async function checkOpenClaw() {
-  const spinner = ora('Checking OpenClaw environment...').start();
+  process.stdout.write(chalk.cyan('🔍 Checking OpenClaw environment... '));
   const result = runCommand('openclaw', ['--version']);
 
   if (result.status === 0) {
     const version = result.stdout.trim();
-    spinner.succeed(`OpenClaw detected: ${chalk.green(version)}`);
+    process.stdout.write(chalk.green(`Detected ${version}\n`));
     return version;
   } else {
-    spinner.warn(chalk.yellow('OpenClaw not found in PATH. Ensure it is installed: npm install -g openclaw'));
+    process.stdout.write(chalk.yellow('OpenClaw not found in PATH.\n'));
+    console.log(chalk.dim('   Hint: Ensure it is installed via "npm install -g openclaw"\n'));
     return null;
   }
 }
