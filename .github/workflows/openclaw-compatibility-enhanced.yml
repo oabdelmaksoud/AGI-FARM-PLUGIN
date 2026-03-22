@@ -122,6 +122,7 @@ jobs:
             fi
           fi
 
+          VERSION="${VERSION#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Testing against OpenClaw $VERSION (${{ matrix.description }})"
 

@@ -54,6 +54,7 @@ jobs:
             # Get second-latest release
             VERSION=$(curl -s https://api.github.com/repos/openclaw/openclaw/releases | jq -r '.[1].tag_name')
           fi
+          VERSION="${VERSION#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Testing against OpenClaw $VERSION"
 
@@ -63,7 +64,7 @@ jobs:
         run: |
           # Install OpenClaw globally
           npm install -g openclaw@${{ steps.openclaw-version.outputs.version }}
-
+          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
           # Verify installation
           openclaw --version
 
