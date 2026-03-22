@@ -3,6 +3,6 @@
 # Tracks which LobsterBoard commit is mirrored for feature-parity work.
 
 REPOSITORY: https://github.com/Curbob/LobsterBoard.git
-COMMIT: 694b1283db5ff3251d7b8b1ea25640c641c0635d
-COMMIT_DATE: 2026-03-05T10:09:16-05:00
-SYNCED_AT: 2026-03-07T10:52:44.552Z
+COMMIT: 82fe832617906ceef2f6e0408f8ce1ee7162e4d9
+COMMIT_DATE: 2026-03-17T20:17:43-04:00
+SYNCED_AT: 2026-03-22T05:48:03.121Z

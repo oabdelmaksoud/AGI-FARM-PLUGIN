@@ -4,6 +4,29 @@
  */
 
 // ─────────────────────────────────────────────
+// Security helpers (available to generated widget scripts via window)
+// ─────────────────────────────────────────────
+
+function _escHtmlGlobal(str) {
+  if (str == null) return '';
+  const div = document.createElement('div');
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+window._esc = _escHtmlGlobal;
+
+function _isSafeUrl(url) {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' || u.protocol === 'http:';
+  } catch (e) {
+    return false;
+  }
+}
+window._isSafeUrl = _isSafeUrl;
+
+// ─────────────────────────────────────────────
 // Icon System - Themeable widget icons
 // ─────────────────────────────────────────────
 const WIDGET_ICONS = {
@@ -47,6 +70,19 @@ const WIDGET_ICONS = {
   'pages': { emoji: '📑', phosphor: 'files' },
   
   // AI / Monitoring
+  'ai-usage': { emoji: '🤖', phosphor: 'robot' },
+  'claude-code': { emoji: '🟣', phosphor: 'circle' },
+  'codex-cli': { emoji: '🟢', phosphor: 'circle' },
+  'github-copilot': { emoji: '⚫', phosphor: 'circle' },
+  'cursor': { emoji: '🔵', phosphor: 'circle' },
+  'gemini-cli': { emoji: '🔷', phosphor: 'diamond' },
+  'amp-code': { emoji: '⚡', phosphor: 'lightning' },
+  'factory': { emoji: '🏭', phosphor: 'factory' },
+  'kimi-code': { emoji: '🌙', phosphor: 'moon' },
+  'jetbrains-ai': { emoji: '🧠', phosphor: 'brain' },
+  'minimax': { emoji: '🔶', phosphor: 'diamond' },
+  'zai': { emoji: '🇿', phosphor: 'sparkle' },
+  'antigravity': { emoji: '🪐', phosphor: 'planet' },
   'ai-claude': { emoji: '🟣', phosphor: 'circle' },
   'ai-cost': { emoji: '💰', phosphor: 'currency-dollar' },
   'api-status': { emoji: '🔄', phosphor: 'arrows-clockwise' },
@@ -125,6 +161,109 @@ function onSystemStats(callback) {
   }
 }
 
+// ─────────────────────────────────────────────
+// Remote server polling for system stats
+// ─────────────────────────────────────────────
+const _remotePollers = {}; // serverId -> { interval, callbacks, lastData, errors, lastSuccess }
+
+function onRemoteStats(serverId, callback, refreshMs = 10000) {
+  if (!_remotePollers[serverId]) {
+    _remotePollers[serverId] = { 
+      callbacks: [], 
+      interval: null, 
+      lastData: null,
+      errors: 0,
+      lastSuccess: null,
+      offline: false
+    };
+    
+    const poll = async () => {
+      const poller = _remotePollers[serverId];
+      try {
+        const res = await fetch(`/api/servers/${serverId}/stats`, {
+          signal: AbortSignal.timeout(10000) // 10s timeout
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const normalized = _normalizeRemoteStats(data);
+          poller.lastData = normalized;
+          poller.errors = 0;
+          poller.lastSuccess = Date.now();
+          poller.offline = false;
+          poller.callbacks.forEach(cb => cb(normalized));
+        } else {
+          throw new Error(`HTTP ${res.status}`);
+        }
+      } catch (e) {
+        poller.errors++;
+        console.warn(`Remote stats error (${serverId}, attempt ${poller.errors}):`, e.message);
+        
+        // After 3 consecutive failures, mark as offline and notify widgets
+        if (poller.errors >= 3 && !poller.offline) {
+          poller.offline = true;
+          const offlineData = {
+            _offline: true,
+            _error: e.message,
+            _lastSuccess: poller.lastSuccess,
+            _serverId: serverId
+          };
+          poller.callbacks.forEach(cb => cb(offlineData));
+        }
+      }
+    };
+    
+    poll(); // Initial fetch
+    _remotePollers[serverId].interval = setInterval(poll, refreshMs);
+  }
+  
+  _remotePollers[serverId].callbacks.push(callback);
+  
+  // If we have cached data, call immediately
+  if (_remotePollers[serverId].lastData) {
+    callback(_remotePollers[serverId].lastData);
+  }
+}
+
+// Normalize remote agent stats to match local SSE format
+function _normalizeRemoteStats(data) {
+  return {
+    uptime: data.uptime,
+    cpu: data.cpu ? {
+      currentLoad: data.cpu.usage || 0,
+      cores: data.cpu.cores || 0,
+    } : null,
+    memory: data.memory ? {
+      total: data.memory.total || 0,
+      active: data.memory.used || 0,
+      available: data.memory.available || 0,
+    } : null,
+    disk: data.disk ? [{
+      mount: data.disk.mount || '/',
+      size: data.disk.total || 0,
+      used: data.disk.used || 0,
+    }] : null,
+    network: data.network ? [{
+      rx_sec: data.network.rxSec || 0,
+      tx_sec: data.network.txSec || 0,
+    }] : null,
+    docker: data.docker,
+    openclaw: data.openclaw,
+    serverName: data.serverName,
+    _remote: true,
+  };
+}
+
+// Unified stats function: local or remote
+function onStats(serverId, callback, refreshMs = 10000) {
+  if (!serverId || serverId === 'local') {
+    onSystemStats(callback);
+  } else {
+    onRemoteStats(serverId, callback, refreshMs);
+  }
+}
+
+window.onStats = onStats;
+
 function _formatBytes(bytes, decimals = 1) {
   if (bytes === 0 || bytes == null) return '0 B';
   const k = 1024;
@@ -165,7 +304,7 @@ const WIDGETS = {
     name: 'Local Weather',
     icon: '🌡️',
     category: 'small',
-    description: 'Shows current weather for a single location using wttr.in (no API key needed).',
+    description: 'Shows current weather for a single location using Open-Meteo (no API key needed).',
     defaultWidth: 200,
     defaultHeight: 120,
     hasApiKey: false,
@@ -193,29 +332,35 @@ const WIDGETS = {
         </div>
       </div>`,
     generateJs: (props) => `
-      // Weather Widget: ${props.id} (uses free wttr.in API - no key needed)
+      // Weather Widget: ${props.id} (uses free Open-Meteo API - no key needed)
+      const WMO_DESC = {0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Rime fog',51:'Light drizzle',53:'Drizzle',55:'Dense drizzle',61:'Slight rain',63:'Moderate rain',65:'Heavy rain',71:'Slight snow',73:'Moderate snow',75:'Heavy snow',80:'Slight showers',81:'Moderate showers',82:'Violent showers',95:'Thunderstorm',96:'Hail thunderstorm',99:'Heavy hail'};
+      function wmoIcon(code) {
+        if (code <= 1) return 'weather-sunny';
+        if (code <= 3) return 'weather-cloudy';
+        if (code >= 51 && code <= 82) return 'weather-rainy';
+        if (code >= 71 && code <= 77) return 'weather-snowy';
+        if (code >= 95) return 'weather-rainy';
+        return 'weather';
+      }
       async function update_${props.id.replace(/-/g, '_')}() {
         const valEl = document.getElementById('${props.id}-value');
         const labelEl = document.getElementById('${props.id}-label');
         const iconEl = document.getElementById('${props.id}-icon');
         try {
-          const location = encodeURIComponent('${props.location || 'Atlanta'}');
-          const res = await fetch('https://wttr.in/' + location + '?format=j1');
+          const loc = '${props.location || 'Atlanta'}';
+          const geoRes = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(loc) + '&count=1');
+          const geoData = await geoRes.json();
+          if (!geoData.results || !geoData.results.length) throw new Error('City not found');
+          const {latitude, longitude} = geoData.results[0];
+          const tempUnit = '${props.units}' === 'C' ? 'celsius' : 'fahrenheit';
+          const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + latitude + '&longitude=' + longitude + '&current=temperature_2m,weathercode,windspeed_10m&temperature_unit=' + tempUnit);
           const data = await res.json();
-          const current = data.current_condition[0];
-          const temp = '${props.units}' === 'C' ? current.temp_C : current.temp_F;
+          const c = data.current;
           const unit = '${props.units}' === 'C' ? '°C' : '°F';
-          valEl.textContent = temp + unit;
-          labelEl.textContent = current.weatherDesc[0].value;
-          // Update icon based on condition
-          const code = parseInt(current.weatherCode);
-          let iconId = 'weather';
-          if (code === 113) iconId = 'weather-sunny';
-          else if (code === 116 || code === 119) iconId = 'weather-cloudy';
-          else if (code >= 176 && code <= 359) iconId = 'weather-rainy';
-          else if (code >= 368 && code <= 395) iconId = 'weather-snowy';
+          valEl.textContent = Math.round(c.temperature_2m) + unit;
+          labelEl.textContent = WMO_DESC[c.weathercode] || 'Unknown';
+          const iconId = wmoIcon(c.weathercode);
           iconEl.setAttribute('data-icon', iconId);
-          // Update emoji fallback for non-themed views
           const icons = window.WIDGET_ICONS || {};
           iconEl.textContent = icons[iconId] ? icons[iconId].emoji : '🌡️';
         } catch (e) {
@@ -260,35 +405,42 @@ const WIDGETS = {
         </div>
       </div>`,
     generateJs: (props) => `
-      // Multi Weather Widget: ${props.id} (uses free wttr.in API - no key needed)
+      // Multi Weather Widget: ${props.id} (uses free Open-Meteo API - no key needed)
+      const WMO_DESC2 = {0:'Clear',1:'Clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Rime fog',51:'Drizzle',53:'Drizzle',55:'Drizzle',61:'Rain',63:'Rain',65:'Heavy rain',71:'Snow',73:'Snow',75:'Heavy snow',80:'Showers',81:'Showers',82:'Showers',95:'Storm',96:'Hail',99:'Hail'};
+      function wmoIcon2(code) {
+        if (code <= 1) return 'weather-sunny';
+        if (code <= 3) return 'weather-cloudy';
+        if (code >= 51 && code <= 82) return 'weather-rainy';
+        if (code >= 71 && code <= 77) return 'weather-snowy';
+        if (code >= 95) return 'weather-rainy';
+        return 'weather';
+      }
       async function update_${props.id.replace(/-/g, '_')}() {
         const locations = '${props.locations || 'New York; London; Tokyo'}'.split(';').map(l => l.trim());
         const container = document.getElementById('${props.id}-list');
-        const unit = '${props.units}' === 'C' ? 'C' : 'F';
-        const unitSymbol = unit === 'C' ? '°C' : '°F';
+        const tempUnit = '${props.units}' === 'C' ? 'celsius' : 'fahrenheit';
+        const unitSymbol = '${props.units}' === 'C' ? '°C' : '°F';
         
         const results = await Promise.all(locations.map(async (loc) => {
           try {
-            const res = await fetch('https://wttr.in/' + encodeURIComponent(loc) + '?format=j1');
+            const geoRes = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(loc) + '&count=1');
+            const geoData = await geoRes.json();
+            if (!geoData.results || !geoData.results.length) return { loc, temp: 'N/A', iconId: 'weather', emoji: '❓' };
+            const {latitude, longitude} = geoData.results[0];
+            const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + latitude + '&longitude=' + longitude + '&current=temperature_2m,weathercode&temperature_unit=' + tempUnit);
             const data = await res.json();
-            const current = data.current_condition[0];
-            const temp = unit === 'C' ? current.temp_C : current.temp_F;
-            const code = parseInt(current.weatherCode);
-            let iconId = 'weather';
-            if (code === 113) iconId = 'weather-sunny';
-            else if (code === 116 || code === 119) iconId = 'weather-cloudy';
-            else if (code >= 176 && code <= 359) iconId = 'weather-rainy';
-            else if (code >= 368 && code <= 395) iconId = 'weather-snowy';
+            const c = data.current;
+            const iconId = wmoIcon2(c.weathercode);
             const icons = window.WIDGET_ICONS || {};
             const emoji = icons[iconId] ? icons[iconId].emoji : '🌡️';
-            return { loc, temp, iconId, emoji, desc: current.weatherDesc[0].value };
+            return { loc, temp: Math.round(c.temperature_2m), iconId, emoji };
           } catch (e) {
-            return { loc, temp: 'N/A', iconId: 'weather', emoji: '❓', desc: 'Error' };
+            return { loc, temp: 'N/A', iconId: 'weather', emoji: '❓' };
           }
         }));
         
-        container.innerHTML = results.map(r => 
-          '<div class="weather-row"><span class="weather-icon lb-icon" data-icon="' + r.iconId + '">' + r.emoji + '</span><span class="weather-loc">' + r.loc + '</span><span class="weather-temp">' + r.temp + unitSymbol + '</span></div>'
+        container.innerHTML = results.map(r =>
+          '<div class="weather-row"><span class="weather-icon lb-icon" data-icon="' + _esc(r.iconId) + '">' + _esc(r.emoji) + '</span><span class="weather-loc">' + _esc(r.loc) + '</span><span class="weather-temp">' + _esc(String(r.temp)) + _esc(unitSymbol) + '</span></div>'
         ).join('');
       }
       update_${props.id.replace(/-/g, '_')}();
@@ -307,6 +459,7 @@ const WIDGETS = {
     apiKeyName: 'OPENCLAW_API',
     properties: {
       title: 'Auth Type',
+      server: 'local',
       endpoint: '/api/status',
       refreshInterval: 30
     },
@@ -326,15 +479,25 @@ const WIDGETS = {
         </div>
       </div>`,
     generateJs: (props) => `
-      // Auth Status Widget: ${props.id}
+      // Auth Status Widget: ${props.id} — ${props.server === 'local' ? 'local' : 'remote: ' + props.server}
       async function update_${props.id.replace(/-/g, '_')}() {
+        const serverId = '${props.server || 'local'}';
+        const dot = document.getElementById('${props.id}-dot');
+        const val = document.getElementById('${props.id}-value');
         try {
-          const res = await fetch('/api/auth');
-          const data = await res.json();
-          const dot = document.getElementById('${props.id}-dot');
-          const val = document.getElementById('${props.id}-value');
-          if (data.status === 'ok') {
-            const isMonthly = data.mode === 'Monthly';
+          let authData;
+          if (serverId === 'local') {
+            const res = await fetch('/api/auth');
+            authData = await res.json();
+          } else {
+            const res = await fetch('/api/servers/' + serverId + '/stats');
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            if (!data.openclaw?.auth) throw new Error('Auth data not available');
+            authData = { status: 'ok', mode: data.openclaw.auth.mode };
+          }
+          if (authData.status === 'ok' || authData.mode) {
+            const isMonthly = authData.mode === 'Monthly';
             val.textContent = isMonthly ? 'Max' : 'API';
             dot.className = 'kpi-indicator ' + (isMonthly ? 'green' : 'yellow');
           } else {
@@ -342,7 +505,7 @@ const WIDGETS = {
           }
         } catch (e) {
           console.error('Auth status widget error:', e);
-          document.getElementById('${props.id}-value').textContent = '—';
+          val.textContent = '—';
         }
       }
       update_${props.id.replace(/-/g, '_')}();
@@ -493,6 +656,7 @@ const WIDGETS = {
     hasApiKey: false,
     properties: {
       title: 'OpenClaw',
+      server: 'local',
       openclawUrl: '',
       refreshInterval: 3600
     },
@@ -519,21 +683,38 @@ const WIDGETS = {
       </div>`,
     generateJs: (props) => `
       async function update_${props.id.replace(/-/g, '_')}() {
+        const serverId = '${props.server || 'local'}';
         const currentEl = document.getElementById('${props.id}-current');
         const arrowEl = document.getElementById('${props.id}-arrow');
         const latestEl = document.getElementById('${props.id}-latest');
         const statusEl = document.getElementById('${props.id}-status');
         
         try {
-          const res = await fetch('/api/releases');
-          const data = await res.json();
-          if (data.status !== 'ok') throw new Error(data.message);
+          let cur, lat;
           
-          const cur = (data.current || '').replace(/^v/, '');
-          const lat = (data.latest || '').replace(/^v/, '');
+          if (serverId === 'local') {
+            // Local: fetch from /api/releases
+            const res = await fetch('/api/releases');
+            const data = await res.json();
+            if (data.status !== 'ok') throw new Error(data.message);
+            cur = (data.current || '').replace(/^v/, '');
+            lat = (data.latest || '').replace(/^v/, '');
+          } else {
+            // Remote: fetch from server stats and get openclaw.version
+            const res = await fetch('/api/servers/' + serverId + '/stats');
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            if (!data.openclaw) throw new Error('OpenClaw not installed on remote');
+            cur = (data.openclaw.version || '').replace(/^v/, '');
+            // Fetch latest from GitHub
+            const ghRes = await fetch('https://api.github.com/repos/openclaw/openclaw/releases/latest');
+            const ghData = await ghRes.json();
+            lat = (ghData.tag_name || '').replace(/^v/, '');
+          }
+          
           // Strip -N suffixes for comparison (e.g. 2026.2.22-2 matches 2026.2.22)
-          const curBase = cur.replace(/-\d+$/, '');
-          const latBase = lat.replace(/-\d+$/, '');
+          const curBase = cur.replace(/-\\d+$/, '');
+          const latBase = lat.replace(/-\\d+$/, '');
           const isUpToDate = cur === lat || curBase === latBase || cur.startsWith(latBase + '-');
           
           if (!cur || cur === 'unknown') {
@@ -556,7 +737,7 @@ const WIDGETS = {
           }
         } catch (e) {
           currentEl.textContent = '—';
-          statusEl.textContent = 'Error';
+          statusEl.textContent = e.message || 'Error';
           console.error('OpenClaw Release widget error:', e);
         }
       }
@@ -690,7 +871,7 @@ const WIDGETS = {
   // ─────────────────────────────────────────────
 
   'activity-list': {
-    privacyWarning: true,
+
     name: 'Activity List',
     icon: '📋',
     category: 'large',
@@ -701,6 +882,7 @@ const WIDGETS = {
     apiKeyName: 'OPENCLAW_API',
     properties: {
       title: 'Today',
+      server: 'local',
       endpoint: '/api/today',
       maxItems: 10,
       refreshInterval: 60
@@ -724,13 +906,22 @@ const WIDGETS = {
         </div>
       </div>`,
     generateJs: (props) => `
-      // Activity List Widget: ${props.id} (Today style)
+      // Activity List Widget: ${props.id} — ${props.server === 'local' ? 'local' : 'remote: ' + props.server}
       async function update_${props.id.replace(/-/g, '_')}() {
+        const serverId = '${props.server || 'local'}';
+        const list = document.getElementById('${props.id}-list');
+        const badge = document.getElementById('${props.id}-badge');
         try {
-          const res = await fetch('${props.endpoint || '/api/today'}');
-          const data = await res.json();
-          const list = document.getElementById('${props.id}-list');
-          const badge = document.getElementById('${props.id}-badge');
+          let data;
+          if (serverId === 'local') {
+            const res = await fetch('${props.endpoint || '/api/today'}');
+            data = await res.json();
+          } else {
+            const res = await fetch('/api/servers/' + serverId + '/stats');
+            const stats = await res.json();
+            if (stats.error) throw new Error(stats.error);
+            data = stats.openclaw?.today || { date: new Date().toISOString().split('T')[0], activities: [] };
+          }
 
           if (data.date && badge) {
             const d = new Date(data.date + 'T12:00:00');
@@ -746,22 +937,565 @@ const WIDGETS = {
           const fs = 'calc(12px * var(--font-scale, 1))';
           list.innerHTML = activities.slice(0, ${props.maxItems || 10}).map(a => {
             const icon = a.status === 'ok' ? '✓' : a.status === 'error' ? '❌' : '';
-            const text = (a.text || '').replace(/</g, '&lt;');
-            const source = (a.source || '').replace(/</g, '&lt;');
+            const text = _esc(a.text || '');
+            const source = _esc(a.source || '');
             return '<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:4px 0;border-bottom:1px solid #30363d;font-size:' + fs + ';">' +
-              '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (a.icon || '') + ' ' + text + '</div>' +
-              '<div style="flex-shrink:0;font-size:0.85em;color:#8b949e;margin-left:8px;">' + icon + ' ' + source + '</div>' +
+              '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _esc(a.icon || '') + ' ' + text + '</div>' +
+              '<div style="flex-shrink:0;font-size:0.85em;color:#8b949e;margin-left:8px;">' + _esc(icon) + ' ' + source + '</div>' +
             '</div>';
           }).join('');
-        } catch (e) { console.error('Today widget error:', e); }
+        } catch (e) { 
+          console.error('Today widget error:', e);
+          list.innerHTML = '<div style="padding:8px;color:#f85149;font-size:calc(12px * var(--font-scale,1));">Error: ' + _esc(e.message) + '</div>';
+        }
       }
       update_${props.id.replace(/-/g, '_')}();
       setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 60) * 1000});
     `
   },
 
+  'ai-usage': {
+
+    name: 'AI Usage',
+    icon: '🤖',
+    category: 'large',
+    description: 'Track usage across AI coding tools. Some providers may show errors on first load — see individual provider widgets for setup instructions.',
+    defaultWidth: 350,
+    defaultHeight: 280,
+    hasApiKey: false,
+    properties: {
+      title: 'AI Usage',
+      server: 'local',
+      providers: 'all',
+      hideUnauthenticated: true,
+      showPlan: true,
+      compactMode: false,
+      refreshInterval: 300
+    },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;">
+      <div>🟣 Claude — 25% session</div>
+      <div>🟢 Codex — 12% weekly</div>
+    </div>`,
+    generateHtml: (props) => `
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head">
+          <span class="dash-card-title">${renderIcon('tokens')} ${props.title || 'AI Usage'}</span>
+          <span class="dash-card-badge" id="${props.id}-badge">—</span>
+        </div>
+        <div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;">
+          <div style="color:var(--text-muted);font-size:11px;">Loading...</div>
+        </div>
+      </div>`,
+    generateJs: (props) => `
+      // AI Usage Widget: ${props.id} — ${props.server === 'local' ? 'local' : 'remote: ' + props.server}
+      async function update_${props.id.replace(/-/g, '_')}() {
+        const content = document.getElementById('${props.id}-content');
+        const badge = document.getElementById('${props.id}-badge');
+        try {
+          const serverId = '${props.server || 'local'}';
+          const providers = '${props.providers || 'all'}';
+          let json;
+          
+          if (serverId === 'local') {
+            // Local: fetch from /api/ai-usage
+            const url = providers === 'all' ? '/api/ai-usage' : '/api/ai-usage/' + providers;
+            const res = await fetch(url);
+            json = await res.json();
+          } else {
+            // Remote: fetch from server stats endpoint
+            const res = await fetch('/api/servers/' + serverId + '/stats');
+            const data = await res.json();
+            if (data.error) {
+              json = { status: 'error', message: data.error };
+            } else if (data.aiUsage && data.aiUsage.providers) {
+              json = { status: 'ok', providers: data.aiUsage.providers };
+            } else if (data.aiUsage === undefined) {
+              json = { status: 'error', message: 'AI usage not enabled on remote agent (enableAiUsage: false)' };
+            } else {
+              json = { status: 'error', message: 'No AI providers found on remote server' };
+            }
+          }
+          
+          if (json.status !== 'ok') {
+            content.innerHTML = '<div style="color:#f85149;font-size:12px;">' + _esc(json.message || 'Error') + '</div>';
+            badge.textContent = '!';
+            return;
+          }
+          
+          let allProviders = json.providers || [json];
+          const hideUnauth = ${props.hideUnauthenticated !== false};
+          const providerFilter = '${props.providers || 'all'}'.split(',').map(s => s.trim()).filter(Boolean);
+          
+          // Filter by selected providers
+          if (providerFilter.length && providerFilter[0] !== 'all') {
+            allProviders = allProviders.filter(p => providerFilter.includes(p.provider));
+          }
+          
+          // Hide unauthenticated/errored providers if option is set
+          if (hideUnauth) {
+            allProviders = allProviders.filter(p => !p.error);
+          }
+          
+          const validProviders = allProviders.filter(p => !p.error);
+          
+          badge.textContent = validProviders.length + (allProviders.length > validProviders.length ? '/' + allProviders.length : '');
+          
+          let html = '';
+          const compact = ${props.compactMode || false};
+          const showPlan = ${props.showPlan !== false};
+          
+          // Map provider IDs to icon IDs for theming
+          const providerIconMap = {
+            claude: 'claude-code', codex: 'codex-cli', copilot: 'github-copilot',
+            cursor: 'cursor', gemini: 'gemini-cli', amp: 'amp-code', factory: 'factory',
+            kimi: 'kimi-code', jetbrains: 'jetbrains-ai', minimax: 'minimax', zai: 'zai',
+            antigravity: 'antigravity'
+          };
+          
+          for (const prov of allProviders) {
+            const iconId = providerIconMap[prov.provider] || 'ai-usage';
+            const iconEmoji = _esc(prov.icon || '⚪');
+            const name = _esc(prov.name || prov.provider || 'Unknown');
+            
+            if (prov.error) {
+              html += '<div style="padding:6px 0;border-bottom:1px solid var(--border,#30363d);">';
+              html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+              html += '<span class="lb-icon" data-icon="' + iconId + '" style="font-size:16px;">' + iconEmoji + '</span>';
+              html += '<span style="font-weight:500;font-size:13px;">' + name + '</span>';
+              html += '</div>';
+              html += '<div style="color:#f85149;font-size:11px;padding-left:22px;">' + _esc(prov.error) + '</div>';
+              html += '</div>';
+              continue;
+            }
+            
+            html += '<div style="padding:6px 0;border-bottom:1px solid var(--border,#30363d);">';
+            html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:' + (compact ? '2px' : '6px') + ';">';
+            html += '<span class="lb-icon" data-icon="' + iconId + '" style="font-size:16px;">' + iconEmoji + '</span>';
+            html += '<span style="font-weight:500;font-size:13px;">' + name + '</span>';
+            if (showPlan && prov.plan) {
+              html += '<span style="font-size:10px;color:var(--text-muted);background:var(--bg-secondary);padding:1px 6px;border-radius:4px;margin-left:auto;">' + _esc(prov.plan) + '</span>';
+            }
+            html += '</div>';
+            
+            if (prov.metrics && prov.metrics.length) {
+              for (const m of prov.metrics) {
+                const label = _esc(m.label);
+                const pct = m.used != null ? Math.min(100, Math.max(0, m.used)) : 0;
+                const color = pct > 80 ? '#f85149' : pct > 50 ? '#d29922' : '#3fb950';
+                
+                if (m.format === 'dollars') {
+                  const val = m.remaining != null ? '$' + m.remaining.toFixed(2) : (m.used != null ? '$' + m.used.toFixed(2) + ' used' : '—');
+                  html += '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0 2px 22px;">';
+                  html += '<span style="color:var(--text-secondary);">' + label + '</span>';
+                  html += '<span style="color:' + (m.remaining != null ? '#3fb950' : 'var(--text-primary)') + ';">' + _esc(val) + '</span>';
+                  html += '</div>';
+                } else {
+                  // Percentage progress bar
+                  html += '<div style="padding:2px 0 2px 22px;">';
+                  if (!compact) {
+                    html += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">';
+                    html += '<span style="color:var(--text-secondary);">' + label + '</span>';
+                    html += '<span style="color:' + color + ';">' + pct.toFixed(0) + '%</span>';
+                    html += '</div>';
+                  }
+                  html += '<div style="height:' + (compact ? '4px' : '6px') + ';background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;">';
+                  html += '<div style="width:' + pct + '%;height:100%;background:' + color + ';transition:width 0.3s;"></div>';
+                  html += '</div>';
+                  if (compact) {
+                    html += '<div style="font-size:9px;color:var(--text-muted);margin-top:1px;">' + label + ' ' + pct.toFixed(0) + '%</div>';
+                  }
+                  html += '</div>';
+                }
+              }
+            }
+            html += '</div>';
+          }
+          
+          content.innerHTML = html || '<div style="color:var(--text-muted);font-size:11px;">No providers configured</div>';
+        } catch (e) {
+          console.error('AI Usage widget error:', e);
+          content.innerHTML = '<div style="color:#f85149;font-size:12px;">Error loading usage data</div>';
+          badge.textContent = '!';
+        }
+      }
+      update_${props.id.replace(/-/g, '_')}();
+      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 300) * 1000});
+    `
+  },
+
+  'claude-code': {
+
+    name: 'Claude Code',
+    icon: '🟣',
+    category: 'small',
+    description: 'Track Claude Code usage (session, weekly, Opus limits). Setup: run `claude` once to authenticate. May show 429 on first load — cached after success.',
+    defaultWidth: 280,
+    defaultHeight: 180,
+    hasApiKey: false,
+    properties: {
+      title: 'Claude',
+      showPlan: true,
+      refreshInterval: 300
+    },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;">
+      <div>Session: 25%</div>
+      <div>Weekly: 12%</div>
+    </div>`,
+    generateHtml: (props) => `
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head">
+          <span class="dash-card-title">🟣 ${props.title || 'Claude'}</span>
+          <span class="dash-card-badge" id="${props.id}-badge">—</span>
+        </div>
+        <div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;">
+          <div style="color:var(--text-muted);font-size:11px;">Loading...</div>
+        </div>
+      </div>`,
+    generateJs: (props) => `
+      async function update_${props.id.replace(/-/g, '_')}() {
+        const content = document.getElementById('${props.id}-content');
+        const badge = document.getElementById('${props.id}-badge');
+        try {
+          const res = await fetch('/api/ai-usage/claude');
+          const data = await res.json();
+          if (data.error) {
+            content.innerHTML = '<div style="color:#f85149;font-size:11px;">' + _esc(data.error) + '</div>';
+            badge.textContent = '!';
+            return;
+          }
+          let html = '';
+          const showPlan = ${props.showPlan !== false};
+          if (showPlan && data.plan) {
+            badge.textContent = _esc(data.plan);
+          }
+          for (const m of (data.metrics || [])) {
+            const pct = m.used != null ? Math.min(100, Math.max(0, m.used)) : 0;
+            const color = pct > 80 ? '#f85149' : pct > 50 ? '#d29922' : '#3fb950';
+            if (m.format === 'dollars') {
+              const val = m.used != null ? '$' + m.used.toFixed(2) : '—';
+              html += '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;">';
+              html += '<span>' + _esc(m.label) + '</span><span style="color:#3fb950;">' + _esc(val) + '</span></div>';
+            } else {
+              html += '<div style="margin-bottom:4px;">';
+              html += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">';
+              html += '<span>' + _esc(m.label) + '</span><span style="color:' + color + ';">' + pct.toFixed(0) + '%</span></div>';
+              html += '<div style="height:6px;background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;">';
+              html += '<div style="width:' + pct + '%;height:100%;background:' + color + ';"></div></div></div>';
+            }
+          }
+          content.innerHTML = html || '<div style="color:var(--text-muted);font-size:11px;">No data</div>';
+        } catch (e) {
+          content.innerHTML = '<div style="color:#f85149;font-size:11px;">Error</div>';
+          badge.textContent = '!';
+        }
+      }
+      update_${props.id.replace(/-/g, '_')}();
+      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 300) * 1000});
+    `
+  },
+
+  'codex-cli': {
+
+    name: 'Codex CLI',
+    icon: '🟢',
+    category: 'small',
+    description: 'Track Codex CLI usage (session, weekly, code reviews). Setup: run `codex` once to authenticate.',
+    defaultWidth: 280,
+    defaultHeight: 180,
+    hasApiKey: false,
+    properties: {
+      title: 'Codex',
+      showPlan: true,
+      refreshInterval: 300
+    },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;">
+      <div>Session: 5%</div>
+      <div>Weekly: 10%</div>
+    </div>`,
+    generateHtml: (props) => `
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head">
+          <span class="dash-card-title">🟢 ${props.title || 'Codex'}</span>
+          <span class="dash-card-badge" id="${props.id}-badge">—</span>
+        </div>
+        <div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;">
+          <div style="color:var(--text-muted);font-size:11px;">Loading...</div>
+        </div>
+      </div>`,
+    generateJs: (props) => `
+      async function update_${props.id.replace(/-/g, '_')}() {
+        const content = document.getElementById('${props.id}-content');
+        const badge = document.getElementById('${props.id}-badge');
+        try {
+          const res = await fetch('/api/ai-usage/codex');
+          const data = await res.json();
+          if (data.error) {
+            content.innerHTML = '<div style="color:#f85149;font-size:11px;">' + _esc(data.error) + '</div>';
+            badge.textContent = '!';
+            return;
+          }
+          let html = '';
+          const showPlan = ${props.showPlan !== false};
+          if (showPlan && data.plan) {
+            badge.textContent = _esc(data.plan);
+          }
+          for (const m of (data.metrics || [])) {
+            const pct = m.used != null ? Math.min(100, Math.max(0, m.used)) : 0;
+            const color = pct > 80 ? '#f85149' : pct > 50 ? '#d29922' : '#3fb950';
+            if (m.format === 'dollars') {
+              const val = m.remaining != null ? '$' + m.remaining.toFixed(2) : '—';
+              html += '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;">';
+              html += '<span>' + _esc(m.label) + '</span><span style="color:#3fb950;">' + _esc(val) + '</span></div>';
+            } else {
+              html += '<div style="margin-bottom:4px;">';
+              html += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">';
+              html += '<span>' + _esc(m.label) + '</span><span style="color:' + color + ';">' + pct.toFixed(0) + '%</span></div>';
+              html += '<div style="height:6px;background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;">';
+              html += '<div style="width:' + pct + '%;height:100%;background:' + color + ';"></div></div></div>';
+            }
+          }
+          content.innerHTML = html || '<div style="color:var(--text-muted);font-size:11px;">No data</div>';
+        } catch (e) {
+          content.innerHTML = '<div style="color:#f85149;font-size:11px;">Error</div>';
+          badge.textContent = '!';
+        }
+      }
+      update_${props.id.replace(/-/g, '_')}();
+      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 300) * 1000});
+    `
+  },
+
+  'github-copilot': {
+    name: 'GitHub Copilot',
+    icon: '⚫',
+    category: 'small',
+    description: 'Track GitHub Copilot usage. Setup: run `gh auth login` first.',
+    defaultWidth: 280,
+    defaultHeight: 180,
+    hasApiKey: false,
+    properties: { title: 'Copilot', showPlan: true, refreshInterval: 300 },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;"><div>Premium: 20%</div><div>Chat: 5%</div></div>`,
+    generateHtml: (props) => `
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head"><span class="dash-card-title">⚫ ${props.title || 'Copilot'}</span><span class="dash-card-badge" id="${props.id}-badge">—</span></div>
+        <div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;"><div style="color:var(--text-muted);font-size:11px;">Loading...</div></div>
+      </div>`,
+    generateJs: (props) => `
+      async function update_${props.id.replace(/-/g, '_')}() {
+        const content = document.getElementById('${props.id}-content');
+        const badge = document.getElementById('${props.id}-badge');
+        try {
+          const res = await fetch('/api/ai-usage/copilot');
+          const data = await res.json();
+          if (data.error) { content.innerHTML = '<div style="color:#f85149;font-size:11px;">' + _esc(data.error) + '</div>'; badge.textContent = '!'; return; }
+          let html = '';
+          if (${props.showPlan !== false} && data.plan) badge.textContent = _esc(data.plan);
+          for (const m of (data.metrics || [])) {
+            const pct = m.used != null ? Math.min(100, Math.max(0, m.used)) : 0;
+            const color = pct > 80 ? '#f85149' : pct > 50 ? '#d29922' : '#3fb950';
+            html += '<div style="margin-bottom:4px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;"><span>' + _esc(m.label) + '</span><span style="color:' + color + ';">' + pct.toFixed(0) + '%</span></div><div style="height:6px;background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:' + color + ';"></div></div></div>';
+          }
+          content.innerHTML = html || '<div style="color:var(--text-muted);font-size:11px;">No data</div>';
+        } catch (e) { content.innerHTML = '<div style="color:#f85149;font-size:11px;">Error</div>'; badge.textContent = '!'; }
+      }
+      update_${props.id.replace(/-/g, '_')}();
+      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 300) * 1000});
+    `
+  },
+
+  'cursor': {
+    name: 'Cursor',
+    icon: '🔵',
+    category: 'small',
+    description: 'Track Cursor IDE usage. Setup: just use Cursor normally — reads from IDE database.',
+    defaultWidth: 280,
+    defaultHeight: 180,
+    hasApiKey: false,
+    properties: { title: 'Cursor', showPlan: true, refreshInterval: 300 },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;"><div>Total: 15%</div><div>API: 46%</div></div>`,
+    generateHtml: (props) => `
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head"><span class="dash-card-title">🔵 ${props.title || 'Cursor'}</span><span class="dash-card-badge" id="${props.id}-badge">—</span></div>
+        <div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;"><div style="color:var(--text-muted);font-size:11px;">Loading...</div></div>
+      </div>`,
+    generateJs: (props) => `
+      async function update_${props.id.replace(/-/g, '_')}() {
+        const content = document.getElementById('${props.id}-content');
+        const badge = document.getElementById('${props.id}-badge');
+        try {
+          const res = await fetch('/api/ai-usage/cursor');
+          const data = await res.json();
+          if (data.error) { content.innerHTML = '<div style="color:#f85149;font-size:11px;">' + _esc(data.error) + '</div>'; badge.textContent = '!'; return; }
+          let html = '';
+          if (${props.showPlan !== false} && data.plan) badge.textContent = _esc(data.plan);
+          for (const m of (data.metrics || [])) {
+            const pct = m.used != null ? Math.min(100, Math.max(0, m.used)) : 0;
+            const color = pct > 80 ? '#f85149' : pct > 50 ? '#d29922' : '#3fb950';
+            html += '<div style="margin-bottom:4px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;"><span>' + _esc(m.label) + '</span><span style="color:' + color + ';">' + pct.toFixed(0) + '%</span></div><div style="height:6px;background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:' + color + ';"></div></div></div>';
+          }
+          content.innerHTML = html || '<div style="color:var(--text-muted);font-size:11px;">No data</div>';
+        } catch (e) { content.innerHTML = '<div style="color:#f85149;font-size:11px;">Error</div>'; badge.textContent = '!'; }
+      }
+      update_${props.id.replace(/-/g, '_')}();
+      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 300) * 1000});
+    `
+  },
+
+  'gemini-cli': {
+    name: 'Gemini CLI',
+    icon: '🔷',
+    category: 'small',
+    description: 'Track Gemini CLI usage. Setup: run `gemini` once to authenticate via browser.',
+    defaultWidth: 280,
+    defaultHeight: 180,
+    hasApiKey: false,
+    properties: { title: 'Gemini', showPlan: true, refreshInterval: 300 },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;"><div>Pro: 10%</div><div>Flash: 5%</div></div>`,
+    generateHtml: (props) => `
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head"><span class="dash-card-title">🔷 ${props.title || 'Gemini'}</span><span class="dash-card-badge" id="${props.id}-badge">—</span></div>
+        <div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;"><div style="color:var(--text-muted);font-size:11px;">Loading...</div></div>
+      </div>`,
+    generateJs: (props) => `
+      async function update_${props.id.replace(/-/g, '_')}() {
+        const content = document.getElementById('${props.id}-content');
+        const badge = document.getElementById('${props.id}-badge');
+        try {
+          const res = await fetch('/api/ai-usage/gemini');
+          const data = await res.json();
+          if (data.error) { content.innerHTML = '<div style="color:#f85149;font-size:11px;">' + _esc(data.error) + '</div>'; badge.textContent = '!'; return; }
+          let html = '';
+          if (${props.showPlan !== false} && data.plan) badge.textContent = _esc(data.plan);
+          for (const m of (data.metrics || [])) {
+            const pct = m.used != null ? Math.min(100, Math.max(0, m.used)) : 0;
+            const color = pct > 80 ? '#f85149' : pct > 50 ? '#d29922' : '#3fb950';
+            html += '<div style="margin-bottom:4px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;"><span>' + _esc(m.label) + '</span><span style="color:' + color + ';">' + pct.toFixed(0) + '%</span></div><div style="height:6px;background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:' + color + ';"></div></div></div>';
+          }
+          content.innerHTML = html || '<div style="color:var(--text-muted);font-size:11px;">No data</div>';
+        } catch (e) { content.innerHTML = '<div style="color:#f85149;font-size:11px;">Error</div>'; badge.textContent = '!'; }
+      }
+      update_${props.id.replace(/-/g, '_')}();
+      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 300) * 1000});
+    `
+  },
+
+  'amp-code': {
+    name: 'Amp Code',
+    icon: '⚡',
+    category: 'small',
+    description: 'Track Amp Code usage. Setup: run `amp` once to authenticate.',
+    defaultWidth: 280,
+    defaultHeight: 180,
+    hasApiKey: false,
+    properties: { title: 'Amp', showPlan: true, refreshInterval: 300 },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;"><div>Free: 30%</div><div>Credits: $5.00</div></div>`,
+    generateHtml: (props) => `
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head"><span class="dash-card-title">⚡ ${props.title || 'Amp'}</span><span class="dash-card-badge" id="${props.id}-badge">—</span></div>
+        <div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;"><div style="color:var(--text-muted);font-size:11px;">Loading...</div></div>
+      </div>`,
+    generateJs: (props) => `
+      async function update_${props.id.replace(/-/g, '_')}() {
+        const content = document.getElementById('${props.id}-content');
+        const badge = document.getElementById('${props.id}-badge');
+        try {
+          const res = await fetch('/api/ai-usage/amp');
+          const data = await res.json();
+          if (data.error) { content.innerHTML = '<div style="color:#f85149;font-size:11px;">' + _esc(data.error) + '</div>'; badge.textContent = '!'; return; }
+          let html = '';
+          if (${props.showPlan !== false} && data.plan) badge.textContent = _esc(data.plan);
+          for (const m of (data.metrics || [])) {
+            if (m.format === 'dollars') {
+              const val = m.remaining != null ? '$' + m.remaining.toFixed(2) : '—';
+              html += '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;"><span>' + _esc(m.label) + '</span><span style="color:#3fb950;">' + _esc(val) + '</span></div>';
+            } else {
+              const pct = m.used != null ? Math.min(100, Math.max(0, m.used)) : 0;
+              const color = pct > 80 ? '#f85149' : pct > 50 ? '#d29922' : '#3fb950';
+              html += '<div style="margin-bottom:4px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;"><span>' + _esc(m.label) + '</span><span style="color:' + color + ';">' + pct.toFixed(0) + '%</span></div><div style="height:6px;background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:' + color + ';"></div></div></div>';
+            }
+          }
+          content.innerHTML = html || '<div style="color:var(--text-muted);font-size:11px;">No data</div>';
+        } catch (e) { content.innerHTML = '<div style="color:#f85149;font-size:11px;">Error</div>'; badge.textContent = '!'; }
+      }
+      update_${props.id.replace(/-/g, '_')}();
+      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 300) * 1000});
+    `
+  },
+
+  'factory': {
+    name: 'Factory',
+    icon: '🏭',
+    category: 'small',
+    description: 'Track Factory (Droid) usage. Setup: run `factory` once to authenticate.',
+    defaultWidth: 280, defaultHeight: 180, hasApiKey: false,
+    properties: { title: 'Factory', showPlan: true, refreshInterval: 300 },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;"><div>Standard: 25%</div></div>`,
+    generateHtml: (props) => `<div class="dash-card" id="widget-${props.id}" style="height:100%;"><div class="dash-card-head"><span class="dash-card-title">🏭 ${props.title || 'Factory'}</span><span class="dash-card-badge" id="${props.id}-badge">—</span></div><div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;"><div style="color:var(--text-muted);font-size:11px;">Loading...</div></div></div>`,
+    generateJs: (props) => `async function update_${props.id.replace(/-/g, '_')}(){const content=document.getElementById('${props.id}-content');const badge=document.getElementById('${props.id}-badge');try{const res=await fetch('/api/ai-usage/factory');const data=await res.json();if(data.error){content.innerHTML='<div style="color:#f85149;font-size:11px;">'+_esc(data.error)+'</div>';badge.textContent='!';return;}let html='';if(${props.showPlan !== false}&&data.plan)badge.textContent=_esc(data.plan);for(const m of(data.metrics||[])){const pct=m.used!=null?Math.min(100,Math.max(0,m.used)):0;const color=pct>80?'#f85149':pct>50?'#d29922':'#3fb950';html+='<div style="margin-bottom:4px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;"><span>'+_esc(m.label)+'</span><span style="color:'+color+';">'+pct.toFixed(0)+'%</span></div><div style="height:6px;background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+color+';"></div></div></div>';}content.innerHTML=html||'<div style="color:var(--text-muted);font-size:11px;">No data</div>';}catch(e){content.innerHTML='<div style="color:#f85149;font-size:11px;">Error</div>';badge.textContent='!';}}update_${props.id.replace(/-/g, '_')}();setInterval(update_${props.id.replace(/-/g, '_')},${(props.refreshInterval||300)*1000});`
+  },
+
+  'kimi-code': {
+    name: 'Kimi Code',
+    icon: '🌙',
+    category: 'small',
+    description: 'Track Kimi Code usage. Setup: run `kimi` once to authenticate.',
+    defaultWidth: 280, defaultHeight: 180, hasApiKey: false,
+    properties: { title: 'Kimi', showPlan: true, refreshInterval: 300 },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;"><div>Session: 26%</div></div>`,
+    generateHtml: (props) => `<div class="dash-card" id="widget-${props.id}" style="height:100%;"><div class="dash-card-head"><span class="dash-card-title">🌙 ${props.title || 'Kimi'}</span><span class="dash-card-badge" id="${props.id}-badge">—</span></div><div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;"><div style="color:var(--text-muted);font-size:11px;">Loading...</div></div></div>`,
+    generateJs: (props) => `async function update_${props.id.replace(/-/g, '_')}(){const content=document.getElementById('${props.id}-content');const badge=document.getElementById('${props.id}-badge');try{const res=await fetch('/api/ai-usage/kimi');const data=await res.json();if(data.error){content.innerHTML='<div style="color:#f85149;font-size:11px;">'+_esc(data.error)+'</div>';badge.textContent='!';return;}let html='';if(${props.showPlan !== false}&&data.plan)badge.textContent=_esc(data.plan);for(const m of(data.metrics||[])){const pct=m.used!=null?Math.min(100,Math.max(0,m.used)):0;const color=pct>80?'#f85149':pct>50?'#d29922':'#3fb950';html+='<div style="margin-bottom:4px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;"><span>'+_esc(m.label)+'</span><span style="color:'+color+';">'+pct.toFixed(0)+'%</span></div><div style="height:6px;background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+color+';"></div></div></div>';}content.innerHTML=html||'<div style="color:var(--text-muted);font-size:11px;">No data</div>';}catch(e){content.innerHTML='<div style="color:#f85149;font-size:11px;">Error</div>';badge.textContent='!';}}update_${props.id.replace(/-/g, '_')}();setInterval(update_${props.id.replace(/-/g, '_')},${(props.refreshInterval||300)*1000});`
+  },
+
+  'jetbrains-ai': {
+    name: 'JetBrains AI',
+    icon: '🧠',
+    category: 'small',
+    description: 'Track JetBrains AI Assistant usage. Setup: sign into AI Assistant in any JetBrains IDE.',
+    defaultWidth: 280, defaultHeight: 180, hasApiKey: false,
+    properties: { title: 'JetBrains', showPlan: true, refreshInterval: 300 },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;"><div>Quota: 15%</div></div>`,
+    generateHtml: (props) => `<div class="dash-card" id="widget-${props.id}" style="height:100%;"><div class="dash-card-head"><span class="dash-card-title">🧠 ${props.title || 'JetBrains'}</span><span class="dash-card-badge" id="${props.id}-badge">—</span></div><div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;"><div style="color:var(--text-muted);font-size:11px;">Loading...</div></div></div>`,
+    generateJs: (props) => `async function update_${props.id.replace(/-/g, '_')}(){const content=document.getElementById('${props.id}-content');const badge=document.getElementById('${props.id}-badge');try{const res=await fetch('/api/ai-usage/jetbrains');const data=await res.json();if(data.error){content.innerHTML='<div style="color:#f85149;font-size:11px;">'+_esc(data.error)+'</div>';badge.textContent='!';return;}let html='';if(${props.showPlan !== false}&&data.plan)badge.textContent=_esc(data.plan);for(const m of(data.metrics||[])){const pct=m.used!=null?Math.min(100,Math.max(0,m.used)):0;const color=pct>80?'#f85149':pct>50?'#d29922':'#3fb950';html+='<div style="margin-bottom:4px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;"><span>'+_esc(m.label)+'</span><span style="color:'+color+';">'+pct.toFixed(0)+'%</span></div><div style="height:6px;background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+color+';"></div></div></div>';}content.innerHTML=html||'<div style="color:var(--text-muted);font-size:11px;">No data</div>';}catch(e){content.innerHTML='<div style="color:#f85149;font-size:11px;">Error</div>';badge.textContent='!';}}update_${props.id.replace(/-/g, '_')}();setInterval(update_${props.id.replace(/-/g, '_')},${(props.refreshInterval||300)*1000});`
+  },
+
+  'minimax': {
+    name: 'MiniMax',
+    icon: '🔶',
+    category: 'small',
+    description: 'Track MiniMax Coding usage. Requires MINIMAX_API_KEY env var.',
+    defaultWidth: 280, defaultHeight: 180, hasApiKey: false,
+    properties: { title: 'MiniMax', showPlan: true, refreshInterval: 300 },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;"><div>Session: 30%</div></div>`,
+    generateHtml: (props) => `<div class="dash-card" id="widget-${props.id}" style="height:100%;"><div class="dash-card-head"><span class="dash-card-title">🔶 ${props.title || 'MiniMax'}</span><span class="dash-card-badge" id="${props.id}-badge">—</span></div><div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;"><div style="color:var(--text-muted);font-size:11px;">Loading...</div></div></div>`,
+    generateJs: (props) => `async function update_${props.id.replace(/-/g, '_')}(){const content=document.getElementById('${props.id}-content');const badge=document.getElementById('${props.id}-badge');try{const res=await fetch('/api/ai-usage/minimax');const data=await res.json();if(data.error){content.innerHTML='<div style="color:#f85149;font-size:11px;">'+_esc(data.error)+'</div>';badge.textContent='!';return;}let html='';if(${props.showPlan !== false}&&data.plan)badge.textContent=_esc(data.plan);for(const m of(data.metrics||[])){const pct=m.used!=null?Math.min(100,Math.max(0,m.used)):0;const color=pct>80?'#f85149':pct>50?'#d29922':'#3fb950';html+='<div style="margin-bottom:4px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;"><span>'+_esc(m.label)+'</span><span style="color:'+color+';">'+pct.toFixed(0)+'%</span></div><div style="height:6px;background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+color+';"></div></div></div>';}content.innerHTML=html||'<div style="color:var(--text-muted);font-size:11px;">No data</div>';}catch(e){content.innerHTML='<div style="color:#f85149;font-size:11px;">Error</div>';badge.textContent='!';}}update_${props.id.replace(/-/g, '_')}();setInterval(update_${props.id.replace(/-/g, '_')},${(props.refreshInterval||300)*1000});`
+  },
+
+  'zai': {
+    name: 'Z.ai',
+    icon: '🇿',
+    category: 'small',
+    description: 'Track Z.ai (GLM Coding) usage. Requires ZAI_API_KEY env var.',
+    defaultWidth: 280, defaultHeight: 180, hasApiKey: false,
+    properties: { title: 'Z.ai', showPlan: true, refreshInterval: 300 },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;"><div>Session: 15%</div><div>Weekly: 45%</div></div>`,
+    generateHtml: (props) => `<div class="dash-card" id="widget-${props.id}" style="height:100%;"><div class="dash-card-head"><span class="dash-card-title">🇿 ${props.title || 'Z.ai'}</span><span class="dash-card-badge" id="${props.id}-badge">—</span></div><div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;"><div style="color:var(--text-muted);font-size:11px;">Loading...</div></div></div>`,
+    generateJs: (props) => `async function update_${props.id.replace(/-/g, '_')}(){const content=document.getElementById('${props.id}-content');const badge=document.getElementById('${props.id}-badge');try{const res=await fetch('/api/ai-usage/zai');const data=await res.json();if(data.error){content.innerHTML='<div style="color:#f85149;font-size:11px;">'+_esc(data.error)+'</div>';badge.textContent='!';return;}let html='';if(${props.showPlan !== false}&&data.plan)badge.textContent=_esc(data.plan);for(const m of(data.metrics||[])){const pct=m.used!=null?Math.min(100,Math.max(0,m.used)):0;const color=pct>80?'#f85149':pct>50?'#d29922':'#3fb950';html+='<div style="margin-bottom:4px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;"><span>'+_esc(m.label)+'</span><span style="color:'+color+';">'+pct.toFixed(0)+'%</span></div><div style="height:6px;background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+color+';"></div></div></div>';}content.innerHTML=html||'<div style="color:var(--text-muted);font-size:11px;">No data</div>';}catch(e){content.innerHTML='<div style="color:#f85149;font-size:11px;">Error</div>';badge.textContent='!';}}update_${props.id.replace(/-/g, '_')}();setInterval(update_${props.id.replace(/-/g, '_')},${(props.refreshInterval||300)*1000});`
+  },
+
+  'antigravity-local': {
+    name: 'Antigravity',
+    icon: '🪐',
+    category: 'small',
+    description: 'Track Google Antigravity usage (Gemini 3, Claude via Google). Requires antigravity-usage login.',
+    defaultWidth: 280, defaultHeight: 200, hasApiKey: false,
+    properties: { title: 'Antigravity', showPlan: true, refreshInterval: 300 },
+    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;"><div>Gemini 3 Pro: 25%</div><div>Claude Sonnet: 40%</div></div>`,
+    generateHtml: (props) => `<div class="dash-card" id="widget-${props.id}" style="height:100%;"><div class="dash-card-head"><span class="dash-card-title">🪐 ${props.title || 'Antigravity'}</span><span class="dash-card-badge" id="${props.id}-badge">—</span></div><div class="dash-card-body" id="${props.id}-content" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;"><div style="color:var(--text-muted);font-size:11px;">Loading...</div></div></div>`,
+    generateJs: (props) => `async function update_${props.id.replace(/-/g, '_')}(){const content=document.getElementById('${props.id}-content');const badge=document.getElementById('${props.id}-badge');try{const res=await fetch('/api/ai-usage/antigravity');const data=await res.json();if(data.error){content.innerHTML='<div style="color:#f85149;font-size:11px;">'+_esc(data.error)+'</div>';badge.textContent='!';return;}let html='';if(${props.showPlan !== false}&&data.plan)badge.textContent=_esc(data.plan);for(const m of(data.metrics||[])){const pct=m.used!=null?Math.min(100,Math.max(0,m.used)):0;const color=pct>80?'#f85149':pct>50?'#d29922':'#3fb950';html+='<div style="margin-bottom:4px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;"><span>'+_esc(m.label)+'</span><span style="color:'+color+';">'+pct.toFixed(0)+'%</span></div><div style="height:6px;background:var(--bg-tertiary,#21262d);border-radius:3px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+color+';"></div></div></div>';}content.innerHTML=html||'<div style="color:var(--text-muted);font-size:11px;">No data</div>';}catch(e){content.innerHTML='<div style="color:#f85149;font-size:11px;">Error</div>';badge.textContent='!';}}update_${props.id.replace(/-/g, '_')}();setInterval(update_${props.id.replace(/-/g, '_')},${(props.refreshInterval||300)*1000});`
+  },
+
   'cron-jobs': {
-    privacyWarning: true,
+
     name: 'Cron Jobs',
     icon: '⏰',
     category: 'large',
@@ -771,6 +1505,7 @@ const WIDGETS = {
     hasApiKey: false,
     properties: {
       title: 'Cron',
+      server: 'local',
       endpoint: '/api/cron',
       columns: 1,
       refreshInterval: 30
@@ -792,14 +1527,24 @@ const WIDGETS = {
         </div>
       </div>`,
     generateJs: (props) => `
-      // Cron Jobs Widget: ${props.id}
+      // Cron Jobs Widget: ${props.id} — ${props.server === 'local' ? 'local' : 'remote: ' + props.server}
       async function update_${props.id.replace(/-/g, '_')}() {
+        const serverId = '${props.server || 'local'}';
+        const list = document.getElementById('${props.id}-list');
+        const badge = document.getElementById('${props.id}-badge');
         try {
-          const res = await fetch('${props.endpoint || '/api/cron'}');
-          const json = await res.json();
-          const jobs = json.jobs || [];
-          const list = document.getElementById('${props.id}-list');
-          const badge = document.getElementById('${props.id}-badge');
+          let jobs;
+          if (serverId === 'local') {
+            const res = await fetch('${props.endpoint || '/api/cron'}');
+            const json = await res.json();
+            jobs = json.jobs || [];
+          } else {
+            const res = await fetch('/api/servers/' + serverId + '/stats');
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            if (!data.openclaw?.cron) throw new Error('Cron data not available');
+            jobs = data.openclaw.cron.jobs || [];
+          }
           if (!jobs.length) {
             list.innerHTML = '<div class="cron-item"><span class="cron-name" style="opacity:0.5;">No cron jobs found</span></div>';
             badge.textContent = '0';
@@ -815,19 +1560,19 @@ const WIDGETS = {
             const lastRun = job.lastRun ? new Date(job.lastRun).toLocaleTimeString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Never';
             const statusBadge = job.lastStatus ? (job.lastStatus === 'ok' ? '✓' : '✗') : '';
             return '<div class="cron-item" style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border,#30363d);font-size:calc(13px * var(--font-scale, 1));">' +
-              '<span style="flex-shrink:0;">' + statusDot + '</span>' +
+              '<span style="flex-shrink:0;">' + _esc(statusDot) + '</span>' +
               '<div style="flex:1;min-width:0;">' +
-                '<div style="font-weight:500;">' + job.name + '</div>' +
+                '<div style="font-weight:500;">' + _esc(job.name) + '</div>' +
               '</div>' +
               '<div style="text-align:right;font-size:0.8em;opacity:0.6;flex-shrink:0;">' +
-                '<div>' + statusBadge + ' ' + lastRun + '</div>' +
+                '<div>' + _esc(statusBadge) + ' ' + _esc(lastRun) + '</div>' +
               '</div>' +
             '</div>';
           }).join('');
           badge.textContent = jobs.length + ' jobs';
         } catch (e) {
           console.error('Cron jobs widget error:', e);
-          document.getElementById('${props.id}-list').innerHTML = '<div class="cron-item"><span class="cron-name">Error loading</span></div>';
+          list.innerHTML = '<div class="cron-item"><span class="cron-name">Error: ' + _esc(e.message) + '</span></div>';
         }
       }
       update_${props.id.replace(/-/g, '_')}();
@@ -836,7 +1581,7 @@ const WIDGETS = {
   },
 
   'system-log': {
-    privacyWarning: true,
+
     name: 'System Log',
     icon: '🔧',
     category: 'large',
@@ -846,6 +1591,7 @@ const WIDGETS = {
     hasApiKey: false,
     properties: {
       title: 'System Log',
+      server: 'local',
       endpoint: '/api/system-log',
       maxLines: 50,
       refreshInterval: 10
@@ -878,20 +1624,29 @@ const WIDGETS = {
         if (level === 'OK') return 'ok';
         return 'info';
       }
+      // System Log Widget: ${props.id} — ${props.server === 'local' ? 'local' : 'remote: ' + props.server}
       async function update_${props.id.replace(/-/g, '_')}() {
+        const serverId = '${props.server || 'local'}';
         try {
-          const res = await fetch('${props.endpoint || '/api/system-log'}?max=${props.maxLines || 50}');
-          const json = await res.json();
-          // Handle both new format (json.entries) and old format (json.lines)
-          let entries = json.entries || [];
-          if (!entries.length && json.lines && json.lines.length) {
-            entries = json.lines.map(line => {
-              let level = 'INFO';
-              if (/\\b(error|fatal)\\b/i.test(line)) level = 'ERROR';
-              else if (/\\bwarn/i.test(line)) level = 'WARN';
-              else if (/\\b(ok|success|ready|started)\\b/i.test(line)) level = 'OK';
-              return { time: new Date().toISOString(), level, category: 'system', message: line };
-            });
+          let entries = [];
+          if (serverId === 'local') {
+            const res = await fetch('${props.endpoint || '/api/system-log'}?max=${props.maxLines || 50}');
+            const json = await res.json();
+            entries = json.entries || [];
+            if (!entries.length && json.lines && json.lines.length) {
+              entries = json.lines.map(line => {
+                let level = 'INFO';
+                if (/\\b(error|fatal)\\b/i.test(line)) level = 'ERROR';
+                else if (/\\bwarn/i.test(line)) level = 'WARN';
+                else if (/\\b(ok|success|ready|started)\\b/i.test(line)) level = 'OK';
+                return { time: new Date().toISOString(), level, category: 'system', message: line };
+              });
+            }
+          } else {
+            const res = await fetch('/api/servers/' + serverId + '/stats');
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            entries = data.openclaw?.systemLog?.entries || [];
           }
           const log = document.getElementById('${props.id}-log');
           const badge = document.getElementById('${props.id}-badge');
@@ -924,7 +1679,7 @@ const WIDGETS = {
   },
 
   'calendar': {
-    privacyWarning: true,
+
     name: 'Calendar',
     icon: '📅',
     category: 'large',
@@ -1456,6 +2211,7 @@ const WIDGETS = {
     apiKeyName: 'OPENCLAW_API',
     properties: {
       title: 'Sessions',
+      server: 'local',
       endpoint: '/api/sessions',
       refreshInterval: 30
     },
@@ -1474,13 +2230,23 @@ const WIDGETS = {
         </div>
       </div>`,
     generateJs: (props) => `
-      // Session Count Widget: ${props.id}
+      // Session Count Widget: ${props.id} — ${props.server === 'local' ? 'local' : 'remote: ' + props.server}
       async function update_${props.id.replace(/-/g, '_')}() {
+        const serverId = '${props.server || 'local'}';
         try {
-          const res = await fetch('${props.endpoint || '/api/sessions'}');
-          const json = await res.json();
-          const data = json.data || json;
-          document.getElementById('${props.id}-count').textContent = data.active || data.length || 0;
+          let count;
+          if (serverId === 'local') {
+            const res = await fetch('${props.endpoint || '/api/sessions'}');
+            const json = await res.json();
+            const data = json.data || json;
+            count = data.active || data.length || 0;
+          } else {
+            const res = await fetch('/api/servers/' + serverId + '/stats');
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            count = data.openclaw?.sessions?.active || data.openclaw?.sessions?.recent24h || 0;
+          }
+          document.getElementById('${props.id}-count').textContent = count;
         } catch (e) {
           document.getElementById('${props.id}-count').textContent = '—';
         }
@@ -1550,13 +2316,13 @@ const WIDGETS = {
     name: 'CPU / Memory',
     icon: '💻',
     category: 'small',
-    description: 'Shows CPU and memory usage. Requires system stats API.',
+    description: 'Shows CPU and memory usage. Supports remote servers via lobsterboard-agent.',
     defaultWidth: 200,
     defaultHeight: 120,
     hasApiKey: false,
     properties: {
       title: 'System',
-      endpoint: '/api/system',
+      server: 'local',
       refreshInterval: 5
     },
     preview: `<div style="padding:8px;font-size:11px;">
@@ -1574,8 +2340,14 @@ const WIDGETS = {
         </div>
       </div>`,
     generateJs: (props) => `
-      // CPU/Memory Widget: ${props.id} — live via SSE
-      onSystemStats(function(data) {
+      // CPU/Memory Widget: ${props.id} — ${props.server === 'local' ? 'local SSE' : 'remote: ' + props.server}
+      onStats('${props.server || 'local'}', function(data) {
+        // Handle offline state
+        if (data._offline) {
+          document.getElementById('${props.id}-cpu').textContent = '⚠️';
+          document.getElementById('${props.id}-mem').textContent = 'offline';
+          return;
+        }
         if (data.cpu) {
           document.getElementById('${props.id}-cpu').textContent = data.cpu.currentLoad.toFixed(0) + '%';
         }
@@ -1584,7 +2356,7 @@ const WIDGETS = {
           const total = (data.memory.total / (1024*1024*1024)).toFixed(1);
           document.getElementById('${props.id}-mem').textContent = used + ' / ' + total + ' GB';
         }
-      });
+      }, ${(props.refreshInterval || 5) * 1000});
     `
   },
 
@@ -1592,14 +2364,14 @@ const WIDGETS = {
     name: 'Disk Usage',
     icon: '💾',
     category: 'small',
-    description: 'Shows disk space usage. Requires system stats API.',
+    description: 'Shows disk space usage. Supports remote servers via lobsterboard-agent.',
     defaultWidth: 160,
     defaultHeight: 100,
     hasApiKey: false,
     properties: {
       title: 'Disk',
+      server: 'local',
       path: '/',
-      endpoint: '/api/disk',
       refreshInterval: 60
     },
     preview: `<div style="text-align:center;padding:8px;">
@@ -1627,20 +2399,35 @@ const WIDGETS = {
         </div>
       </div>`,
     generateJs: (props) => `
-      // Disk Usage Widget: ${props.id} — live via SSE
-      onSystemStats(function(data) {
-        if (!data.disk || data.disk.length === 0) return;
-        // Find the configured mount or default to first/root
-        const targetMount = '${props.path || '/'}';
-        const d = data.disk.find(x => x.mount === targetMount) || data.disk[0];
-        const pct = d.use || 0;
+      // Disk Usage Widget: ${props.id} — ${props.server === 'local' ? 'local SSE' : 'remote: ' + props.server}
+      onStats('${props.server || 'local'}', function(data) {
+        // Handle offline state
+        if (data._offline) {
+          document.getElementById('${props.id}-pct').textContent = '⚠️';
+          document.getElementById('${props.id}-size').textContent = 'offline';
+          document.getElementById('${props.id}-ring').style.strokeDashoffset = 125.66;
+          return;
+        }
+        
+        // Handle both local (array) and remote (object) disk data
+        let d;
+        if (Array.isArray(data.disk)) {
+          if (data.disk.length === 0) return;
+          const targetMount = '${props.path || '/'}';
+          d = data.disk.find(x => x.mount === targetMount) || data.disk[0];
+        } else if (data.disk) {
+          d = data.disk;
+        } else {
+          return;
+        }
+        const pct = d.use || d.percent || 0;
         const circumference = 125.66;
         document.getElementById('${props.id}-ring').style.strokeDashoffset = circumference - (pct / 100) * circumference;
         document.getElementById('${props.id}-pct').textContent = Math.round(pct) + '%';
-        const usedGB = (d.used / (1024*1024*1024)).toFixed(1);
-        const totalGB = (d.size / (1024*1024*1024)).toFixed(0);
+        const usedGB = ((d.used || 0) / (1024*1024*1024)).toFixed(1);
+        const totalGB = ((d.size || d.total || 0) / (1024*1024*1024)).toFixed(0);
         document.getElementById('${props.id}-size').textContent = usedGB + ' / ' + totalGB + ' GB';
-      });
+      }, ${(props.refreshInterval || 60) * 1000});
     `
   },
 
@@ -1648,34 +2435,44 @@ const WIDGETS = {
     name: 'Uptime Monitor',
     icon: '📡',
     category: 'large',
-    description: 'Shows service uptime. Requires uptime monitoring backend.',
+    description: 'Shows system uptime, CPU, and memory. Supports remote servers via lobsterboard-agent.',
     defaultWidth: 350,
     defaultHeight: 220,
     hasApiKey: false,
     properties: {
       title: 'Uptime',
-      services: 'Website,API,Database',
+      server: 'local',
       refreshInterval: 30
     },
     preview: `<div style="padding:4px;font-size:11px;">
-      <div>🟢 Website — 99.9%</div>
-      <div>🟢 API — 100%</div>
-      <div>🟡 Database — 98.2%</div>
+      <div>🟢 System — 5d 12h</div>
+      <div>🟢 CPU — 12.5%</div>
+      <div>🟢 Memory — 45.2%</div>
     </div>`,
     generateHtml: (props) => `
       <div class="dash-card" id="widget-${props.id}" style="height:100%;">
         <div class="dash-card-head">
           <span class="dash-card-title">${renderIcon('uptime')} ${props.title || 'Uptime'}</span>
+          ${props.server && props.server !== 'local' ? `<span class="dash-card-badge" style="font-size:10px;">🌐</span>` : ''}
         </div>
         <div class="dash-card-body" id="${props.id}-services">
           <div class="uptime-row" style="color:var(--text-muted);justify-content:center;">Loading...</div>
         </div>
       </div>`,
     generateJs: (props) => `
-      // Uptime Monitor Widget: ${props.id} — live via SSE
-      onSystemStats(function(data) {
-        if (data.uptime == null) return;
+      // Uptime Monitor Widget: ${props.id} — ${props.server === 'local' ? 'local SSE' : 'remote: ' + props.server}
+      onStats('${props.server || 'local'}', function(data) {
         const container = document.getElementById('${props.id}-services');
+        
+        // Handle offline state
+        if (data._offline) {
+          const lastSeen = data._lastSuccess ? new Date(data._lastSuccess).toLocaleTimeString() : 'never';
+          container.innerHTML = '<div class="uptime-row" style="color:#f85149;justify-content:center;">⚠️ Connection lost</div>' +
+            '<div class="uptime-row" style="opacity:0.6;font-size:11px;justify-content:center;">Last: ' + lastSeen + '</div>';
+          return;
+        }
+        
+        if (data.uptime == null) return;
         const secs = data.uptime;
         const d = Math.floor(secs / 86400);
         const h = Math.floor((secs % 86400) / 3600);
@@ -1692,8 +2489,11 @@ const WIDGETS = {
           const memPct = ((data.memory.active / data.memory.total) * 100).toFixed(1);
           html += '<div class="uptime-row"><span>' + window.renderIcon('memory') + ' Memory</span><span class="uptime-pct">' + memPct + '%</span></div>';
         }
+        if (data.serverName && data._remote) {
+          html += '<div class="uptime-row" style="opacity:0.6;font-size:11px;"><span>📡 ' + data.serverName + '</span></div>';
+        }
         container.innerHTML = html;
-      });
+      }, ${(props.refreshInterval || 30) * 1000});
     `
   },
 
@@ -1701,13 +2501,13 @@ const WIDGETS = {
     name: 'Docker Containers',
     icon: '🐳',
     category: 'large',
-    description: 'Lists Docker containers with status. Requires Docker API proxy.',
+    description: 'Lists Docker containers with status. Supports remote servers via lobsterboard-agent.',
     defaultWidth: 380,
     defaultHeight: 250,
     hasApiKey: false,
     properties: {
       title: 'Containers',
-      endpoint: '/api/docker',
+      server: 'local',
       refreshInterval: 10
     },
     preview: `<div style="padding:4px;font-size:11px;">
@@ -1726,23 +2526,35 @@ const WIDGETS = {
         </div>
       </div>`,
     generateJs: (props) => `
-      // Docker Containers Widget: ${props.id} — live via SSE
-      onSystemStats(function(data) {
+      // Docker Containers Widget: ${props.id} — ${props.server === 'local' ? 'local SSE' : 'remote: ' + props.server}
+      onStats('${props.server || 'local'}', function(data) {
         const list = document.getElementById('${props.id}-list');
         const badge = document.getElementById('${props.id}-badge');
-        if (!data.docker || data.docker.length === 0) {
-          list.innerHTML = '<div class="docker-row" style="color:var(--text-muted);">No containers found</div>';
-          badge.textContent = '0';
+        
+        // Handle offline state
+        if (data._offline) {
+          list.innerHTML = '<div class="docker-row" style="color:#f85149;">⚠️ Connection lost</div>';
+          badge.textContent = '—';
           return;
         }
-        const containers = data.docker;
+        
+        // Handle remote docker data structure
+        const dockerData = data._remote && data.docker?.containers ? data.docker.containers : data.docker;
+        if (!dockerData || dockerData.length === 0) {
+          const msg = data._remote && data.docker?.available === false ? 'Docker not available' : 'No containers found';
+          list.innerHTML = '<div class="docker-row" style="color:var(--text-muted);">' + msg + '</div>';
+          badge.textContent = data._remote && data.docker ? (data.docker.running || 0) + '/' + (data.docker.total || 0) : '0';
+          return;
+        }
+        const containers = dockerData;
         list.innerHTML = containers.map(function(c) {
-          const icon = c.state === 'running' ? '🟢' : '🔴';
+          const running = c.state === 'running' || c.running === true;
+          const icon = running ? '🟢' : '🔴';
           const name = (c.name || '').replace(/^\\//, '');
           return '<div class="docker-row">' + icon + ' ' + name + '<span class="docker-status">' + (c.state || c.status || '—') + '</span></div>';
         }).join('');
-        badge.textContent = containers.length;
-      });
+        badge.textContent = data._remote && data.docker ? (data.docker.running || 0) + '/' + (data.docker.total || 0) : containers.length;
+      }, ${(props.refreshInterval || 10) * 1000});
     `
   },
 
@@ -1750,18 +2562,18 @@ const WIDGETS = {
     name: 'Network Speed',
     icon: '🌐',
     category: 'small',
-    description: 'Shows real-time network activity (upload/download throughput). Updates every 2 seconds.',
+    description: 'Shows real-time network activity. Supports remote servers via lobsterboard-agent.',
     defaultWidth: 200,
     defaultHeight: 100,
     hasApiKey: false,
     properties: {
       title: 'Network',
-      endpoint: '/api/network',
-      refreshInterval: 2
+      server: 'local',
+      refreshInterval: 5
     },
     preview: `<div style="padding:8px;font-size:11px;">
-      <div>↓ <span style="color:#3fb950;">45 Mbps</span></div>
-      <div>↑ <span style="color:#58a6ff;">12 Mbps</span></div>
+      <div>↓ <span style="color:#3fb950;">45 KB/s</span></div>
+      <div>↑ <span style="color:#58a6ff;">12 KB/s</span></div>
     </div>`,
     generateHtml: (props) => `
       <div class="dash-card" id="widget-${props.id}" style="height:100%;">
@@ -1774,26 +2586,38 @@ const WIDGETS = {
         </div>
       </div>`,
     generateJs: (props) => `
-      // Network Speed Widget: ${props.id} — live via SSE
+      // Network Speed Widget: ${props.id} — ${props.server === 'local' ? 'local SSE' : 'remote: ' + props.server}
       function _fmtRate(bytes) {
         if (bytes == null || bytes < 0) return '0 B/s';
         if (bytes < 1024) return bytes.toFixed(0) + ' B/s';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB/s';
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB/s';
       }
-      onSystemStats(function(data) {
+      onStats('${props.server || 'local'}', function(data) {
+        // Handle offline state
+        if (data._offline) {
+          document.getElementById('${props.id}-down').textContent = '⚠️';
+          document.getElementById('${props.id}-up').textContent = 'offline';
+          return;
+        }
+        
         if (!data.network || data.network.length === 0) return;
-        // Sum all interfaces or pick the first non-loopback
+        // Handle both local (array) and remote (object) formats
         let rx = 0, tx = 0;
-        data.network.forEach(function(n) {
-          if (n.iface !== 'lo' && n.iface !== 'lo0') {
-            rx += (n.rx_sec || 0);
-            tx += (n.tx_sec || 0);
-          }
-        });
+        if (Array.isArray(data.network)) {
+          data.network.forEach(function(n) {
+            if (n.iface !== 'lo' && n.iface !== 'lo0') {
+              rx += (n.rx_sec || 0);
+              tx += (n.tx_sec || 0);
+            }
+          });
+        } else {
+          rx = data.network.rx_sec || data.network.rxSec || 0;
+          tx = data.network.tx_sec || data.network.txSec || 0;
+        }
         document.getElementById('${props.id}-down').textContent = _fmtRate(rx);
         document.getElementById('${props.id}-up').textContent = _fmtRate(tx);
-      });
+      }, ${(props.refreshInterval || 5) * 1000});
     `
   },
 
@@ -1802,7 +2626,7 @@ const WIDGETS = {
   // ─────────────────────────────────────────────
 
   'todo-list': {
-    privacyWarning: true,
+
     name: 'Todo List',
     icon: '✅',
     category: 'large',
@@ -1934,7 +2758,7 @@ const WIDGETS = {
         }
       }
       update_${props.id.replace(/-/g, '_')}();
-      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 120) * 1000});
+      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 300) * 1000});
     `
   },
 
@@ -2788,12 +3612,12 @@ const WIDGETS = {
         container.style.display = 'grid';
         container.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
         container.style.gap = '4px';
-        container.innerHTML = links.map(link => {
+        container.innerHTML = links.filter(link => _isSafeUrl(link.url)).map(link => {
           const domain = new URL(link.url).hostname;
-          const favicon = 'https://www.google.com/s2/favicons?sz=32&domain=' + domain;
-          return '<a href="' + link.url + '" class="quick-link" target="_blank" style="display:flex;align-items:center;gap:8px;padding:6px 4px;text-decoration:none;color:var(--text-primary);border-bottom:1px solid var(--border);overflow:hidden;">' +
+          const favicon = 'https://www.google.com/s2/favicons?sz=32&domain=' + _esc(domain);
+          return '<a href="' + _esc(link.url) + '" class="quick-link" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;gap:8px;padding:6px 4px;text-decoration:none;color:var(--text-primary);border-bottom:1px solid var(--border);overflow:hidden;">' +
             '<img src="' + favicon + '" style="width:16px;height:16px;flex-shrink:0;" onerror="this.style.display=\\'none\\'">' +
-            '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + link.name + '</span>' +
+            '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _esc(link.name) + '</span>' +
           '</a>';
         }).join('');
       })();
@@ -2823,7 +3647,7 @@ const WIDGETS = {
           <span class="dash-card-title">${renderIcon('embed')} ${props.title || 'Embed'}</span>
         </div>
         <div class="dash-card-body" style="padding:0;overflow:hidden;">
-          <iframe src="${props.embedUrl || 'about:blank'}" style="width:100%;height:100%;border:none;" ${props.allowFullscreen ? 'allowfullscreen' : ''}></iframe>
+          <iframe src="${_isSafeUrl(props.embedUrl) ? props.embedUrl : 'about:blank'}" style="width:100%;height:100%;border:none;" ${props.allowFullscreen ? 'allowfullscreen' : ''}></iframe>
         </div>
       </div>`,
     generateJs: (props) => `
@@ -2917,32 +3741,34 @@ const WIDGETS = {
         </div>
       </div>`,
     generateJs: (props) => `
-      // World Clock Widget: ${props.id} (uses wttr.in for timezone data)
+      // World Clock Widget: ${props.id} (pure Intl.DateTimeFormat - no API needed)
+      const CITY_TZ_MAP = {
+        'New York': 'America/New_York', 'Los Angeles': 'America/Los_Angeles', 'Chicago': 'America/Chicago',
+        'London': 'Europe/London', 'Paris': 'Europe/Paris', 'Berlin': 'Europe/Berlin',
+        'Tokyo': 'Asia/Tokyo', 'Sydney': 'Australia/Sydney', 'Dubai': 'Asia/Dubai',
+        'Singapore': 'Asia/Singapore', 'Hong Kong': 'Asia/Hong_Kong', 'Mumbai': 'Asia/Kolkata',
+        'Shanghai': 'Asia/Shanghai', 'Seoul': 'Asia/Seoul', 'Moscow': 'Europe/Moscow',
+        'Istanbul': 'Europe/Istanbul', 'Bangkok': 'Asia/Bangkok', 'Toronto': 'America/Toronto',
+        'Heidenheim': 'Europe/Berlin', 'Vienna': 'Europe/Vienna', 'Zurich': 'Europe/Zurich',
+        'Amsterdam': 'Europe/Amsterdam', 'Rome': 'Europe/Rome', 'Madrid': 'Europe/Madrid',
+        'São Paulo': 'America/Sao_Paulo', 'Mexico City': 'America/Mexico_City',
+        'Graz': 'Europe/Vienna', 'Munich': 'Europe/Berlin', 'Frankfurt': 'Europe/Berlin',
+        'Santiago': 'America/Santiago', 'Lima': 'America/Lima'
+      };
       const locs_${props.id.replace(/-/g, '_')} = '${props.locations || 'New York; London; Tokyo'}'.split(';').map(s => s.trim());
       const hour12_${props.id.replace(/-/g, '_')} = ${!props.format24h};
       
-      async function update_${props.id.replace(/-/g, '_')}() {
+      function update_${props.id.replace(/-/g, '_')}() {
         const container = document.getElementById('${props.id}-clocks');
-        const results = await Promise.all(locs_${props.id.replace(/-/g, '_')}.map(async (loc) => {
+        const now = new Date();
+        const results = locs_${props.id.replace(/-/g, '_')}.map(loc => {
+          const tz = CITY_TZ_MAP[loc] || CITY_TZ_MAP[Object.keys(CITY_TZ_MAP).find(k => k.toLowerCase() === loc.toLowerCase())] || null;
+          if (!tz) return { city: loc, time: '(unknown tz)' };
           try {
-            const res = await fetch('https://wttr.in/' + encodeURIComponent(loc) + '?format=j1');
-            const data = await res.json();
-            const area = data.nearest_area[0];
-            const city = area.areaName[0].value;
-            const localTime = data.current_condition[0].localObsDateTime;
-            // Parse the time from format "2026-02-07 12:30 AM"
-            const timePart = localTime.split(' ').slice(1).join(' ');
-            let displayTime = timePart;
-            if (!hour12_${props.id.replace(/-/g, '_')}) {
-              // Convert to 24h if needed
-              const d = new Date('2000-01-01 ' + timePart);
-              displayTime = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-            }
-            return { city, time: displayTime, ok: true };
-          } catch (e) {
-            return { city: loc, time: '—', ok: false };
-          }
-        }));
+            const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: hour12_${props.id.replace(/-/g, '_')} });
+            return { city: loc, time: fmt.format(now) };
+          } catch(e) { return { city: loc, time: '—' }; }
+        });
         container.innerHTML = results.map(r => 
           '<div class="tz-row"><span class="tz-city">' + r.city + '</span><span class="tz-time">' + r.time + '</span></div>'
         ).join('');

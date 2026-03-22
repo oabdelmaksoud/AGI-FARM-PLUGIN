@@ -101,14 +101,14 @@ jobs:
         run: |
           # Test wizard can run (non-interactive)
           echo "Testing wizard..."
-          timeout 10s agi-farm setup --help || true
+          timeout 10s npx agi-farm setup --help || true
 
           # Test other commands
           echo "Testing status..."
-          agi-farm status --help
+          npx agi-farm status --help
 
           echo "Testing dashboard..."
-          agi-farm dashboard --help
+          npx agi-farm dashboard --help
 
           echo "✓ All commands executable"
 

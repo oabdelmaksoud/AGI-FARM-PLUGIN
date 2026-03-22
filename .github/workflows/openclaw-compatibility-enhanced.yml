@@ -192,10 +192,10 @@ jobs:
         continue-on-error: true
         run: |
           COMMANDS=(
-            "agi-farm setup --help"
-            "agi-farm status --help"
-            "agi-farm dashboard --help"
-            "agi-farm rebuild --help"
+            "npx agi-farm setup --help"
+            "npx agi-farm status --help"
+            "npx agi-farm dashboard --help"
+            "npx agi-farm rebuild --help"
           )
 
           FAILED=0

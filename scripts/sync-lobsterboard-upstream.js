@@ -72,7 +72,13 @@ async function copySnapshotFiles(srcRoot) {
     const src = path.join(srcRoot, rel);
     const dest = path.join(SNAPSHOT_ROOT, rel);
     await ensureDir(path.dirname(dest));
-    const content = await fs.readFile(src, 'utf-8');
+    let content = await fs.readFile(src, 'utf-8');
+    
+    // Scrub potential secrets to satisfy GitHub Push Protection
+    // Patterns for Google OAuth Client ID and Secret
+    content = content.replace(/[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com/g, 'REDACTED-GOOGLE-CLIENT-ID');
+    content = content.replace(/GOCSPX-[a-zA-Z0-9_-]{28}/g, 'REDACTED-GOOGLE-CLIENT-SECRET');
+    
     await fs.writeFile(dest, content, 'utf-8');
   }
 }
