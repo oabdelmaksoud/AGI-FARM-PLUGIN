@@ -551,18 +551,8 @@ async function offerOpenDashboard() {
   const port = process.env.PAPERCLIP_PORT || process.env.PORT || '3100';
   const url = `http://${host}:${port}`;
 
-  const { openDashboard } = await inquirer.prompt([
-    {
-      type: 'confirm',
-      name: 'openDashboard',
-      message: `Open Paperclip dashboard in browser? (${url})`,
-      default: true
-    }
-  ]);
-
-  if (openDashboard) {
-    await open(url);
-  }
+  console.log(chalk.cyan(`\n🌐 Opening Paperclip dashboard at ${url}...`));
+  await open(url);
 }
 
 // ── Lifecycle Management ─────────────────────────────────────────────────────

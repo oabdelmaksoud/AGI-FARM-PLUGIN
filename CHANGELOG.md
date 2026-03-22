@@ -6,6 +6,36 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-03-22
+
+### 🚀 Release
+
+- **Automated Dashboard Opening**: `agi-farm setup` now automatically opens the Paperclip dashboard in the browser after successful configuration.
+- **Improved Dependency Management**: Added `express` as a direct dependency to support the Paperclip server.
+- **Submodule Core Sync**: Updated `paperclip` submodule to latest state, including `hermes-paperclip-adapter` and lockfile stability.
+
+## [3.2.0] - 2026-03-21
+
+### 🛠️ Bug Fixes
+
+- Resolved Paperclip integration issues found in live testing environments.
+- Stabilized role mapping priority and syncTeam logic for better organizational chart flow.
+
+## [3.1.0] - 2026-03-15
+
+### ✨ New Features
+
+- **Autonomous Paperclip Tools**: Added new tools (`create_company`, `create_project`, `create_task`, `update_task`, `list_projects`, `manage_board`) that allow agents to autonomously manage the Paperclip dashboard and project workflow.
+- **Agent-Controlled Dashboard**: Agents can now interact with the dashboard to submit tasks, update status, and track project progress.
+
+## [3.0.0] - 2026-03-07
+
+### 🔄 Major Architecture Overhaul
+
+- **Paperclip Integration**: Replaced the custom dashboard with the more powerful and flexible Paperclip dashboard for team and task management.
+- **Role Mapping**: Implemented AGI Farm to Paperclip role enum mapping for cross-platform compatibility.
+- **SyncTeam Infrastructure**: Rewrote the team synchronization logic to align with the new Paperclip backend.
+
 ## [2.0.0] - 2026-03-07
 
 ### 🤖 True Autonomous Agent Expansion

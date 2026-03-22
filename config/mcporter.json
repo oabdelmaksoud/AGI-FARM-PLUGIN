@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx -y @modelcontextprotocol/server-memory"
+    },
+    "sequential-thinking": {
+      "command": "npx -y @modelcontextprotocol/server-sequential-thinking"
+    },
+    "context7": {
+      "command": "npx -y @context7/mcp-server"
+    }
+  },
+  "imports": []
+}
