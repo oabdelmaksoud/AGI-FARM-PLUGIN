@@ -6,6 +6,18 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [3.3.2] - 2026-03-22
+
+### 🚀 Enhancements
+
+- **OpenClaw Detection**: The setup wizard now automatically detects and validates your installed OpenClaw version at startup.
+
+## [3.3.1] - 2026-03-22
+
+### 🛠️ Bug Fixes
+
+- **Restored Setup Wizard**: Re-added missing `scripts/lib/cron-defs.js` which was causing `agi-farm setup` to fail with `ERR_MODULE_NOT_FOUND`.
+
 ## [3.3.0] - 2026-03-22
 
 ### 🚀 Release

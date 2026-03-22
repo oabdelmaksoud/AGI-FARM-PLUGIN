@@ -45,6 +45,21 @@ function getAgentTemplatePath(templateName) {
   return path.join(TEMPLATES_DIR, templateName);
 }
 
+// ── Environment Checks ───────────────────────────────────────────────────────
+async function checkOpenClaw() {
+  const spinner = ora('Checking OpenClaw environment...').start();
+  const result = runCommand('openclaw', ['--version']);
+
+  if (result.status === 0) {
+    const version = result.stdout.trim();
+    spinner.succeed(`OpenClaw detected: ${chalk.green(version)}`);
+    return version;
+  } else {
+    spinner.warn(chalk.yellow('OpenClaw not found in PATH. Ensure it is installed: npm install -g openclaw'));
+    return null;
+  }
+}
+
 // ── Phase 1: Identity & Blueprint ─────────────────────────────────────────────
 async function promptIdentity() {
   console.log(chalk.cyan.bold('\n✨ Phase 1: Identity & Blueprint\n'));
@@ -650,7 +665,10 @@ async function main() {
   try {
     console.log(chalk.cyan.bold('\n⚡ AGI Farm — Advanced Setup Wizard v2.0\n'));
 
-    // 0. Lifecycle Check
+    // 0. Environment Check
+    await checkOpenClaw();
+
+    // 1. Lifecycle Check
     const mode = await checkExistingInstall();
 
     if (mode === 'update') {

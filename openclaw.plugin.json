@@ -2,7 +2,7 @@
   "id": "agi-farm",
   "kind": "team-orchestration",
   "name": "AGI Farm — Multi-Agent Team Builder",
-  "version": "3.3.0",
+  "version": "3.3.2",
   "description": "Bootstrap complete multi-agent AI teams with Paperclip dashboard, auto-dispatcher, and infrastructure. Includes interactive wizard, SOUL.md generation, comms setup, cron registration, and OpenClaw gateway integration.",
   "author": "oabdelmaksoud",
   "homepage": "https://github.com/oabdelmaksoud/AGI-FARM-PLUGIN",
