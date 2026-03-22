@@ -63,6 +63,27 @@ This keeps upstream diffs visible in PRs so feature ports can be done continuous
 
 ---
 
+## 🧙 What's New in v3.3.0
+
+### 🚀 Automated Release & Workflow Hardening
+
+Version 3.3.0 standardizes the release process and ensures all GitHub workflows are production-ready.
+
+#### 🏗️ Automated Dashboard Launch
+- **One-Click Wizard**: The `agi-farm setup` wizard now automatically opens the Paperclip dashboard in your default browser upon successful configuration.
+- **Direct Dependencies**: Added `express` as a core dependency for improved dashboard server stability.
+
+#### 🛡️ Workflow & Compatibility Hardening
+- **OpenClaw Compatibility**: Improved version scrubbing (handles `v` prefixes and revision suffixes) for more robust integration testing.
+- **Graceful Installation**: Workflows now handle missing NPM versions gracefully, skipping integration tests if a specific version is not yet published.
+- **Global PATH Reliability**: Ensured global `npm` bin directories are correctly added to `GITHUB_PATH` across all workflow steps.
+
+#### 🔐 Security Enhancements
+- **Automated Secret Scrubbing**: Upstream sync scripts (`scripts/sync-lobsterboard-upstream.js`) now redact Google OAuth Client IDs and Secrets to prevent GitHub Push Protection violations.
+- **Refined Command Execution**: All `agi-farm` commands in workflows now use `npx` for guaranteed executability.
+
+---
+
 ## 🧙 What's New in v1.9.0
 
 ### 🚀 Advanced Wizard 2.0 — Industry-Driven Automation
