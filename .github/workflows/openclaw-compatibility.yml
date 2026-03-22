@@ -105,10 +105,10 @@ jobs:
 
           # Test other commands
           echo "Testing status..."
-          agi-farm-status --help
+          agi-farm status --help
 
           echo "Testing dashboard..."
-          agi-farm-dashboard --help
+          agi-farm dashboard --help
 
           echo "✓ All commands executable"
 

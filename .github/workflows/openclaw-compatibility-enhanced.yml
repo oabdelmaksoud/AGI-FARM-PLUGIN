@@ -42,7 +42,7 @@ jobs:
       fail-fast: false
       matrix:
         # Test against multiple OpenClaw versions and OS
-        openclaw-version: ['latest', 'previous', 'oldest-supported']
+        openclaw-version: ['latest', 'previous', 'oldest-supported', 'beta']
         os: ['ubuntu-latest']
         node-version: ['22']
 
@@ -193,9 +193,9 @@ jobs:
         run: |
           COMMANDS=(
             "agi-farm setup --help"
-            "agi-farm-status --help"
-            "agi-farm-dashboard --help"
-            "agi-farm-rebuild --help"
+            "agi-farm status --help"
+            "agi-farm dashboard --help"
+            "agi-farm rebuild --help"
           )
 
           FAILED=0
